@@ -1,5 +1,6 @@
 {
   "name": "@ulanzideck/store-desktop",
+  "productName": "Ulanzi Plugin Store",
   "version": "0.1.0",
   "description": "Desktop plugin store for Ulanzi Deck and Dial",
   "private": true,
@@ -8,8 +9,8 @@
   "author": "Narlei Moreira",
   "license": "MIT",
   "scripts": {
-    "dev": "npm run build && electron .",
-    "open": "electron .",
+    "dev": "npm run build && node ../../scripts/brand-electron-app.mjs && electron .",
+    "open": "node ../../scripts/brand-electron-app.mjs && electron .",
     "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
     "build": "npm run build:main && npm run build:renderer",
     "build:main": "tsc -p tsconfig.main.json",

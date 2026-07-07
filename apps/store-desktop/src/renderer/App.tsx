@@ -4,7 +4,10 @@ import { compareVersions } from '@ulanzideck/catalog';
 import type { InstallProgress, Settings } from '../shared';
 import { LANG_NAMES, LANGS, detectLang, pluginText, t, type Lang } from './i18n';
 
-type View = 'store' | 'installed' | 'updates' | 'settings';
+type View = 'store' | 'installed' | 'updates' | 'submit' | 'settings';
+
+const REPO_URL = 'https://github.com/narlei/ulanzipluginstore';
+const SDK_URL = 'https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK';
 type BusyState = Record<string, { pct: number; msg: string }>;
 
 const defaultSettings: Settings = { developerMode: false };
@@ -133,7 +136,7 @@ export function App() {
             <div className="mt-1 text-2xl font-semibold">Plugin Store</div>
           </div>
           <nav className="space-y-2">
-            {(['store', 'installed', 'updates', 'settings'] as View[]).map((item) => (
+            {(['store', 'installed', 'updates', 'submit', 'settings'] as View[]).map((item) => (
               <button
                 key={item}
                 className={`nav-item ${view === item ? 'nav-item-active' : ''}`}
@@ -154,7 +157,7 @@ export function App() {
           <header className="flex h-20 items-center gap-4 border-b border-white/10 px-8">
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl font-semibold">{view === 'store' ? t(lang, 'title') : t(lang, view)}</h1>
-              <p className="mt-1 text-sm text-slate-400">{t(lang, 'subtitle')}</p>
+              <p className="mt-1 text-sm text-slate-400">{view === 'submit' ? t(lang, 'submitSubtitle') : t(lang, 'subtitle')}</p>
             </div>
             <div className="flex rounded-lg border border-white/10 bg-white/[0.04] p-1">
               {LANGS.map((code) => (
@@ -171,6 +174,8 @@ export function App() {
 
           {view === 'settings' ? (
             <SettingsView lang={lang} settings={settings} setDeveloperMode={setDeveloperMode} />
+          ) : view === 'submit' ? (
+            <SubmitView lang={lang} />
           ) : (
             <div className="min-h-0 flex-1 overflow-auto px-8 py-6">
               <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -390,6 +395,27 @@ function SettingsView({ lang, settings, setDeveloperMode }: { lang: Lang; settin
           </button>
         </div>
       </section>
+    </div>
+  );
+}
+
+function SubmitView({ lang }: { lang: Lang }) {
+  return (
+    <div className="min-h-0 flex-1 overflow-auto px-8 py-6">
+      <div className="mb-6 flex flex-wrap gap-2">
+        <button className="btn-primary" onClick={() => void window.api.openExternal(`${REPO_URL}/fork`)}>
+          {t(lang, 'submitFork')}
+        </button>
+        <button className="btn-ghost" onClick={() => void window.api.openExternal(`${REPO_URL}/tree/main/registry/plugins`)}>
+          {t(lang, 'submitRegistry')}
+        </button>
+        <button className="btn-ghost" onClick={() => void window.api.openExternal(SDK_URL)}>
+          {t(lang, 'submitSdk')}
+        </button>
+      </div>
+      <div className="max-w-3xl rounded-lg border border-white/10 bg-white/[0.045] p-6">
+        <Markdown className="text-sm" text={t(lang, 'submitMarkdown')} />
+      </div>
     </div>
   );
 }
