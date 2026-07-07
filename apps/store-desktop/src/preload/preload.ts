@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   checkUpdates: () => ipcRenderer.invoke('updates:check'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setDeveloperMode: (enabled: boolean) => ipcRenderer.invoke('settings:developerMode', enabled),
+  checkSubmission: (repoInput: string) => ipcRenderer.invoke('submit:check', repoInput),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
   onProgress: (callback: (progress: InstallProgress) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, progress: InstallProgress) => callback(progress);

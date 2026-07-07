@@ -1,7 +1,7 @@
 import { createElement, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { CatalogPlugin, InstalledPlugin } from '@ulanzideck/catalog';
 import { compareVersions } from '@ulanzideck/catalog';
-import type { InstallProgress, Settings } from '../shared';
+import type { InstallProgress, Settings, SubmitCheck, SubmitCheckResult } from '../shared';
 import { LANG_NAMES, LANGS, detectLang, pluginText, t, type Lang } from './i18n';
 
 type View = 'store' | 'installed' | 'updates' | 'submit' | 'settings';
@@ -11,6 +11,42 @@ const SDK_URL = 'https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK';
 type BusyState = Record<string, { pct: number; msg: string }>;
 
 const defaultSettings: Settings = { developerMode: false };
+
+const NAV_ICONS: Record<View, ReactNode> = {
+  store: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] shrink-0">
+      <path d="M3 9l1.5-5h15L21 9" />
+      <path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" />
+      <path d="M9 20v-6h6v6" />
+    </svg>
+  ),
+  installed: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] shrink-0">
+      <path d="M12 3v12" />
+      <path d="M8 11l4 4 4-4" />
+      <path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" />
+    </svg>
+  ),
+  updates: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] shrink-0">
+      <path d="M21 12a9 9 0 1 1-3-6.7" />
+      <path d="M21 4v5h-5" />
+    </svg>
+  ),
+  submit: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] shrink-0">
+      <path d="M12 20V6" />
+      <path d="M6 12l6-6 6 6" />
+      <path d="M4 4h16" />
+    </svg>
+  ),
+  settings: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] shrink-0">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  ),
+};
 
 export function App() {
   const [lang, setLangState] = useState<Lang>(() => detectLang());
@@ -142,7 +178,10 @@ export function App() {
                 className={`nav-item ${view === item ? 'nav-item-active' : ''}`}
                 onClick={() => setView(item)}
               >
-                {t(lang, item)}
+                <span className="flex items-center gap-2.5">
+                  {NAV_ICONS[item]}
+                  {t(lang, item)}
+                </span>
                 {item === 'installed' && <span>{Object.keys(installed).length}</span>}
                 {item === 'updates' && <span>{plugins.filter((plugin) => hasUpdate(plugin, installed)).length}</span>}
               </button>
@@ -400,23 +439,144 @@ function SettingsView({ lang, settings, setDeveloperMode }: { lang: Lang; settin
 }
 
 function SubmitView({ lang }: { lang: Lang }) {
+  const [repoInput, setRepoInput] = useState('');
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState<SubmitCheckResult | null>(null);
+  const [networkError, setNetworkError] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function validate() {
+    if (!repoInput.trim() || checking) return;
+    setChecking(true);
+    setResult(null);
+    setNetworkError(false);
+    setCopied(false);
+    try {
+      setResult(await window.api.checkSubmission(repoInput));
+    } catch {
+      setNetworkError(true);
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  async function copyJson() {
+    if (!result) return;
+    await navigator.clipboard.writeText(result.registryJson);
+    setCopied(true);
+  }
+
   return (
     <div className="min-h-0 flex-1 overflow-auto px-8 py-6">
-      <div className="mb-6 flex flex-wrap gap-2">
-        <button className="btn-primary" onClick={() => void window.api.openExternal(`${REPO_URL}/fork`)}>
-          {t(lang, 'submitFork')}
-        </button>
-        <button className="btn-ghost" onClick={() => void window.api.openExternal(`${REPO_URL}/tree/main/registry/plugins`)}>
-          {t(lang, 'submitRegistry')}
-        </button>
-        <button className="btn-ghost" onClick={() => void window.api.openExternal(SDK_URL)}>
-          {t(lang, 'submitSdk')}
-        </button>
-      </div>
-      <div className="max-w-3xl rounded-lg border border-white/10 bg-white/[0.045] p-6">
-        <Markdown className="text-sm" text={t(lang, 'submitMarkdown')} />
+      <div className="max-w-3xl space-y-6">
+        <section className="rounded-lg border border-white/10 bg-white/[0.045] p-6">
+          <ol className="space-y-2 text-sm text-slate-300">
+            {(['submitStep1', 'submitStep2', 'submitStep3'] as const).map((key, index) => (
+              <li key={key} className="flex gap-3">
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand/15 text-xs font-bold text-brand">{index + 1}</span>
+                <span className="leading-6">{renderInlineMarkdown(t(lang, key))}</span>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button className="btn-ghost" onClick={() => void window.api.openExternal(SDK_URL)}>
+              {t(lang, 'submitSdk')}
+            </button>
+            <button className="btn-ghost" onClick={() => void window.api.openExternal(`${REPO_URL}/tree/main/registry`)}>
+              {t(lang, 'submitRegistry')}
+            </button>
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-white/10 bg-white/[0.045] p-6">
+          <h2 className="text-lg font-semibold">{t(lang, 'submitToolTitle')}</h2>
+          <p className="mt-1 text-sm text-slate-400">{t(lang, 'submitToolHelp')}</p>
+          <div className="mt-4 flex gap-2">
+            <input
+              className="h-11 min-w-0 flex-1 rounded-lg border border-white/10 bg-white/[0.05] px-4 text-sm outline-none transition focus:border-brand/70"
+              placeholder="https://github.com/you/your-plugin"
+              value={repoInput}
+              onChange={(event) => setRepoInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') void validate();
+              }}
+              spellCheck={false}
+            />
+            <button className="btn-primary" disabled={checking || !repoInput.trim()} onClick={() => void validate()}>
+              {checking ? t(lang, 'submitChecking') : t(lang, 'submitValidate')}
+            </button>
+          </div>
+
+          {networkError && <p className="mt-4 text-sm text-red-400">{t(lang, 'submitNetworkError')}</p>}
+
+          {result && (
+            <ul className="mt-5 space-y-2">
+              {result.checks.map((check) => (
+                <SubmitCheckRow key={check.id} check={check} lang={lang} />
+              ))}
+            </ul>
+          )}
+
+          {result && !result.ok && (
+            <p className="mt-4 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-4 text-sm leading-6 text-amber-200/90">
+              {t(lang, 'submitFixHint')}
+            </p>
+          )}
+
+          {result?.ok && (
+            <div className="mt-5 rounded-lg border border-brand/30 bg-brand/[0.06] p-5">
+              <div className="flex items-center gap-3">
+                {result.plugin?.icon && <img src={result.plugin.icon} alt="" className="h-10 w-10 rounded-lg object-cover" />}
+                <div>
+                  <div className="font-semibold text-brand">{t(lang, 'submitReadyTitle')}</div>
+                  {result.plugin && (
+                    <div className="text-sm text-slate-300">
+                      {result.plugin.name} · v{result.plugin.version}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-300">{t(lang, 'submitReadyText')}</p>
+              <div className="mt-3 rounded-lg border border-white/10 bg-black/30 p-4">
+                <div className="font-mono text-xs text-slate-400">registry/plugins/{result.registryFileName}</div>
+                <pre className="mt-2 overflow-x-auto font-mono text-sm text-slate-200">{result.registryJson.trim()}</pre>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button className="btn-primary" onClick={() => void window.api.openExternal(result.prUrl)}>
+                  {t(lang, 'submitOpenPr')}
+                </button>
+                <button className="btn-ghost" onClick={() => void copyJson()}>
+                  {copied ? t(lang, 'submitCopied') : t(lang, 'submitCopy')}
+                </button>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-slate-400">{t(lang, 'submitPrHint')}</p>
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-lg border border-white/10 bg-white/[0.045] p-6">
+          <Markdown className="text-sm" text={t(lang, 'submitMarkdown')} />
+        </section>
       </div>
     </div>
+  );
+}
+
+function SubmitCheckRow({ check, lang }: { check: SubmitCheck; lang: Lang }) {
+  const styles: Record<SubmitCheck['status'], { badge: string; symbol: string }> = {
+    ok: { badge: 'bg-brand/15 text-brand', symbol: '✓' },
+    warn: { badge: 'bg-amber-400/15 text-amber-300', symbol: '!' },
+    fail: { badge: 'bg-red-400/15 text-red-400', symbol: '✕' },
+  };
+  const { badge, symbol } = styles[check.status];
+  const suffix = check.id === 'store' && check.value === 'invalid' ? '_invalid' : '';
+  return (
+    <li className="flex items-start gap-3 text-sm">
+      <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${badge}`}>{symbol}</span>
+      <span className="leading-6 text-slate-300">
+        {t(lang, `submit_${check.id}_${check.status}${suffix}`, check.value || '')}
+      </span>
+    </li>
   );
 }
 

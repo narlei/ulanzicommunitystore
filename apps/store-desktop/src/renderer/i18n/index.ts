@@ -49,28 +49,36 @@ const strings: Record<Lang, Record<string, string>> = {
     emptyUpdates: 'Everything is up to date.',
     submit: 'Send plugin',
     submitSubtitle: 'Publish your own plugin to the Ulanzi Plugin Store.',
-    submitFork: 'Fork the repository',
     submitRegistry: 'Browse registry examples',
     submitSdk: 'Official Ulanzi SDK',
-    submitMarkdown: `## 1. Fork the store repository
-Fork **narlei/ulanzipluginstore** on GitHub.
-
-## 2. Add your plugin entry
-Create \`registry/plugins/<owner>__<repo>.json\` with at least:
-
-\`\`\`json
-{ "repo": "your-user/your-repo" }
-\`\`\`
-
-The file name is the \`owner\` and \`repo\`, joined with \`__\` (double underscore) instead of \`/\`.
-Example: \`narlei/ulanzideck_ticktick\` becomes \`narlei__ulanzideck_ticktick.json\`.
-
-## 3. Open a Pull Request
-Once it's approved and merged, a GitHub Action reads your \`manifest.json\`, the optional
-\`store.json\`, and your newest release, then publishes the plugin automatically. Every new
-release you publish is detected as an update by the store.
-
-## What your repo needs
+    submitStep1: 'Build your plugin with the official Ulanzi SDK: a `com.you.plugin.ulanziPlugin/` folder with a `manifest.json`.',
+    submitStep2: 'Publish a **GitHub Release** with the asset `com.you.plugin.ulanziPlugin.zip` (the plugin folder zipped).',
+    submitStep3: 'Paste your repository URL below. The app validates everything and opens the Pull Request for you.',
+    submitToolTitle: 'Validate and submit',
+    submitToolHelp: 'Paste the GitHub repository of your plugin. Only public GitHub data is read, nothing is uploaded.',
+    submitValidate: 'Validate',
+    submitChecking: 'Checking...',
+    submitNetworkError: 'Could not reach GitHub. Check your connection and try again.',
+    submit_repo_ok: 'Repository found: %s',
+    submit_repo_fail: 'Repository not found. Use a public GitHub URL like https://github.com/you/your-plugin.',
+    submit_release_ok: 'Latest release: %s',
+    submit_release_fail: 'No GitHub Release found. Publish a release before submitting.',
+    submit_asset_ok: 'Release asset: %s',
+    submit_asset_fail: 'The latest release has no *.ulanziPlugin.zip asset. Zip the plugin folder and attach it to the release.',
+    submit_manifest_ok: 'manifest.json is valid: %s',
+    submit_manifest_warn: 'manifest.json found in %s/ but Name or Version is missing.',
+    submit_manifest_fail: 'manifest.json missing or invalid in %s/.',
+    submit_store_ok: 'store.json found. Cover, screenshots and tags will show in the store.',
+    submit_store_warn: 'No store.json (optional). Add one for cover image, screenshots and tags.',
+    submit_store_warn_invalid: 'store.json exists but is not valid JSON, so it will be ignored.',
+    submitFixHint: 'Fix the items above and validate again. The official SDK and the registry examples can help.',
+    submitReadyTitle: 'Ready to publish!',
+    submitReadyText: 'This is your registry entry. Click the button below: GitHub forks the store repository, creates the file and opens the Pull Request. No manual editing needed.',
+    submitOpenPr: 'Open Pull Request on GitHub',
+    submitCopy: 'Copy JSON',
+    submitCopied: 'Copied!',
+    submitPrHint: 'Once the PR is merged, your plugin goes live automatically. Every new release in your repo becomes an update in the store.',
+    submitMarkdown: `## What your repo needs
 - A \`com.<you>.<plugin>.ulanziPlugin/\` folder with \`manifest.json\`, following the official Ulanzi Deck Plugin SDK.
 - A **GitHub Release** whose asset is \`com.<you>.<plugin>.ulanziPlugin.zip\` (the plugin folder zipped at the root).
 - Optional: a \`store.json\` at the repo root with cover, screenshots, long description, device types and tags.
@@ -124,28 +132,36 @@ Image paths are relative to your repo root.`,
     emptyUpdates: 'Tudo esta atualizado.',
     submit: 'Enviar plugin',
     submitSubtitle: 'Publique o seu proprio plugin na Ulanzi Plugin Store.',
-    submitFork: 'Fazer fork do repositorio',
     submitRegistry: 'Ver exemplos no registry',
     submitSdk: 'SDK oficial da Ulanzi',
-    submitMarkdown: `## 1. Faca um fork do repositorio da loja
-Faca fork de **narlei/ulanzipluginstore** no GitHub.
-
-## 2. Adicione a entrada do seu plugin
-Crie \`registry/plugins/<owner>__<repo>.json\` com o minimo:
-
-\`\`\`json
-{ "repo": "seu-usuario/seu-repo" }
-\`\`\`
-
-O nome do arquivo e o \`owner\` e o \`repo\` separados por \`__\` (dois underscores), trocando
-qualquer \`/\` por \`__\`. Ex.: \`narlei/ulanzideck_ticktick\` vira \`narlei__ulanzideck_ticktick.json\`.
-
-## 3. Abra um Pull Request
-Ao ser aprovado e mesclado, uma GitHub Action le o \`manifest.json\`, o \`store.json\` (opcional)
-e a release mais nova do seu repo, e publica o plugin na loja automaticamente. Toda nova release
-vira um update detectado pela loja.
-
-## O que o seu repo precisa ter
+    submitStep1: 'Crie seu plugin com o SDK oficial da Ulanzi: uma pasta `com.voce.plugin.ulanziPlugin/` com `manifest.json`.',
+    submitStep2: 'Publique uma **GitHub Release** com o asset `com.voce.plugin.ulanziPlugin.zip` (a pasta do plugin zipada).',
+    submitStep3: 'Cole a URL do seu repositorio abaixo. O app valida tudo e abre o Pull Request pra voce.',
+    submitToolTitle: 'Validar e enviar',
+    submitToolHelp: 'Cole o repositorio do seu plugin no GitHub. So dados publicos do GitHub sao lidos, nada e enviado.',
+    submitValidate: 'Validar',
+    submitChecking: 'Verificando...',
+    submitNetworkError: 'Nao consegui acessar o GitHub. Verifique a conexao e tente de novo.',
+    submit_repo_ok: 'Repositorio encontrado: %s',
+    submit_repo_fail: 'Repositorio nao encontrado. Use uma URL publica do GitHub, ex.: https://github.com/voce/seu-plugin.',
+    submit_release_ok: 'Release mais nova: %s',
+    submit_release_fail: 'Nenhuma GitHub Release encontrada. Publique uma release antes de enviar.',
+    submit_asset_ok: 'Asset da release: %s',
+    submit_asset_fail: 'A release mais nova nao tem um asset *.ulanziPlugin.zip. Zipe a pasta do plugin e anexe na release.',
+    submit_manifest_ok: 'manifest.json valido: %s',
+    submit_manifest_warn: 'manifest.json encontrado em %s/ mas falta Name ou Version.',
+    submit_manifest_fail: 'manifest.json ausente ou invalido em %s/.',
+    submit_store_ok: 'store.json encontrado. Capa, screenshots e tags vao aparecer na loja.',
+    submit_store_warn: 'Sem store.json (opcional). Adicione um para ter capa, screenshots e tags.',
+    submit_store_warn_invalid: 'store.json existe mas nao e um JSON valido, entao sera ignorado.',
+    submitFixHint: 'Corrija os itens acima e valide de novo. O SDK oficial e os exemplos do registry podem ajudar.',
+    submitReadyTitle: 'Pronto pra publicar!',
+    submitReadyText: 'Esta e a sua entrada no registry. Clique no botao abaixo: o GitHub faz o fork do repositorio da loja, cria o arquivo e abre o Pull Request. Sem edicao manual.',
+    submitOpenPr: 'Abrir Pull Request no GitHub',
+    submitCopy: 'Copiar JSON',
+    submitCopied: 'Copiado!',
+    submitPrHint: 'Quando o PR for mesclado, seu plugin entra no ar automaticamente. Toda nova release no seu repo vira um update na loja.',
+    submitMarkdown: `## O que o seu repo precisa ter
 - Uma pasta \`com.<voce>.<plugin>.ulanziPlugin/\` com \`manifest.json\`, no padrao do SDK oficial da Ulanzi.
 - Uma **GitHub Release** cujo asset seja \`com.<voce>.<plugin>.ulanziPlugin.zip\` (o zip da pasta do plugin na raiz).
 - Opcional: um \`store.json\` na raiz do repo com capa, screenshots, descricao longa, tipos de device e tags.
@@ -199,27 +215,36 @@ Caminhos de imagem sao relativos a raiz do seu repo.`,
     emptyUpdates: '全部都是最新版本。',
     submit: '提交插件',
     submitSubtitle: '将你自己的插件发布到 Ulanzi Plugin Store。',
-    submitFork: 'Fork 这个仓库',
     submitRegistry: '查看 registry 示例',
     submitSdk: 'Ulanzi 官方 SDK',
-    submitMarkdown: `## 1. Fork 商店仓库
-在 GitHub 上 fork **narlei/ulanzipluginstore**。
-
-## 2. 添加你的插件条目
-创建 \`registry/plugins/<owner>__<repo>.json\`，最少包含：
-
-\`\`\`json
-{ "repo": "your-user/your-repo" }
-\`\`\`
-
-文件名是 \`owner\` 和 \`repo\`，用 \`__\`（两个下划线）代替 \`/\` 连接。
-例如：\`narlei/ulanzideck_ticktick\` 会变成 \`narlei__ulanzideck_ticktick.json\`。
-
-## 3. 打开一个 Pull Request
-合并后，GitHub Action 会读取你的 \`manifest.json\`、可选的 \`store.json\` 以及你仓库最新的
-release，并自动发布该插件。之后每次发布新的 release，商店都会自动识别为更新。
-
-## 你的仓库需要包含
+    submitStep1: '使用 Ulanzi 官方 SDK 构建插件：一个含 `manifest.json` 的 `com.you.plugin.ulanziPlugin/` 文件夹。',
+    submitStep2: '发布一个 **GitHub Release**，资源文件为 `com.you.plugin.ulanziPlugin.zip`（插件文件夹打包的 zip）。',
+    submitStep3: '在下方粘贴你的仓库 URL。应用会自动验证并为你打开 Pull Request。',
+    submitToolTitle: '验证并提交',
+    submitToolHelp: '粘贴你插件的 GitHub 仓库地址。只读取 GitHub 公开数据，不会上传任何内容。',
+    submitValidate: '验证',
+    submitChecking: '正在检查...',
+    submitNetworkError: '无法访问 GitHub。请检查网络连接后重试。',
+    submit_repo_ok: '找到仓库：%s',
+    submit_repo_fail: '未找到仓库。请使用公开的 GitHub 地址，例如 https://github.com/you/your-plugin。',
+    submit_release_ok: '最新 release：%s',
+    submit_release_fail: '未找到 GitHub Release。请先发布一个 release 再提交。',
+    submit_asset_ok: 'Release 资源文件：%s',
+    submit_asset_fail: '最新 release 中没有 *.ulanziPlugin.zip 资源文件。请将插件文件夹打包为 zip 并附加到 release。',
+    submit_manifest_ok: 'manifest.json 有效：%s',
+    submit_manifest_warn: '在 %s/ 中找到 manifest.json，但缺少 Name 或 Version。',
+    submit_manifest_fail: '%s/ 中的 manifest.json 缺失或无效。',
+    submit_store_ok: '找到 store.json。封面、截图和标签将在商店中展示。',
+    submit_store_warn: '没有 store.json（可选）。添加后可展示封面、截图和标签。',
+    submit_store_warn_invalid: 'store.json 存在但不是有效的 JSON，将被忽略。',
+    submitFixHint: '修复上面的问题后再次验证。官方 SDK 和 registry 示例可以提供帮助。',
+    submitReadyTitle: '可以发布了！',
+    submitReadyText: '这就是你的 registry 条目。点击下方按钮：GitHub 会自动 fork 商店仓库、创建文件并打开 Pull Request，无需手动编辑。',
+    submitOpenPr: '在 GitHub 上打开 Pull Request',
+    submitCopy: '复制 JSON',
+    submitCopied: '已复制！',
+    submitPrHint: 'PR 合并后，你的插件会自动上线。之后你仓库里的每个新 release 都会成为商店中的更新。',
+    submitMarkdown: `## 你的仓库需要包含
 - 一个 \`com.<you>.<plugin>.ulanziPlugin/\` 文件夹，内含 \`manifest.json\`，遵循 Ulanzi 官方 SDK 规范。
 - 一个 **GitHub Release**，其资源文件为 \`com.<you>.<plugin>.ulanziPlugin.zip\`（插件文件夹在根目录打包的 zip）。
 - 可选：仓库根目录下的 \`store.json\`，包含封面、截图、长描述、设备类型和标签。

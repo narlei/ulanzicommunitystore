@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 import type { Catalog, CatalogPlugin, InstalledPlugin } from '@ulanzideck/catalog';
-import type { InstallProgress, Settings } from '../shared';
+import type { InstallProgress, Settings, SubmitCheckResult } from '../shared';
 
 declare global {
   interface Window {
@@ -13,6 +13,7 @@ declare global {
       checkUpdates: () => Promise<string[]>;
       getSettings: () => Promise<Settings>;
       setDeveloperMode: (enabled: boolean) => Promise<Settings>;
+      checkSubmission: (repoInput: string) => Promise<SubmitCheckResult>;
       openExternal: (url: string) => Promise<void>;
       onProgress: (callback: (progress: InstallProgress) => void) => () => void;
       onInstalledRefresh: (callback: () => void) => () => void;

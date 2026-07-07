@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { compareVersions, isPluginId, isRepoSlug, type CatalogPlugin } from '@ulanzideck/catalog';
 import { fetchCatalog, installPlugin, listInstalled, uninstallPlugin } from './install.js';
 import { getSettings, updateSettings } from './settings.js';
+import { checkSubmission } from './submit.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROTOCOL = 'ulanzipluginstore';
@@ -144,6 +145,10 @@ ipcMain.handle('updates:check', async () => {
   }
   return updates.map((plugin) => plugin.id);
 });
+
+ipcMain.handle('submit:check', (_event, repoInput: unknown) =>
+  checkSubmission(typeof repoInput === 'string' ? repoInput : ''),
+);
 
 ipcMain.handle('shell:openExternal', async (_event, url: unknown) => {
   if (typeof url !== 'string' || !/^https?:\/\//.test(url)) throw new Error('Invalid URL');

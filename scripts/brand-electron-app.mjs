@@ -1,9 +1,12 @@
 #!/usr/bin/env node
-// macOS dev mode runs the generic `node_modules/electron` binary, whose Info.plist still
-// reports CFBundleName/CFBundleDisplayName "Electron" — that's what the menu bar and Dock
-// show, regardless of app.setName() or package.json's productName. Patch it in place so
-// `npm run app` / `npm run open` show the real product name too, not just packaged builds.
-import { existsSync, readFileSync } from 'node:fs';
+// macOS dev mode runs the generic `node_modules/electron` binary. Its bundle is named
+// "Electron.app", and that filename — not just the Info.plist's CFBundleName — is what
+// Spotlight/Launch Services cache and what the Dock's tooltip ends up showing, even after
+// the plist is patched and `lsregister -f` is forced. Editing the plist in place isn't
+// reliable, so rename the bundle folder itself: a real rename can't go stale, there's no
+// cache to bust. `path.txt` (read by the `electron` package to find its own binary) is
+// kept in sync so `electron .` still resolves correctly afterward.
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
@@ -21,23 +24,39 @@ try {
   process.exit(0);
 }
 
-const infoPlist = join(electronPkgDir, 'dist', 'Electron.app', 'Contents', 'Info.plist');
-if (!existsSync(infoPlist)) process.exit(0);
+const pathFile = join(electronPkgDir, 'path.txt');
+if (!existsSync(pathFile)) process.exit(0);
 
 const appPkg = JSON.parse(readFileSync(join(__dirname, '..', 'apps', 'store-desktop', 'package.json'), 'utf8'));
 const productName = appPkg.productName || appPkg.build?.productName;
 if (!productName) process.exit(0);
 
+// path.txt looks like "Electron.app/Contents/MacOS/Electron" — everything after the first
+// "/" (the internal executable name) stays the same; only the outer bundle folder is ours to rename.
+const relativeExecPath = readFileSync(pathFile, 'utf-8').trim();
+const execSuffix = relativeExecPath.slice(relativeExecPath.indexOf('/'));
+const targetAppName = `${productName}.app`;
+const targetAppDir = join(electronPkgDir, 'dist', targetAppName);
+
+if (!existsSync(targetAppDir)) {
+  const currentAppName = relativeExecPath.slice(0, relativeExecPath.indexOf('/'));
+  const currentAppDir = join(electronPkgDir, 'dist', currentAppName);
+  if (existsSync(currentAppDir)) {
+    renameSync(currentAppDir, targetAppDir);
+    writeFileSync(pathFile, `${targetAppName}${execSuffix}`);
+  }
+}
+
+if (!existsSync(targetAppDir)) process.exit(0);
+
+const infoPlist = join(targetAppDir, 'Contents', 'Info.plist');
 for (const key of ['CFBundleName', 'CFBundleDisplayName']) {
   spawnSync('plutil', ['-replace', key, '-string', productName, infoPlist], { stdio: 'inherit' });
 }
 
-// macOS's Launch Services caches the Info.plist contents it saw the first time it indexed
-// this bundle path (Dock/Spotlight/menu bar all read from that cache, not the file on disk).
-// Force it to re-scan this bundle so the rename actually shows up.
+// Belt and suspenders: also force Launch Services to pick up the (now correctly named) bundle.
 const lsregister =
   '/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister';
-const appBundle = join(electronPkgDir, 'dist', 'Electron.app');
 if (existsSync(lsregister)) {
-  spawnSync(lsregister, ['-f', appBundle], { stdio: 'inherit' });
+  spawnSync(lsregister, ['-f', targetAppDir], { stdio: 'inherit' });
 }

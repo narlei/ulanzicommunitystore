@@ -38,6 +38,7 @@
           <a href="#features">Features</a>
           <a href="#plugins">Plugins</a>
           <a href="#how-it-works">How it works</a>
+          <a href="#publish">Publish</a>
           <a href="https://github.com/narlei/ulanzipluginstore" target="_blank" rel="noopener noreferrer">GitHub</a>
         </div>
         <a class="button button-sm" href="https://github.com/narlei/ulanzipluginstore/releases/latest" target="_blank" rel="noopener noreferrer">
@@ -68,7 +69,7 @@
               <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v7.19l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0L3.72 7.53a.75.75 0 0 1 1.06-1.06l2.47 2.47V1.75A.75.75 0 0 1 8 1ZM2 12.25a.75.75 0 0 1 1.5 0v1.25h9v-1.25a.75.75 0 0 1 1.5 0v1.5c0 .69-.56 1.25-1.25 1.25H3.25C2.56 15 2 14.44 2 13.75v-1.5Z"/></svg>
               Download for free
             </a>
-            <a class="button button-lg secondary" href="https://github.com/narlei/ulanzipluginstore/tree/main/registry" target="_blank" rel="noopener noreferrer">
+            <a class="button button-lg secondary" href="#publish">
               Publish a plugin
             </a>
           </div>
@@ -258,6 +259,51 @@
         </ol>
       </section>
 
+      <!-- ============ PUBLISH ============ -->
+      <section class="section" id="publish">
+        <p class="section-eyebrow reveal">For developers</p>
+        <h2 class="section-title reveal">Publish your plugin<br>in three steps.</h2>
+        <ol class="steps">
+          <li class="card reveal">
+            <span class="step-index">1</span>
+            <h3>Build your plugin</h3>
+            <p>Create it with the <a href="https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK" target="_blank" rel="noopener noreferrer">official Ulanzi SDK</a>: a <code>com.you.plugin.ulanziPlugin/</code> folder containing a <code>manifest.json</code>.</p>
+          </li>
+          <li class="card reveal">
+            <span class="step-index">2</span>
+            <h3>Publish a GitHub Release</h3>
+            <p>Zip the plugin folder and attach it to a release as <code>com.you.plugin.ulanziPlugin.zip</code>. Every new release becomes an update in the store.</p>
+          </li>
+          <li class="card reveal">
+            <span class="step-index">3</span>
+            <h3>Submit your repository</h3>
+            <p>Paste your repo URL below — or in the app's <strong>Send plugin</strong> tab. We validate it and open the Pull Request for you.</p>
+          </li>
+        </ol>
+
+        <div class="card publish-tool reveal">
+          <h3>Check your repo &amp; generate the submission</h3>
+          <p class="publish-sub">Runs entirely in your browser against the public GitHub API. Nothing is uploaded anywhere.</p>
+          <form class="publish-row" id="publishForm">
+            <input id="publishInput" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://github.com/you/your-plugin" aria-label="Your plugin's GitHub repository URL">
+            <button class="button" type="submit" id="publishBtn">Validate</button>
+          </form>
+          <ul class="publish-checks" id="publishChecks" hidden></ul>
+          <p class="publish-error" id="publishError" hidden></p>
+          <div class="publish-ready" id="publishReady" hidden>
+            <p class="publish-file">registry/plugins/<code id="publishFileName"></code></p>
+            <pre id="publishJson"></pre>
+            <div class="publish-actions">
+              <a class="button" id="publishPrLink" href="#" target="_blank" rel="noopener noreferrer">Open the Pull Request on GitHub</a>
+              <button class="button secondary" type="button" id="publishCopy">Copy JSON</button>
+            </div>
+            <p class="publish-hint">GitHub forks the store repository and creates the file for you — just confirm with “Propose changes”. Once the PR is merged, your plugin goes live automatically.</p>
+          </div>
+        </div>
+
+        <p class="publish-doc reveal">Want a cover image, screenshots and tags? Add a <code>store.json</code> to your repo — see the <a href="https://github.com/narlei/ulanzipluginstore/tree/main/registry" target="_blank" rel="noopener noreferrer">full submission guide</a>.</p>
+      </section>
+
       <!-- ============ FINAL CTA ============ -->
       <section class="cta reveal">
         <div class="cta-inner">
@@ -280,7 +326,7 @@
       <div class="footer-links">
         <a href="https://github.com/narlei/ulanzipluginstore" target="_blank" rel="noopener noreferrer">GitHub</a>
         <a href="https://github.com/narlei/ulanzipluginstore/releases/latest" target="_blank" rel="noopener noreferrer">Releases</a>
-        <a href="https://github.com/narlei/ulanzipluginstore/tree/main/registry" target="_blank" rel="noopener noreferrer">Publish a plugin</a>
+        <a href="#publish">Publish a plugin</a>
         <a href="https://github.com/narlei/ulanzipluginstore/issues" target="_blank" rel="noopener noreferrer">Report an issue</a>
       </div>
       <p class="copyright">Ulanzi Plugin Store is an unofficial, community-run project.</p>
@@ -310,6 +356,164 @@
           });
         }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
         items.forEach(function (el) { io.observe(el); });
+      })();
+
+      // ---- Publish tool: validate a plugin repo and generate the registry PR ----
+      (function () {
+        var STORE_REPO = 'narlei/ulanzipluginstore';
+        var form = document.getElementById('publishForm');
+        var input = document.getElementById('publishInput');
+        var button = document.getElementById('publishBtn');
+        var list = document.getElementById('publishChecks');
+        var errorEl = document.getElementById('publishError');
+        var ready = document.getElementById('publishReady');
+        var fileNameEl = document.getElementById('publishFileName');
+        var jsonEl = document.getElementById('publishJson');
+        var prLink = document.getElementById('publishPrLink');
+        var copyBtn = document.getElementById('publishCopy');
+
+        function parseRepo(value) {
+          value = value.trim().replace(/\/+$/, '');
+          if (!value) return null;
+          if (/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value)) return value;
+          var m = value.match(/^(?:https?:\/\/)?(?:www\.)?(?:git@)?github\.com[/:]([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?(?:[/?#].*)?$/i);
+          return m ? m[1] + '/' + m[2] : null;
+        }
+
+        function addCheck(status, message) {
+          var li = document.createElement('li');
+          var badge = document.createElement('span');
+          badge.className = 'ck ck-' + status;
+          badge.textContent = status === 'ok' ? '✓' : status === 'warn' ? '!' : '✕';
+          var text = document.createElement('span');
+          text.textContent = message;
+          li.appendChild(badge);
+          li.appendChild(text);
+          list.appendChild(li);
+          list.hidden = false;
+        }
+
+        function showError(message) {
+          errorEl.textContent = message;
+          errorEl.hidden = false;
+        }
+
+        async function gh(path) {
+          var res = await fetch('https://api.github.com' + path, {
+            headers: { Accept: 'application/vnd.github+json' },
+          });
+          return res;
+        }
+
+        async function raw(repo, ref, path) {
+          var res = await fetch('https://raw.githubusercontent.com/' + repo + '/' + ref + '/' + path);
+          if (res.status === 404) return null;
+          if (!res.ok) throw new Error('raw ' + res.status);
+          return res.text();
+        }
+
+        async function validate(repo) {
+          var failed = false;
+
+          var repoRes = await gh('/repos/' + repo);
+          if (!repoRes.ok) {
+            addCheck('fail', 'Repository not found. Use a public GitHub URL like https://github.com/you/your-plugin.');
+            return false;
+          }
+          var repoInfo = await repoRes.json();
+          var ref = repoInfo.default_branch || 'main';
+          addCheck('ok', 'Repository found: ' + repo);
+
+          var relRes = await gh('/repos/' + repo + '/releases/latest');
+          if (!relRes.ok) {
+            addCheck('fail', 'No GitHub Release found. Publish a release before submitting.');
+            return false;
+          }
+          var release = await relRes.json();
+          addCheck('ok', 'Latest release: ' + release.tag_name);
+
+          var asset = (release.assets || []).find(function (a) { return a.name.endsWith('.ulanziPlugin.zip'); });
+          if (!asset) {
+            addCheck('fail', 'The latest release has no *.ulanziPlugin.zip asset. Zip the plugin folder and attach it to the release.');
+            return false;
+          }
+          addCheck('ok', 'Release asset: ' + asset.name);
+          var pluginId = asset.name.replace(/\.zip$/, '');
+
+          try {
+            var manifestText = await raw(repo, ref, pluginId + '/manifest.json');
+            if (!manifestText) {
+              addCheck('fail', 'manifest.json missing in ' + pluginId + '/.');
+              failed = true;
+            } else {
+              var manifest = JSON.parse(manifestText);
+              if (manifest.Name && manifest.Version) {
+                addCheck('ok', 'manifest.json is valid: ' + manifest.Name + ' v' + manifest.Version);
+              } else {
+                addCheck('warn', 'manifest.json found in ' + pluginId + '/ but Name or Version is missing.');
+              }
+            }
+          } catch (err) {
+            addCheck('fail', 'manifest.json missing or invalid in ' + pluginId + '/.');
+            failed = true;
+          }
+
+          try {
+            var storeText = await raw(repo, ref, 'store.json');
+            if (storeText === null) {
+              addCheck('warn', 'No store.json (optional). Add one for cover image, screenshots and tags.');
+            } else {
+              JSON.parse(storeText);
+              addCheck('ok', 'store.json found — cover, screenshots and tags will show in the store.');
+            }
+          } catch (err) {
+            addCheck('warn', 'store.json exists but is not valid JSON, so it will be ignored.');
+          }
+
+          return !failed;
+        }
+
+        form.addEventListener('submit', function (event) {
+          event.preventDefault();
+          list.innerHTML = '';
+          list.hidden = true;
+          errorEl.hidden = true;
+          ready.hidden = true;
+          copyBtn.textContent = 'Copy JSON';
+
+          var repo = parseRepo(input.value);
+          if (!repo) {
+            showError('Enter a GitHub repository URL like https://github.com/you/your-plugin (or just you/your-plugin).');
+            return;
+          }
+
+          button.disabled = true;
+          button.textContent = 'Checking…';
+
+          validate(repo).then(function (ok) {
+            if (!ok) return;
+            var fileName = repo.replace('/', '__') + '.json';
+            var json = '{\n  "repo": "' + repo + '"\n}\n';
+            fileNameEl.textContent = fileName;
+            jsonEl.textContent = json.trim();
+            prLink.href = 'https://github.com/' + STORE_REPO + '/new/main/registry/plugins?filename=' +
+              encodeURIComponent(fileName) + '&value=' + encodeURIComponent(json);
+            ready.hidden = false;
+          }).catch(function () {
+            showError('Could not reach GitHub. Check your connection (or API rate limit) and try again.');
+          }).finally(function () {
+            button.disabled = false;
+            button.textContent = 'Validate';
+          });
+        });
+
+        copyBtn.addEventListener('click', function () {
+          var repo = parseRepo(input.value);
+          if (!repo) return;
+          navigator.clipboard.writeText('{\n  "repo": "' + repo + '"\n}\n').then(function () {
+            copyBtn.textContent = 'Copied!';
+          });
+        });
       })();
     </script>
   </body>
