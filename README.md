@@ -1,78 +1,76 @@
-# UlanziDeck Store
+# Ulanzi Plugin Store
 
-Loja **não-oficial e ágil** de plugins para Ulanzi Deck e Ulanzi Dial. Devs publicam
-apontando o repositório; a loja lê o `manifest.json` e a release mais nova sozinha, e todo
-update vira detecção automática.
+Desktop app and registry for the unofficial Ulanzi Deck/Dial plugin store.
 
-> Projeto independente e não-oficial. Não é afiliado, endossado ou mantido pela Ulanzi.
+This repo now treats the Electron app as the product. The Hostinger site is only a
+manual marketing upload, and the catalog is published automatically through GitHub Pages.
 
-## Como funciona
+## Structure
 
-```
-┌───────────────┐   fetch catalog.json   ┌──────────────────────┐
-│  Site (PHP)   │ ─────────────────────► │  registry/ (PR)      │
-│  public_html/ │                        │  → GitHub Action gera │
-│               │   fetch 127.0.0.1      │    catalog.json       │
-│   catálogo    │ ◄───────────────────►  └──────────────────────┘
-└──────┬────────┘     (Helper local)
-       │ botão Instalar
-       ▼
-┌───────────────┐   baixa release .zip do GitHub, extrai na pasta
-│ Helper (Go)   │   ~/Library/Application Support/Ulanzi/UlanziDeck/Plugins
-│ daemon local  │   e reinicia o Ulanzi Studio
-└───────────────┘
-```
+| Path | Purpose |
+| --- | --- |
+| `apps/store-desktop/` | Electron + React + TypeScript + Vite desktop app. |
+| `apps/marketing-site/` | Static HTML/CSS marketing site for manual Hostinger upload. |
+| `packages/catalog/` | Catalog types, registry validation, and `catalog.json` builder. |
+| `registry/plugins/` | Source of truth for approved plugin repos. |
+| `VERSION` | Official app release version. Changing it on `main` triggers app release. |
 
-Um navegador não pode escrever na pasta de Plugins, então um **Helper local** (binário Go
-residente, servidor em `127.0.0.1`) faz a instalação. O site conversa com ele por HTTP local.
-
-## Componentes
-
-> A raiz do repo **é** o document root: a Hostinger sincroniza o repositório inteiro em
-> `public_html`, então `index.php`, `assets/` e `catalog.json` ficam na raiz. Um `.htaccess`
-> esconde as pastas de dev (`helper/`, `scripts/`, `.git`…).
-
-| Item | O quê |
-|-------|-------|
-| `index.php`, `plugin.php`, `publish.php`, `assets/` | Site PHP+HTML (sem build). Deploy Hostinger via push na `main`. |
-| `catalog.json` | Catálogo gerado (na raiz, servido em `/catalog.json`). |
-| `registry/plugins/*.json` | Fonte da verdade. Dev abre PR com `{ "repo": "owner/repo" }`. |
-| `scripts/build-catalog.mjs` | Gera `catalog.json` lendo os repos via API do GitHub. |
-| `helper/` | Daemon Go: `/ping`, `/install`, `/installed`, `/status`, `/uninstall`. |
-| `.github/workflows/` | `build-catalog` (regenera o catálogo) e `release-helper` (binários). |
-
-## Desenvolvimento
+## Development
 
 ```bash
-# catálogo
-GH_TOKEN=$(gh auth token) node scripts/build-catalog.mjs
-
-# site (raiz do repo é o document root)
-php -S 127.0.0.1:8123 -t .
-
-# helper (aponta pro catálogo local, instala numa pasta de teste, sem reiniciar o app)
-cd helper
-HELPER_CATALOG_URL=http://127.0.0.1:8123/catalog.json \
-HELPER_PLUGINS_DIR=/tmp/fake-plugins HELPER_SKIP_RESTART=1 \
-  go run . run
+npm install
+npm run app
 ```
 
-### Variáveis do Helper
+Useful commands:
 
-| Env | Efeito |
-|-----|--------|
-| `HELPER_CATALOG_URL` | URL do `catalog.json` (padrão: domínio da loja). |
-| `HELPER_PLUGINS_DIR` | Sobrescreve a pasta de Plugins (testes/CI). |
-| `HELPER_SKIP_RESTART` | Não reinicia o Ulanzi Studio (testes/CI). |
-| `HELPER_DEV_MODE` | Permite instalar repos fora do registry (dev testando o próprio plugin). |
-| `HELPER_ALLOWED_ORIGINS` | Origens extras autorizadas (além do domínio da loja e loopback). |
+```bash
+npm run typecheck
+npm run app:build
+GH_TOKEN=$(gh auth token) npm run catalog:build
+npm run catalog:validate
+make marketing
+```
 
-## Roadmap
+By default, the app loads a local generated catalog:
 
-- **MVP (feito):** registry + catálogo + site + Helper macOS + detecção de update.
-- **Fase 2:** Windows, notificação proativa de updates, template repo + skill de IA de
-  publicação, instaladores assinados/notarizados.
+```text
+dist/catalog/catalog.json
+```
 
-## Publicar um plugin
+Generate it with:
 
-Veja [`registry/README.md`](registry/README.md).
+```bash
+GH_TOKEN=$(gh auth token) npm run catalog:build
+```
+
+Override the catalog source with:
+
+```bash
+STORE_CATALOG_FILE=/absolute/path/catalog.json npm run app
+STORE_CATALOG_URL=https://example.com/catalog.json npm run app
+```
+
+## Releases
+
+`VERSION` is the release source of truth. When it changes on `main`, GitHub Actions builds
+and publishes a release with:
+
+- macOS `.dmg`
+- macOS `.zip`
+- Windows `.exe`
+
+The first pipeline intentionally builds unsigned artifacts. The Electron Builder config is
+kept compatible with future signing/notarization secrets.
+
+## Catalog
+
+`catalog.json` is generated, not versioned. The registry entries in `registry/plugins/*.json`
+are the source of truth. The publishing workflow is ready for GitHub Pages, but the desktop app
+can stay on a local catalog while the repository is private.
+
+## Security Model
+
+The app installs only plugins from the official catalog by default. Developer Mode is reserved
+for future manual installs. ZIP extraction validates plugin IDs and entry paths before writing
+to the Ulanzi plugins folder.

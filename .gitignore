@@ -1,7 +1,8 @@
 .DS_Store
 node_modules/
-helper/dist/
-helper/ulanzideck-store-helper
-app/dist/
+.cache/
+dist/
+apps/store-desktop/dist/
+apps/store-desktop/release/
 *.log
 .claude/launch.json

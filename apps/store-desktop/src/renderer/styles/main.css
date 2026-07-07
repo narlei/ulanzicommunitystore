@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 900px;
+  min-height: 620px;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0b0f17;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@layer components {
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .app-titlebar {
+    height: 32px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(6, 10, 16, 0.72);
+    -webkit-app-region: drag;
+    position: relative;
+    z-index: 10;
+  }
+
+  .nav-item {
+    @apply flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-300 transition hover:bg-white/[0.06] hover:text-white;
+  }
+
+  .nav-item-active {
+    @apply bg-brand text-slate-950 hover:bg-brand hover:text-slate-950;
+  }
+
+  .pill {
+    @apply h-10 rounded-lg border border-white/10 bg-white/[0.04] px-4 text-sm text-slate-300 transition hover:border-brand/60 hover:text-white;
+  }
+
+  .pill-active {
+    @apply border-brand bg-brand text-slate-950 hover:text-slate-950;
+  }
+
+  .btn-primary {
+    @apply rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#68f4d9];
+  }
+
+  .btn-ghost {
+    @apply rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-brand/50 hover:text-white;
+  }
+
+  .chip {
+    @apply rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-slate-300;
+  }
+
+  .chip-brand {
+    @apply border-brand/40 bg-brand/10 text-brand;
+  }
+
+  .toggle {
+    @apply relative h-7 w-12 rounded-full bg-slate-700 transition;
+  }
+
+  .toggle span {
+    @apply absolute left-1 top-1 h-5 w-5 rounded-full bg-white transition;
+  }
+
+  .toggle-on {
+    @apply bg-brand;
+  }
+
+  .toggle-on span {
+    @apply translate-x-5 bg-slate-950;
+  }
+
+  .markdown-body {
+    @apply space-y-4;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .markdown-body h1,
+  .markdown-body h2,
+  .markdown-body h3,
+  .markdown-body h4 {
+    @apply font-semibold text-slate-100;
+  }
+
+  .markdown-body h1 {
+    @apply text-xl;
+  }
+
+  .markdown-body h2 {
+    @apply text-lg;
+  }
+
+  .markdown-body h3,
+  .markdown-body h4 {
+    @apply text-base;
+  }
+
+  .markdown-body p {
+    @apply text-slate-300;
+  }
+
+  .markdown-body a {
+    @apply text-brand underline decoration-brand/40 underline-offset-4 hover:decoration-brand;
+  }
+
+  .markdown-body strong {
+    @apply font-semibold text-slate-100;
+  }
+
+  .markdown-body code {
+    @apply rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.92em] text-slate-100;
+  }
+
+  .markdown-body pre {
+    @apply max-w-full overflow-x-auto rounded-lg border border-white/10 bg-black/30 p-4;
+  }
+
+  .markdown-body pre code {
+    @apply bg-transparent p-0 text-sm leading-6 text-slate-200;
+  }
+
+  .markdown-body ul {
+    @apply max-w-full list-disc space-y-2 pl-5 text-slate-300;
+  }
+
+  .markdown-body blockquote {
+    @apply border-l-2 border-brand/60 pl-4 text-slate-300;
+  }
+
+  .markdown-body hr {
+    @apply border-white/10;
+  }
+}

@@ -1,58 +1,42 @@
 HOST ?= 127.0.0.1
 PORT ?= 8123
 
-# URL do catálogo que o Helper vai usar. Local por padrão (precisa do `make run_local` no ar).
-CATALOG_URL ?= http://$(HOST):$(PORT)/catalog.json
-BIN_DIR := $(HOME)/.ulanzideck-store/bin
-BIN := $(BIN_DIR)/ulanzideck-store-helper
+.PHONY: run install app build typecheck catalog catalog_validate release marketing version
 
-.PHONY: run_local catalog helper_local install_helper uninstall_helper
+run:
+	npm install
+	node scripts/ensure-electron.mjs
+	@test -n "$$(gh auth token 2>/dev/null)" || (echo "GitHub token nao encontrado. Rode: gh auth login" && exit 1)
+	GH_TOKEN=$$(gh auth token) CATALOG_STRICT=1 npm run catalog:build
+	npm run typecheck
+	npm run app:build
+	npm run app:open
 
-# Sobe o site localmente em http://127.0.0.1:8123 (sem build, igual à Hostinger:
-# a raiz do repo é o document root).
-run_local:
-	@echo "Site em http://$(HOST):$(PORT)  (Ctrl+C para parar)"
-	php -S $(HOST):$(PORT) -t .
+install:
+	npm install
 
-# Regenera catalog.json a partir do registry (precisa de gh logado).
-catalog:
-	GH_TOKEN=$$(gh auth token) node scripts/build-catalog.mjs
-
-# Sobe o Helper em foreground apontando pro catálogo local, instalando numa pasta
-# de teste e sem reiniciar o Ulanzi Studio (só pra experimentar, não persiste).
-helper_local:
-	cd helper && \
-	HELPER_CATALOG_URL=$(CATALOG_URL) \
-	HELPER_PLUGINS_DIR=/tmp/ulanzideck-fake-plugins \
-	HELPER_SKIP_RESTART=1 \
-	go run . run
-
-# Instala o Helper DE VERDADE na sua máquina: compila, registra o LaunchAgent
-# (residente, sobe sozinho) apontando pro catálogo local, e passa a instalar na
-# pasta real do UlanziDeck. Requer `make run_local` no ar para os plugins.
-install_helper:
-	@mkdir -p $(BIN_DIR)
-	cd helper && go build -o "$(BIN)" .
-	HELPER_CATALOG_URL=$(CATALOG_URL) "$(BIN)" install-agent
-	@echo ""
-	@echo "Helper instalado e rodando. Catálogo: $(CATALOG_URL)"
-	@echo "Deixe o site no ar com 'make run_local' para instalar plugins."
-
-# Remove o LaunchAgent do Helper.
-uninstall_helper:
-	-"$(BIN)" uninstall-agent
-	@echo "Helper removido. (binário em $(BIN_DIR) pode ser apagado)"
-
-# ---- App desktop (Electron) ----
-# Roda o app em modo dev. Use CATALOG_URL pra apontar pro catálogo local:
-#   make app CATALOG_URL=http://127.0.0.1:8123/catalog.json  (com 'make run_local' no ar)
 app:
-	cd app && STORE_CATALOG_URL=$(CATALOG_URL) npm start
+	npm run app
 
-# Instala deps do app (Electron etc.).
-app_deps:
-	cd app && npm install
+build:
+	npm run build
 
-# Gera os instaladores (.dmg no Mac, .exe no Windows).
-app_dist:
-	cd app && npm run dist
+typecheck:
+	npm run typecheck
+
+catalog:
+	npm run catalog:build
+
+catalog_validate:
+	npm run catalog:validate
+
+release:
+	npm run sync:version
+	npm run app:dist
+
+marketing:
+	@echo "Marketing site: apps/marketing-site/index.html"
+	python3 -m http.server $(PORT) --bind $(HOST) --directory apps/marketing-site
+
+version:
+	@cat VERSION

@@ -1,0 +1,78 @@
+{
+  "name": "@ulanzideck/store-desktop",
+  "version": "0.1.0",
+  "description": "Desktop plugin store for Ulanzi Deck and Dial",
+  "private": true,
+  "type": "module",
+  "main": "dist/main/main.js",
+  "author": "Narlei Moreira",
+  "license": "MIT",
+  "scripts": {
+    "dev": "npm run build && electron .",
+    "open": "electron .",
+    "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
+    "build": "npm run build:main && npm run build:renderer",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build:renderer": "vite build",
+    "dist": "npm run build && electron-builder",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win"
+  },
+  "dependencies": {
+    "@ulanzideck/catalog": "0.1.0",
+    "adm-zip": "^0.5.16",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.0.3"
+  },
+  "build": {
+    "appId": "com.narlei.ulanzipluginstore",
+    "productName": "Ulanzi Plugin Store",
+    "directories": {
+      "output": "release"
+    },
+    "icon": "build/icon.png",
+    "files": [
+      "dist/**",
+      "build/icon.png",
+      "package.json"
+    ],
+    "protocols": [
+      {
+        "name": "Ulanzi Plugin Store",
+        "schemes": [
+          "ulanzipluginstore"
+        ]
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.utilities"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "publish": [
+      {
+        "provider": "github"
+      }
+    ]
+  }
+}

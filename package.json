@@ -1,0 +1,28 @@
+{
+  "name": "ulanzideck-store",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "app": "npm run build -w @ulanzideck/catalog && npm run dev -w @ulanzideck/store-desktop",
+    "app:open": "npm run open -w @ulanzideck/store-desktop",
+    "app:build": "npm run build -w @ulanzideck/catalog && npm run build -w @ulanzideck/store-desktop",
+    "app:dist": "npm run build -w @ulanzideck/catalog && npm run dist -w @ulanzideck/store-desktop",
+    "catalog:build": "npm run generate -w @ulanzideck/catalog",
+    "catalog:validate": "npm run validate -w @ulanzideck/catalog",
+    "typecheck": "npm run build -w @ulanzideck/catalog && npm run typecheck -w @ulanzideck/store-desktop",
+    "build": "npm run catalog:build && npm run app:build",
+    "electron:ensure": "node scripts/ensure-electron.mjs",
+    "sync:version": "node scripts/sync-version.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "allowScripts": {
+    "electron@43.0.0": true,
+    "esbuild@0.25.12": true
+  }
+}
