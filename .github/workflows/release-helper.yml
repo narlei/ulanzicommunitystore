@@ -1,0 +1,36 @@
+name: release-helper
+
+# Builda os binários do Helper (macOS) e anexa na release.
+# Dispare criando uma tag: git tag helper-v0.1.0 && git push --tags
+
+on:
+  push:
+    tags:
+      - 'helper-v*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: helper
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Build macOS (arm64 + amd64)
+        run: make darwin
+
+      - name: Publicar binários na release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            helper/dist/ulanzideck-store-helper-darwin-arm64
+            helper/dist/ulanzideck-store-helper-darwin-amd64
