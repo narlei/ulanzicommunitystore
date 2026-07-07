@@ -6,7 +6,7 @@
     <title>Ulanzi Plugin Store — install Ulanzi Deck &amp; Dial plugins in one click</title>
     <meta name="description" content="Unofficial desktop app to browse, install, update and remove Ulanzi Deck and Dial plugins from a curated catalog. Free and open source, for macOS and Windows.">
     <link rel="canonical" href="https://narlei.github.io/ulanzipluginstore/">
-    <meta name="theme-color" content="#090d14">
+    <meta name="theme-color" content="#070b12">
     <link rel="icon" type="image/png" href="assets/app-icon.png">
     <link rel="apple-touch-icon" href="assets/app-icon.png">
 
@@ -22,11 +22,17 @@
     <link rel="stylesheet" href="assets/style.css">
   </head>
   <body id="top">
-    <header class="hero">
-      <nav>
+    <div class="bg" aria-hidden="true">
+      <div class="bg-grid"></div>
+      <div class="bg-glow bg-glow-1"></div>
+      <div class="bg-glow bg-glow-2"></div>
+    </div>
+
+    <header class="site-header" id="siteHeader">
+      <nav class="nav">
         <a class="brand" href="#top">
-          <img class="brand-icon" src="assets/app-icon.png" alt="" width="28" height="28">
-          Ulanzi Plugin Store
+          <img class="brand-icon" src="assets/app-icon.png" alt="" width="30" height="30">
+          <span>Ulanzi&nbsp;Plugin&nbsp;Store</span>
         </a>
         <div class="nav-links">
           <a href="#features">Features</a>
@@ -34,93 +40,239 @@
           <a href="#how-it-works">How it works</a>
           <a href="https://github.com/narlei/ulanzipluginstore" target="_blank" rel="noopener noreferrer">GitHub</a>
         </div>
-        <a class="button nav-cta" href="https://github.com/narlei/ulanzipluginstore/releases/latest" target="_blank" rel="noopener noreferrer">Download</a>
+        <a class="button button-sm" href="https://github.com/narlei/ulanzipluginstore/releases/latest" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v7.19l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0L3.72 7.53a.75.75 0 0 1 1.06-1.06l2.47 2.47V1.75A.75.75 0 0 1 8 1ZM2 12.25a.75.75 0 0 1 1.5 0v1.25h9v-1.25a.75.75 0 0 1 1.5 0v1.5c0 .69-.56 1.25-1.25 1.25H3.25C2.56 15 2 14.44 2 13.75v-1.5Z"/></svg>
+          Download
+        </a>
       </nav>
-      <section>
-        <img class="app-icon" src="assets/app-icon.png" alt="Ulanzi Plugin Store app icon" width="96" height="96">
-        <p class="eyebrow">Unofficial desktop app</p>
-        <h1>Install Ulanzi Deck and Dial plugins without hunting through repos.</h1>
-        <p class="lead">Browse the catalog, install plugins, update them, and remove them from a focused desktop app for macOS and Windows.</p>
-        <div class="actions">
-          <a class="button" href="https://github.com/narlei/ulanzipluginstore/releases/latest" target="_blank" rel="noopener noreferrer">Download latest release</a>
-          <a class="button secondary" href="https://github.com/narlei/ulanzipluginstore/tree/main/registry" target="_blank" rel="noopener noreferrer">Publish a plugin</a>
-        </div>
-        <p class="platforms">macOS &middot; Windows &middot; Free and open source</p>
-      </section>
     </header>
 
     <main>
-      <section class="features" id="features">
-        <article>
-          <h2>One-click installs</h2>
-          <p>The app downloads the latest plugin release and places it in the Ulanzi plugins folder for you.</p>
-        </article>
-        <article>
-          <h2>Catalog-first</h2>
-          <p>Plugins come from the official registry, generated automatically from GitHub releases and manifests.</p>
-        </article>
-        <article>
-          <h2>Cross-platform</h2>
-          <p>Electron builds are published for macOS and Windows through GitHub Releases.</p>
-        </article>
+      <!-- ============ HERO ============ -->
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="badge">
+            <span class="badge-dot"></span>
+            Unofficial · Free · Open source
+          </p>
+          <h1>
+            Every Ulanzi&nbsp;Deck plugin.
+            <span class="gradient-text">One&nbsp;click away.</span>
+          </h1>
+          <p class="lead">
+            Stop hunting through repos and unzipping folders by hand. Browse a curated catalog,
+            install plugins, and keep them updated — from a beautiful desktop app for macOS and Windows.
+          </p>
+          <div class="actions">
+            <a class="button button-lg" href="https://github.com/narlei/ulanzipluginstore/releases/latest" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v7.19l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0L3.72 7.53a.75.75 0 0 1 1.06-1.06l2.47 2.47V1.75A.75.75 0 0 1 8 1ZM2 12.25a.75.75 0 0 1 1.5 0v1.25h9v-1.25a.75.75 0 0 1 1.5 0v1.5c0 .69-.56 1.25-1.25 1.25H3.25C2.56 15 2 14.44 2 13.75v-1.5Z"/></svg>
+              Download for free
+            </a>
+            <a class="button button-lg secondary" href="https://github.com/narlei/ulanzipluginstore/tree/main/registry" target="_blank" rel="noopener noreferrer">
+              Publish a plugin
+            </a>
+          </div>
+          <p class="platforms">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M11.53 2.3c.6-.72 1-1.72.9-2.3-.86.06-1.9.6-2.5 1.3-.55.64-1.03 1.66-.9 2.64.96.08 1.9-.48 2.5-1.64Zm2.9 9.03c-.4.9-.6 1.3-1.12 2.1-.72 1.1-1.74 2.48-3 2.5-1.12.01-1.41-.74-2.93-.73-1.52 0-1.84.74-2.96.72-1.26-.01-2.22-1.25-2.94-2.36C-.5 10.44-.7 6.64.83 4.62c1.09-1.43 2.8-1.6 3.7-1.6 1.14 0 1.86.63 2.8.63.92 0 1.48-.63 2.8-.63.8 0 2.24.13 3.3 1.5-2.9 1.6-2.43 5.7.99 6.8Z"/></svg>
+            macOS
+            <span class="dot-sep">·</span>
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M0 2.26 6.53 1.4v6.24H0V2.26Zm7.32-.97L16 0v7.64H7.32V1.29ZM0 8.43h6.53v6.25L0 13.78V8.43Zm7.32 0H16V16l-8.68-1.24V8.43Z"/></svg>
+            Windows
+            <span class="dot-sep">·</span>
+            No account needed
+          </p>
+        </div>
+
+        <!-- App window mockup -->
+        <div class="hero-visual" aria-hidden="true">
+          <div class="window">
+            <div class="window-bar">
+              <span class="wdot wdot-r"></span>
+              <span class="wdot wdot-y"></span>
+              <span class="wdot wdot-g"></span>
+              <span class="window-title">Ulanzi Plugin Store</span>
+              <span class="window-search">
+                <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M11.7 10.3a6 6 0 1 0-1.4 1.4l3 3a1 1 0 0 0 1.4-1.4l-3-3ZM7 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/></svg>
+                Search plugins…
+              </span>
+            </div>
+            <div class="window-body">
+              <div class="window-row">
+                <img class="wp-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_ticktick/main/com.narlei.ticktickfocus.ulanziPlugin/resources/icon.png" alt="" loading="lazy">
+                <div class="wp-meta">
+                  <strong>TickTick Focus</strong>
+                  <span>Pomodoro control on a smart button · v1.0.1</span>
+                </div>
+                <span class="wp-btn wp-installed">✓ Installed</span>
+              </div>
+              <div class="window-row">
+                <img class="wp-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck-ai-cost/main/com.narlei.aicost.ulanziPlugin/resources/icon.png" alt="" loading="lazy">
+                <div class="wp-meta">
+                  <strong>AI Cost Monitor</strong>
+                  <span>Track AI coding spend locally · v1.0.3</span>
+                </div>
+                <span class="wp-btn wp-installing"><span class="wp-progress"></span><span class="wp-btn-label">Installing…</span></span>
+              </div>
+              <div class="window-row">
+                <img class="wp-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_claude/main/com.claude.usage.ulanziPlugin/resources/icon.png" alt="" loading="lazy">
+                <div class="wp-meta">
+                  <strong>Claude Code Usage</strong>
+                  <span>Live subscription limits · v1.0.6</span>
+                </div>
+                <span class="wp-btn">Install</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-visual-glow"></div>
+        </div>
       </section>
 
-      <section class="steps" id="how-it-works">
-        <h2 class="section-title">How it works</h2>
-        <ol>
-          <li>
+      <!-- ============ STATS STRIP ============ -->
+      <section class="stats reveal">
+        <div class="stat">
+          <strong>1‑click</strong>
+          <span>install &amp; update</span>
+        </div>
+        <div class="stat">
+          <strong>100%</strong>
+          <span>open source</span>
+        </div>
+        <div class="stat">
+          <strong>2</strong>
+          <span>platforms: macOS &amp; Windows</span>
+        </div>
+        <div class="stat">
+          <strong>0</strong>
+          <span>accounts, trackers or ads</span>
+        </div>
+      </section>
+
+      <!-- ============ FEATURES ============ -->
+      <section class="section" id="features">
+        <p class="section-eyebrow reveal">Why you'll love it</p>
+        <h2 class="section-title reveal">Built for people who'd rather<br>create than configure.</h2>
+        <div class="feature-grid">
+          <article class="card reveal">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+            </div>
+            <h3>One-click installs</h3>
+            <p>The app grabs the latest release and drops it straight into your Ulanzi plugins folder. No unzipping, no path juggling.</p>
+          </article>
+          <article class="card reveal">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+            </div>
+            <h3>Updates that find you</h3>
+            <p>See at a glance when an installed plugin has a new version and update it with a single click.</p>
+          </article>
+          <article class="card reveal">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2.4"/></svg>
+            </div>
+            <h3>Curated catalog</h3>
+            <p>Every plugin comes from a reviewed registry, generated automatically from GitHub releases and manifests.</p>
+          </article>
+          <article class="card reveal">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            </div>
+            <h3>macOS &amp; Windows</h3>
+            <p>Native desktop builds for both platforms, published automatically through GitHub Releases.</p>
+          </article>
+          <article class="card reveal">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4z"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <h3>Safe by default</h3>
+            <p>ZIP extraction validates plugin IDs and entry paths before anything is written to disk. Only catalog plugins install by default.</p>
+          </article>
+          <article class="card reveal">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 8-5 4 5 4M15 8l5 4-5 4"/></svg>
+            </div>
+            <h3>Open source</h3>
+            <p>The app, the registry, and the catalog pipeline are all public on GitHub. Audit it, fork it, contribute to it.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============ PLUGINS ============ -->
+      <section class="section" id="plugins">
+        <p class="section-eyebrow reveal">In the catalog today</p>
+        <h2 class="section-title reveal">A growing set of plugins,<br>built in the open.</h2>
+        <div class="plugin-grid">
+          <article class="card plugin-card reveal">
+            <img class="plugin-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_ticktick/main/com.narlei.ticktickfocus.ulanziPlugin/resources/icon.png" alt="" loading="lazy" width="52" height="52">
+            <div class="plugin-head">
+              <h3>TickTick Focus</h3>
+              <span class="chip">Productivity</span>
+            </div>
+            <p>Start, pause, and mirror your TickTick focus/pomodoro sessions from a single smart button, with live remaining time on your deck.</p>
+            <a class="card-link" href="https://github.com/narlei/ulanzideck_ticktick" target="_blank" rel="noopener noreferrer">View source <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="card plugin-card reveal">
+            <img class="plugin-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck-ai-cost/main/com.narlei.aicost.ulanziPlugin/resources/icon.png" alt="" loading="lazy" width="52" height="52">
+            <div class="plugin-head">
+              <h3>AI Cost Monitor</h3>
+              <span class="chip">Dev tools</span>
+            </div>
+            <p>Track spend on Claude, Codex, Cursor, Gemini, Copilot and more, right on your deck. Data is read locally — no API keys needed.</p>
+            <a class="card-link" href="https://github.com/narlei/ulanzideck-ai-cost" target="_blank" rel="noopener noreferrer">View source <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="card plugin-card reveal">
+            <img class="plugin-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_claude/main/com.claude.usage.ulanziPlugin/resources/icon.png" alt="" loading="lazy" width="52" height="52">
+            <div class="plugin-head">
+              <h3>Claude Code Usage</h3>
+              <span class="chip">Dev tools</span>
+            </div>
+            <p>Monitor your 5-hour and weekly Claude Code limits in real time, with color-coded thresholds and a reset countdown.</p>
+            <a class="card-link" href="https://github.com/narlei/ulanzideck_claude" target="_blank" rel="noopener noreferrer">View source <span aria-hidden="true">→</span></a>
+          </article>
+        </div>
+        <div class="center reveal">
+          <a class="button secondary" href="https://github.com/narlei/ulanzipluginstore/tree/main/registry/plugins" target="_blank" rel="noopener noreferrer">Browse the full registry</a>
+        </div>
+      </section>
+
+      <!-- ============ HOW IT WORKS ============ -->
+      <section class="section" id="how-it-works">
+        <p class="section-eyebrow reveal">How it works</p>
+        <h2 class="section-title reveal">From zero to new plugin<br>in under a minute.</h2>
+        <ol class="steps">
+          <li class="card reveal">
             <span class="step-index">1</span>
-            <div>
-              <h3>Download the app</h3>
-              <p>Grab the latest release for macOS or Windows straight from GitHub.</p>
-            </div>
+            <h3>Download the app</h3>
+            <p>Grab the latest release for macOS or Windows straight from GitHub. Free, no account required.</p>
           </li>
-          <li>
+          <li class="card reveal">
             <span class="step-index">2</span>
-            <div>
-              <h3>Browse the catalog</h3>
-              <p>See every approved plugin with its description, version, and source repository.</p>
-            </div>
+            <h3>Browse the catalog</h3>
+            <p>See every approved plugin with its description, version, screenshots, and source repository.</p>
           </li>
-          <li>
+          <li class="card reveal">
             <span class="step-index">3</span>
-            <div>
-              <h3>Install, update, or remove</h3>
-              <p>One click writes the plugin into your Ulanzi plugins folder — no manual unzip, no path juggling.</p>
-            </div>
+            <h3>Click install</h3>
+            <p>The plugin lands in your Ulanzi plugins folder, ready to drag onto a key. Updates are one click too.</p>
           </li>
         </ol>
       </section>
 
-      <section class="plugins" id="plugins">
-        <h2 class="section-title">In the catalog today</h2>
-        <p class="section-lead">A growing set of independent plugins, all built and maintained in the open.</p>
-        <div class="plugin-grid">
-          <article class="plugin-card">
-            <img class="plugin-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_ticktick/main/com.narlei.ticktickfocus.ulanziPlugin/resources/icon.png" alt="" loading="lazy" width="48" height="48">
-            <h3>TickTick Focus</h3>
-            <p>Start, pause, and mirror your TickTick focus/pomodoro sessions from a single smart button, with live remaining time on your deck.</p>
-            <a href="https://github.com/narlei/ulanzideck_ticktick" target="_blank" rel="noopener noreferrer">View source →</a>
-          </article>
-          <article class="plugin-card">
-            <img class="plugin-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck-ai-cost/main/com.narlei.aicost.ulanziPlugin/resources/icon.png" alt="" loading="lazy" width="48" height="48">
-            <h3>AI Cost Monitor</h3>
-            <p>Track spend on Claude, Codex, Cursor, Gemini, Copilot and more, right on your deck. Data is read locally — no API keys needed.</p>
-            <a href="https://github.com/narlei/ulanzideck-ai-cost" target="_blank" rel="noopener noreferrer">View source →</a>
-          </article>
-          <article class="plugin-card">
-            <img class="plugin-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_claude/main/com.claude.usage.ulanziPlugin/resources/icon.png" alt="" loading="lazy" width="48" height="48">
-            <h3>Claude Code Usage</h3>
-            <p>Monitor your 5-hour and weekly Claude Code limits in real time, with color-coded thresholds and a reset countdown.</p>
-            <a href="https://github.com/narlei/ulanzideck_claude" target="_blank" rel="noopener noreferrer">View source →</a>
-          </article>
+      <!-- ============ FINAL CTA ============ -->
+      <section class="cta reveal">
+        <div class="cta-inner">
+          <img class="cta-icon" src="assets/app-icon.png" alt="" width="72" height="72">
+          <h2>Your deck deserves better plugins.</h2>
+          <p>Free, open source, and ready in seconds.</p>
+          <a class="button button-lg" href="https://github.com/narlei/ulanzipluginstore/releases/latest" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v7.19l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0L3.72 7.53a.75.75 0 0 1 1.06-1.06l2.47 2.47V1.75A.75.75 0 0 1 8 1ZM2 12.25a.75.75 0 0 1 1.5 0v1.25h9v-1.25a.75.75 0 0 1 1.5 0v1.5c0 .69-.56 1.25-1.25 1.25H3.25C2.56 15 2 14.44 2 13.75v-1.5Z"/></svg>
+            Download the latest release
+          </a>
         </div>
-        <a class="link-more" href="https://github.com/narlei/ulanzipluginstore/tree/main/registry/plugins" target="_blank" rel="noopener noreferrer">Browse the full registry on GitHub →</a>
       </section>
 
-      <section class="note" id="about">
-        <h2>Independent project</h2>
-        <p>This is an unofficial community project. It is not affiliated with, endorsed by, or maintained by Ulanzi.</p>
+      <section class="note reveal" id="about">
+        <p><strong>Independent project.</strong> This is an unofficial community project. It is not affiliated with, endorsed by, or maintained by Ulanzi.</p>
       </section>
     </main>
 
@@ -128,9 +280,37 @@
       <div class="footer-links">
         <a href="https://github.com/narlei/ulanzipluginstore" target="_blank" rel="noopener noreferrer">GitHub</a>
         <a href="https://github.com/narlei/ulanzipluginstore/releases/latest" target="_blank" rel="noopener noreferrer">Releases</a>
+        <a href="https://github.com/narlei/ulanzipluginstore/tree/main/registry" target="_blank" rel="noopener noreferrer">Publish a plugin</a>
         <a href="https://github.com/narlei/ulanzipluginstore/issues" target="_blank" rel="noopener noreferrer">Report an issue</a>
       </div>
       <p class="copyright">Ulanzi Plugin Store is an unofficial, community-run project.</p>
     </footer>
+
+    <script>
+      (function () {
+        var header = document.getElementById('siteHeader');
+        var onScroll = function () {
+          header.classList.toggle('scrolled', window.scrollY > 12);
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var items = document.querySelectorAll('.reveal');
+        if (reduce || !('IntersectionObserver' in window)) {
+          items.forEach(function (el) { el.classList.add('in'); });
+          return;
+        }
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('in');
+              io.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+        items.forEach(function (el) { io.observe(el); });
+      })();
+    </script>
   </body>
 </html>
