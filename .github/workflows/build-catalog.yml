@@ -1,7 +1,7 @@
 name: build-catalog
 
-# Regenera public_html/catalog.json a partir do registry e commita na main.
-# A Hostinger publica sozinha ao detectar o push (integração GitHub → public_html).
+# Regenera catalog.json a partir do registry e commita na main.
+# A Hostinger publica sozinha ao detectar o push (o repo inteiro vira o public_html).
 
 on:
   push:
@@ -38,12 +38,12 @@ jobs:
 
       - name: Commitar se mudou
         run: |
-          if git diff --quiet -- public_html/catalog.json; then
+          if git diff --quiet -- catalog.json; then
             echo "Catálogo sem mudanças."
             exit 0
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public_html/catalog.json
+          git add catalog.json
           git commit -m "chore: atualiza catálogo [skip ci]"
           git push

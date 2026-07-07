@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Gera public_html/catalog.json a partir das entradas em registry/plugins/*.json.
+// Gera catalog.json (na raiz do repo) a partir das entradas em registry/plugins/*.json.
 // Para cada { repo }, lê a release mais nova + manifest.json + store.json (opcional) via
 // API do GitHub e monta a entrada do catálogo. Um repo com erro é ignorado (com aviso),
 // nunca derruba o catálogo inteiro.
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const REGISTRY_DIR = join(ROOT, 'registry', 'plugins');
-const OUT_FILE = join(ROOT, 'public_html', 'catalog.json');
+const OUT_FILE = join(ROOT, 'catalog.json');
 
 const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
 const API = 'https://api.github.com';

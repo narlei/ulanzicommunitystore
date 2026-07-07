@@ -28,11 +28,16 @@ residente, servidor em `127.0.0.1`) faz a instalação. O site conversa com ele 
 
 ## Componentes
 
-| Pasta | O quê |
+> A raiz do repo **é** o document root: a Hostinger sincroniza o repositório inteiro em
+> `public_html`, então `index.php`, `assets/` e `catalog.json` ficam na raiz. Um `.htaccess`
+> esconde as pastas de dev (`helper/`, `scripts/`, `.git`…).
+
+| Item | O quê |
 |-------|-------|
-| `public_html/` | Site PHP+HTML (sem build). Deploy Hostinger via push na `main`. |
+| `index.php`, `plugin.php`, `publish.php`, `assets/` | Site PHP+HTML (sem build). Deploy Hostinger via push na `main`. |
+| `catalog.json` | Catálogo gerado (na raiz, servido em `/catalog.json`). |
 | `registry/plugins/*.json` | Fonte da verdade. Dev abre PR com `{ "repo": "owner/repo" }`. |
-| `scripts/build-catalog.mjs` | Gera `public_html/catalog.json` lendo os repos via API do GitHub. |
+| `scripts/build-catalog.mjs` | Gera `catalog.json` lendo os repos via API do GitHub. |
 | `helper/` | Daemon Go: `/ping`, `/install`, `/installed`, `/status`, `/uninstall`. |
 | `.github/workflows/` | `build-catalog` (regenera o catálogo) e `release-helper` (binários). |
 
@@ -42,8 +47,8 @@ residente, servidor em `127.0.0.1`) faz a instalação. O site conversa com ele 
 # catálogo
 GH_TOKEN=$(gh auth token) node scripts/build-catalog.mjs
 
-# site
-php -S 127.0.0.1:8123 -t public_html
+# site (raiz do repo é o document root)
+php -S 127.0.0.1:8123 -t .
 
 # helper (aponta pro catálogo local, instala numa pasta de teste, sem reiniciar o app)
 cd helper

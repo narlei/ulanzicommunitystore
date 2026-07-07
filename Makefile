@@ -8,12 +8,13 @@ BIN := $(BIN_DIR)/ulanzideck-store-helper
 
 .PHONY: run_local catalog helper_local install_helper uninstall_helper
 
-# Sobe o site localmente em http://127.0.0.1:8123 (sem build, igual à Hostinger).
+# Sobe o site localmente em http://127.0.0.1:8123 (sem build, igual à Hostinger:
+# a raiz do repo é o document root).
 run_local:
 	@echo "Site em http://$(HOST):$(PORT)  (Ctrl+C para parar)"
-	php -S $(HOST):$(PORT) -t public_html
+	php -S $(HOST):$(PORT) -t .
 
-# Regenera public_html/catalog.json a partir do registry (precisa de gh logado).
+# Regenera catalog.json a partir do registry (precisa de gh logado).
 catalog:
 	GH_TOKEN=$$(gh auth token) node scripts/build-catalog.mjs
 
