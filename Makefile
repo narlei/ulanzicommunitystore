@@ -42,3 +42,17 @@ install_helper:
 uninstall_helper:
 	-"$(BIN)" uninstall-agent
 	@echo "Helper removido. (binário em $(BIN_DIR) pode ser apagado)"
+
+# ---- App desktop (Electron) ----
+# Roda o app em modo dev. Use CATALOG_URL pra apontar pro catálogo local:
+#   make app CATALOG_URL=http://127.0.0.1:8123/catalog.json  (com 'make run_local' no ar)
+app:
+	cd app && STORE_CATALOG_URL=$(CATALOG_URL) npm start
+
+# Instala deps do app (Electron etc.).
+app_deps:
+	cd app && npm install
+
+# Gera os instaladores (.dmg no Mac, .exe no Windows).
+app_dist:
+	cd app && npm run dist

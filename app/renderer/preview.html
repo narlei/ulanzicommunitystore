@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ulanzi Plugin Store (preview)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <span class="brand"><span class="brand-mark">◈</span><span class="brand-name">Ulanzi Plugin Store</span></span>
+      <nav class="header-nav">
+        <a href="#" data-i18n="nav.publish">Publish</a>
+        <span class="lang-switch" id="lang-switch"></span>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="hero"><h1 id="hero-title"></h1><p class="hero-sub" id="hero-sub"></p></section>
+    <section class="toolbar" id="toolbar" hidden>
+      <div class="search"><input type="search" id="search" autocomplete="off" spellcheck="false"></div>
+      <div class="filter-group" id="device-filter" data-group="device" role="group"></div>
+    </section>
+    <div class="loading" id="loading" data-i18n="loading">Loading…</div>
+    <div class="load-error" id="load-error" hidden></div>
+    <section class="grid" id="grid" hidden></section>
+    <p class="empty" id="no-results" hidden></p>
+  </main>
+  <footer class="site-footer"><div class="wrap"><p class="disclaimer" id="disclaimer"></p></div></footer>
+  <div id="detail-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-modal-close></div>
+    <div class="modal-card detail-modal" role="dialog" aria-modal="true">
+      <button type="button" class="modal-x" data-modal-close aria-label="×">&times;</button>
+      <div id="detail-body"></div>
+    </div>
+  </div>
+
+  <!-- MOCK do window.api só para preview no navegador (não vai pro app) -->
+  <script>
+    const _cbs = [];
+    window.api = {
+      getCatalog: () => fetch('/catalog.json').then((r) => r.json()),
+      listInstalled: () => Promise.resolve([
+        { pluginId: 'com.narlei.ticktickfocus.ulanziPlugin', version: '1.0.0' },
+        { pluginId: 'com.claude.usage.ulanziPlugin', version: '1.0.6' },
+      ]),
+      install: async (cp) => {
+        for (const p of [10, 50, 75, 100]) { _cbs.forEach((cb) => cb({ id: cp.id, pct: p })); await new Promise((r) => setTimeout(r, 150)); }
+      },
+      uninstall: async () => { await new Promise((r) => setTimeout(r, 200)); },
+      checkUpdates: async () => [],
+      onProgress: (cb) => _cbs.push(cb),
+    };
+  </script>
+  <script src="i18n-data.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

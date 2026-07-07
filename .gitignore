@@ -2,5 +2,6 @@
 node_modules/
 helper/dist/
 helper/ulanzideck-store-helper
+app/dist/
 *.log
 .claude/launch.json
