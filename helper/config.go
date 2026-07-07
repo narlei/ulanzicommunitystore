@@ -18,8 +18,8 @@ const (
 )
 
 // URL do catalog.json publicado (fonte de verdade para o modo registry).
-// Trocar pelo domínio real da loja, ou sobrescrever com HELPER_CATALOG_URL.
-const defaultCatalogURL = "https://store.narlei.dev/catalog.json"
+// Sobrescreva com HELPER_CATALOG_URL para dev/local.
+const defaultCatalogURL = "https://ulanzipluginstore.narlei.com/catalog.json"
 
 func catalogURL() string {
 	if v := os.Getenv("HELPER_CATALOG_URL"); v != "" {
