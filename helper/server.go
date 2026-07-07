@@ -41,6 +41,11 @@ func (s *server) withCORS(next http.HandlerFunc) http.HandlerFunc {
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 			w.Header().Set("Access-Control-Max-Age", "600")
+			// Private Network Access (Chrome): páginas https públicas chamando o
+			// loopback exigem este header no preflight, senão a request é bloqueada.
+			if r.Header.Get("Access-Control-Request-Private-Network") == "true" {
+				w.Header().Set("Access-Control-Allow-Private-Network", "true")
+			}
 		}
 
 		if r.Method == http.MethodOptions {
