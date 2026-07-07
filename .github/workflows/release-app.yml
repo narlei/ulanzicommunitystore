@@ -98,6 +98,7 @@ jobs:
         with:
           tag_name: ${{ needs.version.outputs.tag }}
           name: Ulanzi Plugin Store ${{ needs.version.outputs.tag }}
+          body_path: release_notes.md
           files: release-assets/*
           draft: false
           prerelease: false

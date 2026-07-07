@@ -1,7 +1,7 @@
 {
   "name": "@ulanzideck/store-desktop",
   "productName": "Ulanzi Plugin Store",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "description": "Desktop plugin store for Ulanzi Deck and Dial",
   "private": true,
   "type": "module",
@@ -62,12 +62,16 @@
         ]
       }
     ],
+    "afterPack": "scripts/afterPack.cjs",
     "mac": {
       "target": [
         "dmg",
         "zip"
       ],
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
     },
     "win": {
       "target": [

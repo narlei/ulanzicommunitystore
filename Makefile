@@ -25,7 +25,8 @@ typecheck:
 	npm run typecheck
 
 catalog:
-	npm run catalog:build
+	@test -n "$$(gh auth token 2>/dev/null)" || (echo "GitHub token nao encontrado. Rode: gh auth login" && exit 1)
+	GH_TOKEN=$$(gh auth token) npm run catalog:build
 
 catalog_validate:
 	npm run catalog:validate

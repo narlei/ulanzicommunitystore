@@ -74,31 +74,43 @@ Once your PR is merged, a GitHub Action reads your manifest and latest release a
 
 ## 🛠️ Development
 
+Everything goes through the [`Makefile`](Makefile):
+
 ```bash
-npm install
-npm run app        # build catalog + launch the app in dev mode
+make run    # install deps, build catalog, typecheck, build and open the app
 ```
 
-Useful commands:
+Useful targets:
 
 ```bash
-npm run typecheck                                # type-check everything
-npm run app:build                                # build the desktop app
-GH_TOKEN=$(gh auth token) npm run catalog:build  # generate dist/catalog/catalog.json
-npm run catalog:validate                         # validate registry entries
-make marketing                                   # package the marketing site
+make app               # launch the app in dev mode
+make typecheck         # type-check everything
+make catalog           # generate dist/catalog/catalog.json (uses gh auth token)
+make catalog_validate  # validate registry entries
+make release           # sync version + build distributables
+make marketing         # serve the marketing site locally
+make version           # print the current app version
 ```
 
 By default the app loads the locally generated catalog at `dist/catalog/catalog.json`. Override the source when needed:
 
 ```bash
-STORE_CATALOG_FILE=/absolute/path/catalog.json npm run app
-STORE_CATALOG_URL=https://example.com/catalog.json npm run app
+STORE_CATALOG_FILE=/absolute/path/catalog.json make app
+STORE_CATALOG_URL=https://example.com/catalog.json make app
 ```
 
 ## 📦 Releases
 
-[`VERSION`](VERSION) is the single source of truth. When it changes on `main`, GitHub Actions builds and publishes a release with the macOS `.dmg` + `.zip` and the Windows `.exe`. Artifacts are currently unsigned; the Electron Builder config is ready for future signing/notarization secrets.
+[`VERSION`](VERSION) is the single source of truth. When it changes on `main`, GitHub Actions builds and publishes a release with the macOS `.dmg` + `.zip` and the Windows `.exe`. Artifacts are ad-hoc signed (no Apple Developer account, not notarized), so macOS Gatekeeper still flags the app as coming from an unidentified developer. To open it the first time:
+
+1. Drag **Ulanzi Plugin Store.app** to `/Applications`.
+2. Right-click (or Control-click) the app → **Open** → **Open** again in the dialog. (Double-clicking it directly gets blocked.)
+
+If macOS still says the app is damaged, clear the quarantine flag manually:
+
+```bash
+xattr -cr "/Applications/Ulanzi Plugin Store.app"
+```
 
 The catalog (`catalog.json`) is generated — never versioned. Registry entries in [`registry/plugins/*.json`](registry/plugins) are the source of truth, published automatically through GitHub Pages.
 
