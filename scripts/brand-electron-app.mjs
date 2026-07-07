@@ -31,3 +31,13 @@ if (!productName) process.exit(0);
 for (const key of ['CFBundleName', 'CFBundleDisplayName']) {
   spawnSync('plutil', ['-replace', key, '-string', productName, infoPlist], { stdio: 'inherit' });
 }
+
+// macOS's Launch Services caches the Info.plist contents it saw the first time it indexed
+// this bundle path (Dock/Spotlight/menu bar all read from that cache, not the file on disk).
+// Force it to re-scan this bundle so the rename actually shows up.
+const lsregister =
+  '/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister';
+const appBundle = join(electronPkgDir, 'dist', 'Electron.app');
+if (existsSync(lsregister)) {
+  spawnSync(lsregister, ['-f', appBundle], { stdio: 'inherit' });
+}

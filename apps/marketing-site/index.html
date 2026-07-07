@@ -3,37 +3,61 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ulanzi Plugin Store</title>
-    <meta name="description" content="Unofficial desktop plugin store for Ulanzi Deck and Dial.">
+    <title>Ulanzi Plugin Store — install Ulanzi Deck &amp; Dial plugins in one click</title>
+    <meta name="description" content="Unofficial desktop app to browse, install, update and remove Ulanzi Deck and Dial plugins from a curated catalog. Free and open source, for macOS and Windows.">
+    <link rel="canonical" href="https://narlei.github.io/ulanzipluginstore/">
+    <meta name="theme-color" content="#090d14">
+    <link rel="icon" type="image/png" href="assets/app-icon.png">
+    <link rel="apple-touch-icon" href="assets/app-icon.png">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Ulanzi Plugin Store">
+    <meta property="og:description" content="Browse, install, update and remove Ulanzi Deck and Dial plugins from a focused desktop app for macOS and Windows.">
+    <meta property="og:image" content="assets/app-icon.png">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Ulanzi Plugin Store">
+    <meta name="twitter:description" content="Browse, install, update and remove Ulanzi Deck and Dial plugins from a focused desktop app for macOS and Windows.">
+    <meta name="twitter:image" content="assets/app-icon.png">
+
     <link rel="stylesheet" href="assets/style.css">
   </head>
-  <body>
+  <body id="top">
     <header class="hero">
       <nav>
-        <strong>Ulanzi Plugin Store</strong>
-        <a href="https://github.com/narlei/ulanzideck_store/releases/latest">Download</a>
+        <a class="brand" href="#top">
+          <img class="brand-icon" src="assets/app-icon.png" alt="" width="28" height="28">
+          Ulanzi Plugin Store
+        </a>
+        <div class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#plugins">Plugins</a>
+          <a href="#how-it-works">How it works</a>
+          <a href="https://github.com/narlei/ulanzipluginstore" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+        <a class="button nav-cta" href="https://github.com/narlei/ulanzipluginstore/releases/latest" target="_blank" rel="noopener noreferrer">Download</a>
       </nav>
       <section>
-        <img class="app-icon" src="assets/app-icon.png" alt="">
+        <img class="app-icon" src="assets/app-icon.png" alt="Ulanzi Plugin Store app icon" width="96" height="96">
         <p class="eyebrow">Unofficial desktop app</p>
         <h1>Install Ulanzi Deck and Dial plugins without hunting through repos.</h1>
         <p class="lead">Browse the catalog, install plugins, update them, and remove them from a focused desktop app for macOS and Windows.</p>
         <div class="actions">
-          <a class="button" href="https://github.com/narlei/ulanzideck_store/releases/latest">Download latest release</a>
-          <a class="button secondary" href="https://github.com/narlei/ulanzideck_store/tree/main/registry">Publish a plugin</a>
+          <a class="button" href="https://github.com/narlei/ulanzipluginstore/releases/latest" target="_blank" rel="noopener noreferrer">Download latest release</a>
+          <a class="button secondary" href="https://github.com/narlei/ulanzipluginstore/tree/main/registry" target="_blank" rel="noopener noreferrer">Publish a plugin</a>
         </div>
+        <p class="platforms">macOS &middot; Windows &middot; Free and open source</p>
       </section>
     </header>
 
     <main>
-      <section class="features">
+      <section class="features" id="features">
         <article>
           <h2>One-click installs</h2>
-          <p>The app downloads the latest plugin release and places it in the Ulanzi plugins folder.</p>
+          <p>The app downloads the latest plugin release and places it in the Ulanzi plugins folder for you.</p>
         </article>
         <article>
           <h2>Catalog-first</h2>
-          <p>Plugins come from the official registry, generated from GitHub releases and manifests.</p>
+          <p>Plugins come from the official registry, generated automatically from GitHub releases and manifests.</p>
         </article>
         <article>
           <h2>Cross-platform</h2>
@@ -41,10 +65,72 @@
         </article>
       </section>
 
-      <section class="note">
+      <section class="steps" id="how-it-works">
+        <h2 class="section-title">How it works</h2>
+        <ol>
+          <li>
+            <span class="step-index">1</span>
+            <div>
+              <h3>Download the app</h3>
+              <p>Grab the latest release for macOS or Windows straight from GitHub.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-index">2</span>
+            <div>
+              <h3>Browse the catalog</h3>
+              <p>See every approved plugin with its description, version, and source repository.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-index">3</span>
+            <div>
+              <h3>Install, update, or remove</h3>
+              <p>One click writes the plugin into your Ulanzi plugins folder — no manual unzip, no path juggling.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="plugins" id="plugins">
+        <h2 class="section-title">In the catalog today</h2>
+        <p class="section-lead">A growing set of independent plugins, all built and maintained in the open.</p>
+        <div class="plugin-grid">
+          <article class="plugin-card">
+            <img class="plugin-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_ticktick/main/com.narlei.ticktickfocus.ulanziPlugin/resources/icon.png" alt="" loading="lazy" width="48" height="48">
+            <h3>TickTick Focus</h3>
+            <p>Start, pause, and mirror your TickTick focus/pomodoro sessions from a single smart button, with live remaining time on your deck.</p>
+            <a href="https://github.com/narlei/ulanzideck_ticktick" target="_blank" rel="noopener noreferrer">View source →</a>
+          </article>
+          <article class="plugin-card">
+            <img class="plugin-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck-ai-cost/main/com.narlei.aicost.ulanziPlugin/resources/icon.png" alt="" loading="lazy" width="48" height="48">
+            <h3>AI Cost Monitor</h3>
+            <p>Track spend on Claude, Codex, Cursor, Gemini, Copilot and more, right on your deck. Data is read locally — no API keys needed.</p>
+            <a href="https://github.com/narlei/ulanzideck-ai-cost" target="_blank" rel="noopener noreferrer">View source →</a>
+          </article>
+          <article class="plugin-card">
+            <img class="plugin-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_claude/main/com.claude.usage.ulanziPlugin/resources/icon.png" alt="" loading="lazy" width="48" height="48">
+            <h3>Claude Code Usage</h3>
+            <p>Monitor your 5-hour and weekly Claude Code limits in real time, with color-coded thresholds and a reset countdown.</p>
+            <a href="https://github.com/narlei/ulanzideck_claude" target="_blank" rel="noopener noreferrer">View source →</a>
+          </article>
+        </div>
+        <a class="link-more" href="https://github.com/narlei/ulanzipluginstore/tree/main/registry/plugins" target="_blank" rel="noopener noreferrer">Browse the full registry on GitHub →</a>
+      </section>
+
+      <section class="note" id="about">
         <h2>Independent project</h2>
         <p>This is an unofficial community project. It is not affiliated with, endorsed by, or maintained by Ulanzi.</p>
       </section>
     </main>
+
+    <footer>
+      <div class="footer-links">
+        <a href="https://github.com/narlei/ulanzipluginstore" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://github.com/narlei/ulanzipluginstore/releases/latest" target="_blank" rel="noopener noreferrer">Releases</a>
+        <a href="https://github.com/narlei/ulanzipluginstore/issues" target="_blank" rel="noopener noreferrer">Report an issue</a>
+      </div>
+      <p class="copyright">Ulanzi Plugin Store is an unofficial, community-run project.</p>
+    </footer>
   </body>
 </html>

@@ -21,6 +21,18 @@ body {
 
 a {
   color: inherit;
+  text-decoration: none;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 .hero {
@@ -32,11 +44,45 @@ nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
   color: var(--muted);
 }
 
-nav strong {
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   color: var(--text);
+  font-weight: 800;
+}
+
+.brand-icon {
+  border-radius: 7px;
+  display: block;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin-right: auto;
+  margin-left: 12px;
+}
+
+.nav-links a {
+  transition: color 0.15s ease;
+}
+
+.nav-links a:hover {
+  color: var(--text);
+}
+
+.nav-cta {
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 0.9rem;
 }
 
 .hero section {
@@ -89,16 +135,44 @@ h1 {
   font-weight: 800;
   padding: 0 20px;
   text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(65, 230, 195, 0.25);
 }
 
 .button.secondary {
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.05);
   color: var(--text);
+  box-shadow: none;
+}
+
+.button.secondary:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.platforms {
+  margin-top: 18px;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
 }
 
 main {
   padding: 0 clamp(20px, 5vw, 72px) 72px;
+}
+
+.section-title {
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  margin: 0 0 8px;
+}
+
+.section-lead {
+  margin: 0 0 28px;
+  max-width: 620px;
 }
 
 .features {
@@ -119,6 +193,10 @@ h2 {
   margin: 0 0 10px;
 }
 
+h3 {
+  margin: 0 0 8px;
+}
+
 p {
   color: var(--muted);
 }
@@ -127,12 +205,142 @@ p {
   margin-top: 16px;
 }
 
+.steps {
+  padding-top: 72px;
+}
+
+.steps ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.steps li {
+  display: flex;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 24px;
+}
+
+.step-index {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(65, 230, 195, 0.16);
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.plugins {
+  padding-top: 72px;
+}
+
+.plugin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.plugin-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 24px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.plugin-card:hover {
+  border-color: rgba(65, 230, 195, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.plugin-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  object-fit: cover;
+}
+
+.plugin-card h3 {
+  font-size: 1.05rem;
+}
+
+.plugin-card p {
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.plugin-card a {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--brand);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.link-more {
+  display: inline-block;
+  margin-top: 24px;
+  color: var(--brand);
+  font-weight: 700;
+}
+
+footer {
+  padding: 32px clamp(20px, 5vw, 72px) 48px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.footer-links {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.footer-links a {
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+
+.footer-links a:hover {
+  color: var(--text);
+}
+
+.copyright {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 @media (max-width: 760px) {
-  .features {
+  .features,
+  .steps ol,
+  .plugin-grid {
     grid-template-columns: 1fr;
   }
 
   .hero section {
     padding-top: 10vh;
+  }
+
+  .nav-links {
+    margin-left: 0;
+    order: 3;
+    width: 100%;
   }
 }
