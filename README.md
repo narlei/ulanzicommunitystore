@@ -35,12 +35,22 @@ The Ulanzi Deck and Dial are great hardware — but there was no central place t
 
 ## ⬇️ Download
 
-Grab the latest build from the [**releases page**](https://github.com/narlei/ulanzipluginstore/releases/latest):
+**macOS — install via Terminal (recommended, no Gatekeeper prompts):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/narlei/ulanzipluginstore/main/install.sh | bash
+```
+
+[`install.sh`](install.sh) is a small, readable script — check it before running it if you want. It downloads the latest `.zip` straight from GitHub Releases and installs it to `/Applications`.
+
+Or grab the installer manually from the [**releases page**](https://github.com/narlei/ulanzipluginstore/releases/latest):
 
 | Platform | Artifact |
 | --- | --- |
 | 🍎 macOS | `.dmg` / `.zip` |
 | 🪟 Windows | `.exe` (NSIS installer) |
+
+macOS `.dmg` downloads trigger a Gatekeeper warning on first launch since the app isn't notarized (no Apple Developer account) — see [Releases](#-releases) below for how to get past it.
 
 Or visit the website: [**ulanzipluginstore.narlei.com**](https://ulanzipluginstore.narlei.com)
 
@@ -101,12 +111,23 @@ STORE_CATALOG_URL=https://example.com/catalog.json make app
 
 ## 📦 Releases
 
-[`VERSION`](VERSION) is the single source of truth. When it changes on `main`, GitHub Actions builds and publishes a release with the macOS `.dmg` + `.zip` and the Windows `.exe`. Artifacts are ad-hoc signed (no Apple Developer account, not notarized), so macOS Gatekeeper still flags the app as coming from an unidentified developer. To open it the first time:
+[`VERSION`](VERSION) is the single source of truth. When it changes on `main`, GitHub Actions builds and publishes a release with the macOS `.dmg` + `.zip` and the Windows `.exe`. Artifacts are ad-hoc signed (no Apple Developer account, not notarized).
 
-1. Drag **Ulanzi Plugin Store.app** to `/Applications`.
-2. Right-click (or Control-click) the app → **Open** → **Open** again in the dialog. (Double-clicking it directly gets blocked.)
+**macOS — recommended install:**
 
-If macOS still says the app is damaged, clear the quarantine flag manually:
+```bash
+curl -fsSL https://raw.githubusercontent.com/narlei/ulanzipluginstore/main/install.sh | bash
+```
+
+[`install.sh`](install.sh) fetches the latest `.zip` from GitHub Releases and installs it to `/Applications`. Files downloaded via `curl` aren't tagged with the `com.apple.quarantine` attribute the way browser downloads are, so Gatekeeper never blocks the app — it opens right away, no security prompts.
+
+**macOS — manual `.dmg` download:** since the DMG is downloaded through a browser, it does get quarantined and Gatekeeper will block the first launch. To open it:
+
+1. Drag **Ulanzi Plugin Store.app** to `/Applications` and try to open it — macOS will block it on the first attempt. That's expected.
+2. Go to **System Settings → Privacy & Security**, scroll to the Security section, and click **Open Anyway** next to the message about Ulanzi Plugin Store being blocked.
+3. Try opening the app again — a new dialog appears with an **Open** button. Click it.
+
+(Right-click → Open no longer shows a bypass option on recent macOS versions — the Settings route above is the reliable one.) Or just clear the quarantine flag manually:
 
 ```bash
 xattr -cr "/Applications/Ulanzi Plugin Store.app"

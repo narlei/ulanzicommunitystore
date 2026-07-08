@@ -1,4 +1,5 @@
 import AdmZip from 'adm-zip';
+import { app } from 'electron';
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
@@ -10,8 +11,11 @@ import { isPluginId } from '@ulanzideck/catalog';
 import type { InstallProgress } from '../shared.js';
 import { pluginsDir, ULANZI_APP } from './paths.js';
 
+// Published by .github/workflows/publish-catalog.yml on every registry change.
+const DEFAULT_CATALOG_URL = 'https://narlei.github.io/ulanzipluginstore/catalog.json';
+
 export const CATALOG_URL =
-  process.env.STORE_CATALOG_URL || '';
+  process.env.STORE_CATALOG_URL || (app.isPackaged ? DEFAULT_CATALOG_URL : '');
 
 const UA = 'ulanzi-plugin-store/0.1.0';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

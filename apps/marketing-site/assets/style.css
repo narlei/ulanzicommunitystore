@@ -936,6 +936,233 @@ footer {
   color: var(--muted);
 }
 
+/* ============ Download modal ============ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(5, 8, 14, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 32px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(23, 31, 45, 0.98), rgba(11, 15, 24, 0.99));
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.4);
+  animation: modal-in 0.22s ease;
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.modal-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.modal-close:hover {
+  color: var(--text);
+  background: var(--panel-strong);
+}
+
+.modal h3 {
+  font-size: 1.35rem;
+  margin: 0 0 10px;
+  padding-right: 30px;
+}
+
+.modal-sub {
+  margin: 0 0 24px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.modal-sub a {
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.modal-sub a:hover {
+  text-decoration: underline;
+}
+
+.modal-trust {
+  display: inline-block;
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.modal-option {
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(65, 230, 195, 0.28);
+  background: rgba(65, 230, 195, 0.05);
+}
+
+.modal-option-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.modal-option-head h4 {
+  margin: 0;
+  font-size: 1.02rem;
+  color: var(--text);
+}
+
+.modal-option-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: var(--brand-ink);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.modal-option-os {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.modal-option p {
+  margin: 0 0 14px;
+  font-size: 0.87rem;
+  line-height: 1.55;
+}
+
+.modal-code {
+  position: relative;
+  padding: 12px 84px 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.modal-code code {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--text);
+  white-space: normal;
+  word-break: break-all;
+}
+
+.modal-copy {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  flex: none;
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.modal-copy:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.modal-link {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.modal-link:hover {
+  text-decoration: underline;
+}
+
+.modal-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.modal-divider::before,
+.modal-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.modal-direct {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-note {
+  margin: 16px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.modal-note a {
+  color: var(--brand);
+}
+
+.modal-note a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .modal {
+    padding: 26px 20px;
+  }
+}
+
 /* ============ Reveal animation ============ */
 
 .reveal {
