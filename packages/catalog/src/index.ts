@@ -25,6 +25,8 @@ export type CatalogPlugin = {
   releaseTag: string;
   changelog: string;
   publishedAt: string | null;
+  /** Soma dos downloads dos assets .ulanziPlugin.zip em todas as releases. Ausente em catálogos antigos. */
+  downloads?: number;
   downloadUrl: string;
   sourceUrl: string;
 };

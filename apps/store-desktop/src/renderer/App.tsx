@@ -5,6 +5,7 @@ import type { InstallProgress, Settings, SubmitCheck, SubmitCheckResult } from '
 import { LANG_NAMES, LANGS, detectLang, pluginText, t, type Lang } from './i18n';
 
 type View = 'store' | 'installed' | 'updates' | 'submit' | 'settings';
+type Sort = 'recent' | 'popular';
 
 const REPO_URL = 'https://github.com/narlei/ulanzipluginstore';
 const SDK_URL = 'https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK';
@@ -59,6 +60,7 @@ export function App() {
   const [selected, setSelected] = useState<CatalogPlugin | null>(null);
   const [query, setQuery] = useState('');
   const [device, setDevice] = useState('');
+  const [sort, setSort] = useState<Sort>('recent');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
@@ -135,7 +137,7 @@ export function App() {
   );
 
   const visible = useMemo(() => {
-    return plugins.filter((plugin) => {
+    const filtered = plugins.filter((plugin) => {
       if (view === 'installed' && !installed[plugin.id]) return false;
       if (view === 'updates' && !hasUpdate(plugin, installed)) return false;
       if (device && !(plugin.deviceTypes || []).includes(device)) return false;
@@ -153,7 +155,12 @@ export function App() {
       }
       return true;
     });
-  }, [plugins, view, installed, device, query, lang]);
+    // O catálogo já vem ordenado por data de publicação (recentes primeiro).
+    if (sort === 'popular') {
+      filtered.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
+    }
+    return filtered;
+  }, [plugins, view, installed, device, query, lang, sort]);
 
   async function install(plugin: CatalogPlugin) {
     setBusy((current) => ({ ...current, [plugin.id]: { pct: 2, msg: 'start' } }));
@@ -215,7 +222,7 @@ export function App() {
         </div>
         <nav className="no-drag mt-4 flex-1 space-y-px overflow-y-auto px-3">
           <div className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink3">
-            Ulanzi Plugin Store
+            Ulanzi Community Store
           </div>
           {NAV_VIEWS.map((item) => (
             <button
@@ -248,16 +255,28 @@ export function App() {
           <h1 className="truncate text-[15px] font-semibold">
             {view === 'store' ? t(lang, 'title') : t(lang, view)}
           </h1>
-          {isListView && devices.length > 0 && (
-            <div className="seg no-drag">
-              <button className={device === '' ? 'seg-active' : ''} onClick={() => setDevice('')}>
-                {t(lang, 'all')}
-              </button>
-              {devices.map((item) => (
-                <button key={item} className={device === item ? 'seg-active' : ''} onClick={() => setDevice(item)}>
-                  {deviceLabel(item)}
+          {isListView && (
+            <div className="no-drag flex items-center gap-2">
+              <div className="seg">
+                <button className={sort === 'recent' ? 'seg-active' : ''} onClick={() => setSort('recent')}>
+                  {t(lang, 'sortRecent')}
                 </button>
-              ))}
+                <button className={sort === 'popular' ? 'seg-active' : ''} onClick={() => setSort('popular')}>
+                  {t(lang, 'sortPopular')}
+                </button>
+              </div>
+              {devices.length > 0 && (
+                <div className="seg">
+                  <button className={device === '' ? 'seg-active' : ''} onClick={() => setDevice('')}>
+                    {t(lang, 'all')}
+                  </button>
+                  {devices.map((item) => (
+                    <button key={item} className={device === item ? 'seg-active' : ''} onClick={() => setDevice(item)}>
+                      {deviceLabel(item)}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </header>
@@ -542,6 +561,9 @@ function PluginDetail({
             <h3 className="mb-3 text-[16px] font-semibold">{t(lang, 'details')}</h3>
             <div className="grid grid-cols-2 gap-x-6 rounded-xl bg-surface px-5 shadow-card sm:grid-cols-3 lg:grid-cols-4">
               <DetailCell label={t(lang, 'version')} value={plugin.version} />
+              {typeof plugin.downloads === 'number' && (
+                <DetailCell label={t(lang, 'downloads')} value={plugin.downloads.toLocaleString()} />
+              )}
               {plugin.minSoftwareVersion && <DetailCell label={t(lang, 'minSoftware')} value={plugin.minSoftwareVersion} />}
               {plugin.languages?.length > 0 && <DetailCell label={t(lang, 'languages')} value={plugin.languages.join(', ')} />}
               {plugin.publishedAt && <DetailCell label={t(lang, 'published')} value={plugin.publishedAt.slice(0, 10)} />}
@@ -753,10 +775,24 @@ function SubmitCheckRow({ check, lang }: { check: SubmitCheck; lang: Lang }) {
   );
 }
 
+function DownloadCount({ count }: { count: number }) {
+  return (
+    <span className="chip flex items-center gap-1 tabular-nums">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 shrink-0">
+        <path d="M12 4v11" />
+        <path d="M7 11l5 5 5-5" />
+        <path d="M5 20h14" />
+      </svg>
+      {formatDownloads(count)}
+    </span>
+  );
+}
+
 function Meta({ plugin, showUpdate, lang }: { plugin: CatalogPlugin; showUpdate?: boolean; lang?: Lang }) {
   return (
     <div className="flex min-w-0 flex-wrap gap-1.5">
       {showUpdate && lang && <span className="chip bg-accent text-accent-ink">{t(lang, 'updateBadge')}</span>}
+      {typeof plugin.downloads === 'number' && <DownloadCount count={plugin.downloads} />}
       {(plugin.deviceTypes || []).map((item) => (
         <span className="chip chip-brand" key={item}>
           {deviceLabel(item)}
@@ -960,6 +996,12 @@ function toInstalledMap(items: InstalledPlugin[]): Record<string, string | null>
 function hasUpdate(plugin: CatalogPlugin, installed: Record<string, string | null>): boolean {
   const current = installed[plugin.id];
   return Boolean(current && compareVersions(plugin.version, current) > 0);
+}
+
+function formatDownloads(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+  return String(count);
 }
 
 function deviceLabel(value: string): string {

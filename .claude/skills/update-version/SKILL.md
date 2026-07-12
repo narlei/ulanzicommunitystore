@@ -1,6 +1,6 @@
 ---
 name: update-version
-description: Faz o bump de versão do Ulanzi Plugin Store e recria o release_notes.md a partir do diff acumulado, para o CI publicar como corpo da GitHub Release. Use quando o usuário disser "sobe a versão", "bump de versão", "fecha a release" ou "update-version".
+description: Faz o bump de versão da Ulanzi Community Store e recria o release_notes.md a partir do diff acumulado, para o CI publicar como corpo da GitHub Release. Use quando o usuário disser "sobe a versão", "bump de versão", "fecha a release" ou "update-version".
 ---
 
 Esta skill prepara o repositório para uma nova release: decide o tipo de bump com o usuário, atualiza `VERSION` e reescreve `release_notes.md` (que o workflow `.github/workflows/release-app.yml` usa como `body_path` da GitHub Release quando `VERSION` é empurrado para `main`).

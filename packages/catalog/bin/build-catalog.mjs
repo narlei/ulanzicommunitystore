@@ -103,6 +103,23 @@ async function fetchI18n(repo, pluginId, ref, languages) {
     return out;
 }
 
+// Soma os download_count dos assets *.ulanziPlugin.zip de todas as releases do repo.
+// Falha vira 0 — popularidade nunca derruba a entrada do catálogo.
+async function countDownloads(repo) {
+  try {
+    const releases = await ghJson(`/repos/${repo}/releases?per_page=100`);
+    let total = 0;
+    for (const release of releases) {
+      for (const asset of release.assets || []) {
+        if (asset.name.endsWith('.ulanziPlugin.zip')) total += asset.download_count || 0;
+      }
+    }
+    return total;
+  } catch {
+    return 0;
+  }
+}
+
 async function buildEntry(repo) {
   // 1) release mais nova
   const release = await ghJson(`/repos/${repo}/releases/latest`);
@@ -135,6 +152,7 @@ async function buildEntry(repo) {
   // 5) idiomas + textos localizados (name/description por locale)
   const languages = await detectLanguages(repo, pluginId, ref);
   const i18n = await fetchI18n(repo, pluginId, ref, languages);
+  const downloads = await countDownloads(repo);
 
   // 6) device types (store.json sobrescreve o derivado do manifest)
   const deviceTypes =
@@ -173,6 +191,7 @@ async function buildEntry(repo) {
     releaseTag: release.tag_name,
     changelog: release.body || '',
     publishedAt: release.published_at,
+    downloads,
     // URL estável que sempre aponta pra release mais recente
     downloadUrl: `https://github.com/${repo}/releases/latest/download/${pluginId}.zip`,
     sourceUrl: `https://github.com/${repo}`,

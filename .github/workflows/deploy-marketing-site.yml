@@ -1,0 +1,28 @@
+name: deploy-marketing-site
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'apps/marketing-site/**'
+      - '.github/workflows/deploy-marketing-site.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-marketing-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./apps/marketing-site/
+          server-dir: ./public_html/

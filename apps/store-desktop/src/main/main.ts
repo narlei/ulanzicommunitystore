@@ -32,7 +32,7 @@ function createWindow(): void {
           trafficLightPosition: { x: 20, y: 18 },
         }
       : { backgroundColor: '#1e1e1e' }),
-    title: 'Ulanzi Plugin Store',
+    title: 'Ulanzi Community Store',
     icon: appIconPath(),
     titleBarStyle: isMac ? 'hiddenInset' : 'default',
     webPreferences: {
@@ -103,6 +103,11 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
+    app.setAboutPanelOptions({
+      applicationName: 'Ulanzi Community Store',
+      credits: 'The open-source community store for Ulanzi Deck & Dial plugins.\nMade by the community — unofficial project, not affiliated with Ulanzi.',
+      website: 'https://ulanzipluginstore.narlei.com',
+    });
     if (process.platform === 'darwin') {
       app.dock?.setIcon(nativeImage.createFromPath(appIconPath()));
     }
@@ -146,7 +151,7 @@ ipcMain.handle('updates:check', async () => {
 
   if (updates.length && Notification.isSupported()) {
     new Notification({
-      title: 'Ulanzi Plugin Store',
+      title: 'Ulanzi Community Store',
       body:
         updates.length === 1
           ? `Update available: ${updates[0].name}`
