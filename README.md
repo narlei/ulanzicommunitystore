@@ -1,11 +1,11 @@
 <div align="center">
 
-<img src="apps/marketing-site/assets/app-icon.png" alt="Ulanzi Plugin Store icon" width="128" />
+<img src="apps/marketing-site/assets/app-icon.png" alt="Ulanzi Community Store icon" width="128" />
 
-# Ulanzi Plugin Store
+# Ulanzi Community Store
 
-**The unofficial plugin store for Ulanzi Deck & Dial.**
-Discover, install, and update community plugins — in one click, on macOS and Windows.
+**The open-source community store for Ulanzi Deck & Dial plugins.**
+Built by fans of Ulanzi gear — publish in minutes, install in one click, update automatically.
 
 [![Latest release](https://img.shields.io/github/v/release/narlei/ulanzipluginstore?label=download&color=2dd4bf)](https://github.com/narlei/ulanzipluginstore/releases/latest)
 [![Build](https://img.shields.io/github/actions/workflow/status/narlei/ulanzipluginstore/ci.yml?branch=main&label=build)](https://github.com/narlei/ulanzipluginstore/actions)
@@ -13,25 +13,29 @@ Discover, install, and update community plugins — in one click, on macOS and W
 [![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-8b5cf6)](https://github.com/narlei/ulanzipluginstore/releases/latest)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-2dd4bf.svg)](#-publish-your-plugin)
 
-[**🌐 Website**](https://ulanzipluginstore.narlei.com) · [**⬇️ Download**](https://github.com/narlei/ulanzipluginstore/releases/latest) · [**🚀 Publish your plugin**](https://narlei.github.io/ulanzipluginstore/#publish) · [**🧩 Browse the registry**](registry/README.md)
+[**🌐 Website**](https://ulanzipluginstore.narlei.com) · [**⬇️ Download**](https://github.com/narlei/ulanzipluginstore/releases/latest) · [**🚀 Publish your plugin**](https://narlei.github.io/ulanzipluginstore/#publish) · [**🧩 Browse the community registry**](registry/README.md)
 
-<img src="docs/screenshot-store.png" alt="Ulanzi Plugin Store — store screen" width="850" />
+<img src="docs/screenshot-store.png" alt="Ulanzi Community Store — store screen" width="850" />
 
 </div>
 
 ---
 
-## ✨ Why
+## 💚 What this is (and isn't)
 
-The Ulanzi Deck and Dial are great hardware — but there was no central place to find, install, and keep community plugins up to date. The Ulanzi Plugin Store fixes that:
+The Ulanzi Deck and Dial are great hardware, and the community keeps building great plugins for them. The **Ulanzi Community Store** is where those plugins live in the open: a community-run, open-source catalog where **anyone can publish a plugin with a Pull Request** and every GitHub Release ships as an update to every user, instantly.
 
+**It is not a replacement for the official Ulanzi Studio Marketplace — and it doesn't want to be.** The official marketplace is where plugins get Ulanzi's review and stamp of approval. The Community Store is the companion fast lane: a place for makers to ship early, iterate quickly with users, and grow the ecosystem around Ulanzi devices. More plugins, faster updates, more reasons to love the hardware. That's the whole mission.
+
+- 🚀 **Publish in minutes** — one Pull Request, automated validation, and your plugin is live. No waiting queue.
+- 🔄 **Updates ship instantly** — every new GitHub Release of your plugin becomes an update in the store.
 - 🛍️ **One-click install** — browse the catalog and install straight into your Ulanzi plugins folder.
-- 🔄 **Automatic updates** — every new GitHub Release of a plugin becomes an update in the store.
 - 🌍 **Multilingual** — English, Português, and 中文 out of the box.
-- 🔐 **Safe by default** — only plugins from the reviewed catalog are installable; ZIPs are validated before anything touches your disk.
+- 🔐 **Safe by default** — only plugins from the reviewed community registry are installable; ZIPs are validated before anything touches your disk.
 - 🖥️ **Native desktop app** — Electron + React + TypeScript, for macOS and Windows.
+- 🔓 **100% open source** — the app, the registry, and the pipeline. Audit it, fork it, contribute to it.
 
-> **Note** — This is an unofficial, community-driven project. It is not affiliated with or endorsed by Ulanzi.
+> **Note** — This is an unofficial, community-driven project made by people who love Ulanzi hardware. It is not affiliated with, endorsed by, or maintained by Ulanzi. For official plugins and support, see the Ulanzi Studio Marketplace.
 
 ## ⬇️ Download
 
@@ -56,10 +60,10 @@ Or visit the website: [**ulanzipluginstore.narlei.com**](https://ulanzipluginsto
 
 ## 🚀 Publish Your Plugin
 
-Built something cool for your Deck or Dial? Getting it into the store takes minutes.
+Built something cool for your Deck or Dial? This is the fast lane: getting it into the Community Store takes minutes, and every release you ship afterwards reaches your users automatically.
 
 <div align="center">
-<img src="docs/screenshot-submit.png" alt="Ulanzi Plugin Store — Send plugin screen" width="850" />
+<img src="docs/screenshot-submit.png" alt="Ulanzi Community Store — Send plugin screen" width="850" />
 </div>
 
 **The easy way** — use the **Send plugin** tab in the app, or the [**Publish section on the website**](https://narlei.github.io/ulanzipluginstore/#publish). Paste your GitHub repo URL, and it validates everything and opens the Pull Request for you in one click.
@@ -72,6 +76,8 @@ Built something cool for your Deck or Dial? Getting it into the store takes minu
 
 Once your PR is merged, a GitHub Action reads your manifest and latest release and publishes the plugin automatically. **Every new release you ship becomes an update for every user.** Full details in the [registry guide](registry/README.md).
 
+Publishing here doesn't lock you in — the same plugin can (and should!) also go to the official Ulanzi Studio Marketplace. The Community Store is simply where it can live and evolve while you iterate.
+
 ## 🏗️ Project Structure
 
 | Path | Purpose |
@@ -79,8 +85,8 @@ Once your PR is merged, a GitHub Action reads your manifest and latest release a
 | [`apps/store-desktop/`](apps/store-desktop) | Electron + React + TypeScript + Vite desktop app |
 | [`apps/marketing-site/`](apps/marketing-site) | Static marketing site ([ulanzipluginstore.narlei.com](https://ulanzipluginstore.narlei.com)) |
 | [`packages/catalog/`](packages/catalog) | Catalog types, registry validation, and `catalog.json` builder |
-| [`registry/plugins/`](registry/plugins) | **Source of truth** for approved plugin repos |
-| [`VERSION`](VERSION) | Official app release version — changing it on `main` triggers a release |
+| [`registry/plugins/`](registry/plugins) | **Community registry** — source of truth for approved plugin repos |
+| [`VERSION`](VERSION) | App release version — changing it on `main` triggers a release |
 
 ## 🛠️ Development
 
@@ -123,21 +129,21 @@ curl -fsSL https://raw.githubusercontent.com/narlei/ulanzipluginstore/main/insta
 
 **macOS — manual `.dmg` download:** since the DMG is downloaded through a browser, it does get quarantined and Gatekeeper will block the first launch. To open it:
 
-1. Drag **Ulanzi Plugin Store.app** to `/Applications` and try to open it — macOS will block it on the first attempt. That's expected.
-2. Go to **System Settings → Privacy & Security**, scroll to the Security section, and click **Open Anyway** next to the message about Ulanzi Plugin Store being blocked.
+1. Drag **Ulanzi Community Store.app** to `/Applications` and try to open it — macOS will block it on the first attempt. That's expected.
+2. Go to **System Settings → Privacy & Security**, scroll to the Security section, and click **Open Anyway** next to the message about Ulanzi Community Store being blocked.
 3. Try opening the app again — a new dialog appears with an **Open** button. Click it.
 
 (Right-click → Open no longer shows a bypass option on recent macOS versions — the Settings route above is the reliable one.) Or just clear the quarantine flag manually:
 
 ```bash
-xattr -cr "/Applications/Ulanzi Plugin Store.app"
+xattr -cr "/Applications/Ulanzi Community Store.app"
 ```
 
 The catalog (`catalog.json`) is generated — never versioned. Registry entries in [`registry/plugins/*.json`](registry/plugins) are the source of truth, published automatically through GitHub Pages.
 
 ## 🔐 Security Model
 
-- The app installs **only** plugins from the official catalog by default.
+- The app installs **only** plugins from the community registry catalog by default.
 - ZIP extraction validates plugin IDs and entry paths before writing to the Ulanzi plugins folder.
 - Developer Mode is reserved for future manual installs.
 
@@ -151,6 +157,6 @@ The catalog (`catalog.json`) is generated — never versioned. Registry entries 
 
 **[Website](https://ulanzipluginstore.narlei.com)** · **[Download](https://github.com/narlei/ulanzipluginstore/releases/latest)** · **[Publish a plugin](https://narlei.github.io/ulanzipluginstore/#publish)** · **[Report an issue](https://github.com/narlei/ulanzipluginstore/issues)**
 
-*Unofficial project. Not affiliated with Ulanzi.*
+*Made with 💚 by the community, for the community. Unofficial project — not affiliated with Ulanzi.*
 
 </div>

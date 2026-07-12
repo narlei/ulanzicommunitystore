@@ -1,7 +1,8 @@
-# Registry — How to Submit a Plugin
+# Community Registry — How to Submit a Plugin
 
-This folder is the **source of truth** for the store. Each file `plugins/<owner>__<repo>.json`
-represents a published plugin.
+This folder is the **source of truth** for the Ulanzi Community Store. Each file
+`plugins/<owner>__<repo>.json` represents a published plugin — anyone can add theirs
+with a Pull Request, and every new GitHub Release ships to users automatically.
 
 > **Easy way:** the **Submit Plugin** tab in the app (or the *Publish* section at
 > [narlei.github.io/ulanzipluginstore](https://narlei.github.io/ulanzipluginstore/#publish))

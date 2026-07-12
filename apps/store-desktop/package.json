@@ -1,8 +1,8 @@
 {
   "name": "@ulanzideck/store-desktop",
-  "productName": "Ulanzi Plugin Store",
+  "productName": "Ulanzi Community Store",
   "version": "0.2.0",
-  "description": "Desktop plugin store for Ulanzi Deck and Dial",
+  "description": "The open-source community store for Ulanzi Deck and Dial plugins",
   "private": true,
   "type": "module",
   "main": "dist/main/main.js",
@@ -44,7 +44,7 @@
   },
   "build": {
     "appId": "com.narlei.ulanzipluginstore",
-    "productName": "Ulanzi Plugin Store",
+    "productName": "Ulanzi Community Store",
     "directories": {
       "output": "release"
     },
@@ -56,7 +56,7 @@
     ],
     "protocols": [
       {
-        "name": "Ulanzi Plugin Store",
+        "name": "Ulanzi Community Store",
         "schemes": [
           "ulanzipluginstore"
         ]

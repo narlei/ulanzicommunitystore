@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Downloads and installs the latest Ulanzi Plugin Store build for macOS.
+# Downloads and installs the latest Ulanzi Community Store build for macOS.
 #
 #   curl -fsSL https://raw.githubusercontent.com/narlei/ulanzipluginstore/main/install.sh | bash
 #
@@ -9,8 +9,6 @@
 set -euo pipefail
 
 REPO="narlei/ulanzipluginstore"
-APP_NAME="Ulanzi Plugin Store.app"
-DEST="/Applications/$APP_NAME"
 DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/UlanziPluginStore-mac.zip"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
@@ -25,13 +23,26 @@ echo "Downloading $DOWNLOAD_URL"
 curl -fsSL "$DOWNLOAD_URL" -o "$TMP_DIR/app.zip"
 
 echo "Installing to /Applications..."
-rm -rf "$DEST"
 unzip -q "$TMP_DIR/app.zip" -d "$TMP_DIR"
-mv "$TMP_DIR/$APP_NAME" "$DEST"
+
+# Locate the app bundle inside the zip instead of hardcoding its name, so
+# installs keep working across releases even if the product name changes
+# (e.g. the Plugin Store → Community Store rebrand).
+APP_PATH=$(find "$TMP_DIR" -maxdepth 1 -name "*.app" -print -quit)
+if [[ -z "$APP_PATH" ]]; then
+  echo "No .app bundle found in the downloaded archive." >&2
+  exit 1
+fi
+APP_NAME=$(basename "$APP_PATH")
+DEST="/Applications/$APP_NAME"
+
+# Remove both the current and the pre-rebrand install, if present.
+rm -rf "$DEST" "/Applications/Ulanzi Plugin Store.app" "/Applications/Ulanzi Community Store.app"
+mv "$APP_PATH" "$DEST"
 
 # Defensive — curl downloads aren't quarantined, but strip the attribute
 # in case a future step in the chain (or a re-run) adds one.
 xattr -cr "$DEST"
 
-echo "Installed. Launching Ulanzi Plugin Store..."
+echo "Installed. Launching ${APP_NAME%.app}..."
 open "$DEST"
