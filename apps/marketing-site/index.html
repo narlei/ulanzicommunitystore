@@ -638,7 +638,7 @@
               encodeURIComponent(fileName) + '&value=' + encodeURIComponent(json);
             ready.hidden = false;
           }).catch(function () {
-            showError('Could not reach GitHub. Check your connection (or API rate limit) and try again!');
+            showError('Could not reach GitHub. Check your connection (or API rate limit) and try again.');
           }).finally(function () {
             button.disabled = false;
             button.textContent = 'Validate';

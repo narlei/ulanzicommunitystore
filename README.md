@@ -146,6 +146,9 @@ The catalog (`catalog.json`) is generated — never versioned. Registry entries 
 - The app installs **only** plugins from the community registry catalog by default.
 - ZIP extraction validates plugin IDs and entry paths before writing to the Ulanzi plugins folder.
 - Developer Mode is reserved for future manual installs.
+- **Daily vulnerability scan** — a scheduled GitHub Action ([`security-scan.yml`](.github/workflows/security-scan.yml)) scans every repo in the [community registry](registry/plugins) once a day with [Trivy](https://github.com/aquasecurity/trivy), looking for known-vulnerable dependencies and leaked secrets. Findings are posted to the run summary and to a single rolling GitHub issue (opened when something is found, closed automatically when everything is clean). Because these are third-party repos, the scan **flags** issues for maintainers to act on — it doesn't modify anyone's code.
+
+> Run it on demand from the **Actions** tab (**Run workflow**) or with `gh workflow run security-scan.yml`.
 
 ## 📄 License
 
