@@ -1,4 +1,4 @@
-import { createElement, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { CatalogPlugin, InstalledPlugin } from '@ulanzideck/catalog';
 import { compareVersions } from '@ulanzideck/catalog';
 import type { InstallProgress, Settings, SubmitCheck, SubmitCheckResult } from '../shared';
@@ -12,36 +12,38 @@ type BusyState = Record<string, { pct: number; msg: string }>;
 
 const defaultSettings: Settings = { developerMode: false };
 
+const NAV_VIEWS: View[] = ['store', 'installed', 'updates', 'submit', 'settings'];
+
 const NAV_ICONS: Record<View, ReactNode> = {
   store: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] shrink-0">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0">
       <path d="M3 9l1.5-5h15L21 9" />
       <path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" />
       <path d="M9 20v-6h6v6" />
     </svg>
   ),
   installed: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] shrink-0">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0">
       <path d="M12 3v12" />
       <path d="M8 11l4 4 4-4" />
       <path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" />
     </svg>
   ),
   updates: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] shrink-0">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0">
       <path d="M21 12a9 9 0 1 1-3-6.7" />
       <path d="M21 4v5h-5" />
     </svg>
   ),
   submit: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] shrink-0">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0">
       <path d="M12 20V6" />
       <path d="M6 12l6-6 6 6" />
       <path d="M4 4h16" />
     </svg>
   ),
   settings: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px] shrink-0">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
@@ -60,6 +62,7 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -94,14 +97,41 @@ export function App() {
     };
   }, [load]);
 
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && (event.key === 'k' || event.key === 'f')) {
+        event.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   function setLang(next: Lang) {
     localStorage.setItem('lang', next);
     setLangState(next);
   }
 
+  function onSearch(value: string) {
+    setQuery(value);
+    if (value && (view === 'settings' || view === 'submit')) setView('store');
+  }
+
   const devices = useMemo(
     () => Array.from(new Set(plugins.flatMap((plugin) => plugin.deviceTypes || []))).sort(),
     [plugins],
+  );
+
+  const updateCount = useMemo(
+    () => plugins.filter((plugin) => hasUpdate(plugin, installed)).length,
+    [plugins, installed],
+  );
+
+  const installedCount = useMemo(
+    () => plugins.filter((plugin) => installed[plugin.id]).length,
+    [plugins, installed],
   );
 
   const visible = useMemo(() => {
@@ -161,110 +191,123 @@ export function App() {
     setSettings(await window.api.setDeveloperMode(enabled));
   }
 
-  return (
-    <main className="min-h-screen overflow-hidden bg-ink text-slate-100">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_30%_10%,rgba(65,230,195,0.14),transparent_32%),radial-gradient(circle_at_82%_12%,rgba(76,117,255,0.13),transparent_28%)]" />
-      <div className="app-titlebar" />
-      <div className="relative flex h-[calc(100vh-32px)]">
-        <aside className="flex w-64 shrink-0 flex-col border-r border-white/10 bg-black/20 px-4 py-5 backdrop-blur-xl">
-          <div className="mb-8 pl-2">
-            <div className="text-sm font-semibold uppercase tracking-[0.24em] text-brand">Ulanzi</div>
-            <div className="mt-1 text-2xl font-semibold">Plugin Store</div>
-          </div>
-          <nav className="space-y-2">
-            {(['store', 'installed', 'updates', 'submit', 'settings'] as View[]).map((item) => (
-              <button
-                key={item}
-                className={`nav-item ${view === item ? 'nav-item-active' : ''}`}
-                onClick={() => setView(item)}
-              >
-                <span className="flex items-center gap-2.5">
-                  {NAV_ICONS[item]}
-                  {t(lang, item)}
-                </span>
-                {item === 'installed' && <span>{Object.keys(installed).length}</span>}
-                {item === 'updates' && <span>{plugins.filter((plugin) => hasUpdate(plugin, installed)).length}</span>}
-              </button>
-            ))}
-          </nav>
-          <div className="mt-auto rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs leading-relaxed text-slate-400">
-            {t(lang, 'unofficial')}
-          </div>
-        </aside>
+  const isListView = view === 'store' || view === 'installed' || view === 'updates';
 
-        <section className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-20 items-center gap-4 border-b border-white/10 px-8">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-semibold">{view === 'store' ? t(lang, 'title') : t(lang, view)}</h1>
-              <p className="mt-1 text-sm text-slate-400">{view === 'submit' ? t(lang, 'submitSubtitle') : t(lang, 'subtitle')}</p>
-            </div>
-            <div className="flex rounded-lg border border-white/10 bg-white/[0.04] p-1">
-              {LANGS.map((code) => (
-                <button
-                  key={code}
-                  className={`rounded-md px-3 py-1.5 text-xs font-semibold ${lang === code ? 'bg-brand text-slate-950' : 'text-slate-300'}`}
-                  onClick={() => setLang(code)}
-                >
-                  {LANG_NAMES[code]}
+  return (
+    <main className="flex h-screen overflow-hidden text-[13px] text-ink">
+      <aside className="sidebar flex w-[232px] shrink-0 flex-col border-r border-stroke/70">
+        <div className="drag-region h-[52px] shrink-0" />
+        <div className="px-3">
+          <div className="search-field no-drag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="search-icon h-3.5 w-3.5">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M21 21l-4.3-4.3" />
+            </svg>
+            <input
+              ref={searchRef}
+              placeholder={t(lang, 'search')}
+              value={query}
+              onChange={(event) => onSearch(event.target.value)}
+              spellCheck={false}
+            />
+            {!query && <span className="kbd">⌘K</span>}
+          </div>
+        </div>
+        <nav className="no-drag mt-4 flex-1 space-y-px overflow-y-auto px-3">
+          <div className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink3">
+            Ulanzi Plugin Store
+          </div>
+          {NAV_VIEWS.map((item) => (
+            <button
+              key={item}
+              className={`nav-item ${view === item ? 'nav-item-active' : ''}`}
+              onClick={() => setView(item)}
+            >
+              <span className="flex min-w-0 items-center gap-2.5">
+                <span className={view === item ? '' : 'text-accent'}>{NAV_ICONS[item]}</span>
+                <span className="truncate">{t(lang, item)}</span>
+              </span>
+              {item === 'installed' && installedCount > 0 && (
+                <span className="nav-badge">{installedCount}</span>
+              )}
+              {item === 'updates' && updateCount > 0 && (
+                <span className={`rounded-full px-1.5 text-[11px] font-semibold tabular-nums ${view === item ? 'nav-badge' : 'bg-accent text-accent-ink'}`}>
+                  {updateCount}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+        <footer className="no-drag px-5 pb-4 text-[11px] leading-relaxed text-ink3">
+          {t(lang, 'unofficial')}
+        </footer>
+      </aside>
+
+      <section className="content-pane flex min-w-0 flex-1 flex-col">
+        <header className="drag-region flex h-[52px] shrink-0 items-center justify-between gap-4 border-b border-stroke/70 px-6">
+          <h1 className="truncate text-[15px] font-semibold">
+            {view === 'store' ? t(lang, 'title') : t(lang, view)}
+          </h1>
+          {isListView && devices.length > 0 && (
+            <div className="seg no-drag">
+              <button className={device === '' ? 'seg-active' : ''} onClick={() => setDevice('')}>
+                {t(lang, 'all')}
+              </button>
+              {devices.map((item) => (
+                <button key={item} className={device === item ? 'seg-active' : ''} onClick={() => setDevice(item)}>
+                  {deviceLabel(item)}
                 </button>
               ))}
             </div>
-          </header>
-
-          {view === 'settings' ? (
-            <SettingsView lang={lang} settings={settings} setDeveloperMode={setDeveloperMode} />
-          ) : view === 'submit' ? (
-            <SubmitView lang={lang} />
-          ) : (
-            <div className="min-h-0 flex-1 overflow-auto px-8 py-6">
-              <div className="mb-6 flex flex-wrap items-center gap-3">
-                <input
-                  className="h-11 min-w-80 flex-1 rounded-lg border border-white/10 bg-white/[0.05] px-4 text-sm outline-none transition focus:border-brand/70"
-                  placeholder={t(lang, 'search')}
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                />
-                <button className={`pill ${device === '' ? 'pill-active' : ''}`} onClick={() => setDevice('')}>
-                  {t(lang, 'all')}
-                </button>
-                {devices.map((item) => (
-                  <button key={item} className={`pill ${device === item ? 'pill-active' : ''}`} onClick={() => setDevice(item)}>
-                    {deviceLabel(item)}
-                  </button>
-                ))}
-              </div>
-
-              {loading && <StateCard>{t(lang, 'loading')}</StateCard>}
-              {error && (
-                <StateCard>
-                  <div>{t(lang, 'catalogError')}</div>
-                  <button className="btn-primary mt-4" onClick={() => void load()}>
-                    {t(lang, 'retry')}
-                  </button>
-                </StateCard>
-              )}
-              {!loading && !error && visible.length === 0 && (
-                <StateCard>{view === 'installed' ? t(lang, 'emptyInstalled') : view === 'updates' ? t(lang, 'emptyUpdates') : t(lang, 'noResults')}</StateCard>
-              )}
-
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
-                {visible.map((plugin) => (
-                  <PluginCard
-                    key={plugin.id}
-                    plugin={plugin}
-                    lang={lang}
-                    installedVersion={installed[plugin.id]}
-                    busy={busy[plugin.id]}
-                    onOpen={() => setSelected(plugin)}
-                    onInstall={() => void install(plugin)}
-                    onUninstall={() => void uninstall(plugin)}
-                  />
-                ))}
-              </div>
-            </div>
           )}
-        </section>
-      </div>
+        </header>
+
+        {view === 'settings' ? (
+          <SettingsView lang={lang} settings={settings} setLang={setLang} setDeveloperMode={setDeveloperMode} />
+        ) : view === 'submit' ? (
+          <SubmitView lang={lang} />
+        ) : (
+          <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
+            <div className="mb-6">
+              <h2 className="text-[26px] font-bold tracking-tight">
+                {view === 'store' ? t(lang, 'title') : t(lang, view)}
+              </h2>
+              <p className="mt-0.5 text-ink2">{t(lang, 'subtitle')}</p>
+            </div>
+
+            {loading && <StateCard>{t(lang, 'loading')}</StateCard>}
+            {error && (
+              <StateCard>
+                <div>{t(lang, 'catalogError')}</div>
+                <button className="btn-primary mt-4" onClick={() => void load()}>
+                  {t(lang, 'retry')}
+                </button>
+              </StateCard>
+            )}
+            {!loading && !error && visible.length === 0 && (
+              <StateCard>
+                {view === 'installed' ? t(lang, 'emptyInstalled') : view === 'updates' ? t(lang, 'emptyUpdates') : t(lang, 'noResults')}
+              </StateCard>
+            )}
+
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5 pb-4">
+              {visible.map((plugin, index) => (
+                <PluginCard
+                  key={plugin.id}
+                  plugin={plugin}
+                  index={index}
+                  lang={lang}
+                  installedVersion={installed[plugin.id]}
+                  busy={busy[plugin.id]}
+                  onOpen={() => setSelected(plugin)}
+                  onInstall={() => void install(plugin)}
+                  onUninstall={() => void uninstall(plugin)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
 
       {selected && (
         <PluginDetail
@@ -281,8 +324,44 @@ export function App() {
   );
 }
 
+function InstallButton({
+  lang,
+  installedVersion,
+  update,
+  busy,
+  onInstall,
+}: {
+  lang: Lang;
+  installedVersion?: string | null;
+  update?: boolean | null;
+  busy?: { pct: number; msg: string };
+  onInstall: () => void;
+}) {
+  const label = busy
+    ? t(lang, 'installing')
+    : installedVersion
+      ? update
+        ? t(lang, 'update')
+        : t(lang, 'installedState')
+      : t(lang, 'install');
+  const isIdleInstalled = Boolean(installedVersion && !update);
+  return (
+    <button
+      className={isIdleInstalled ? 'btn-pill-ghost' : 'btn-get'}
+      disabled={Boolean(busy) || isIdleInstalled}
+      onClick={(event) => {
+        event.stopPropagation();
+        onInstall();
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 function PluginCard({
   plugin,
+  index,
   lang,
   installedVersion,
   busy,
@@ -291,6 +370,7 @@ function PluginCard({
   onUninstall,
 }: {
   plugin: CatalogPlugin;
+  index: number;
   lang: Lang;
   installedVersion?: string | null;
   busy?: { pct: number; msg: string };
@@ -298,10 +378,11 @@ function PluginCard({
   onInstall: () => void;
   onUninstall: () => void;
 }) {
-  const update = installedVersion && compareVersions(plugin.version, installedVersion) > 0;
+  const update = Boolean(installedVersion && compareVersions(plugin.version, installedVersion) > 0);
   return (
     <article
-      className="group cursor-pointer overflow-hidden rounded-lg border border-white/10 bg-white/[0.045] shadow-glow transition hover:-translate-y-0.5 hover:border-brand/50"
+      className="card card-interactive animate-card group flex cursor-pointer flex-col overflow-hidden"
+      style={{ animationDelay: `${Math.min(index, 12) * 30}ms` }}
       role="button"
       tabIndex={0}
       onClick={onOpen}
@@ -312,38 +393,51 @@ function PluginCard({
         }
       }}
     >
-      <div className="block h-36 w-full overflow-hidden bg-slate-900 text-left">
+      <div className="h-32 w-full overflow-hidden bg-raised">
         {plugin.cover ? (
-          <img src={plugin.cover} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+          <img src={plugin.cover} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
         ) : (
-          <div className="grid h-full place-items-center text-4xl text-brand">◆</div>
+          <div className="grid h-full place-items-center text-3xl text-accent/50">◆</div>
         )}
       </div>
-      <div className="p-4">
-        <div className="mb-2 flex items-start gap-3">
-          <div className="min-w-0 flex-1 text-left">
-            <h2 className="truncate text-base font-semibold">{pluginText(plugin, 'name', lang)}</h2>
-            <p className="mt-0.5 text-xs text-slate-400">by {plugin.author}</p>
+      <div className="flex flex-1 flex-col p-4">
+        <div className="flex items-center gap-3">
+          {plugin.icon ? (
+            <img src={plugin.icon} alt="" className="h-10 w-10 shrink-0 rounded-[10px] object-cover shadow-card" />
+          ) : (
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-accent/10 text-accent">◆</div>
+          )}
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-[14px] font-semibold">{pluginText(plugin, 'name', lang)}</h3>
+            <p className="truncate text-[12px] text-ink3">{plugin.author}</p>
           </div>
-          {update && <span className="rounded bg-brand px-2 py-1 text-[10px] font-bold uppercase text-slate-950">{t(lang, 'updateBadge')}</span>}
+          <InstallButton lang={lang} installedVersion={installedVersion} update={update} busy={busy} onInstall={onInstall} />
         </div>
-        <p className="line-clamp-2 min-h-10 text-sm text-slate-300">{pluginText(plugin, 'description', lang)}</p>
-        <Meta plugin={plugin} />
-        {busy && (
-          <div className="mt-3 h-1.5 overflow-hidden rounded bg-white/10">
-            <div className="h-full rounded bg-brand transition-all" style={{ width: `${busy.pct}%` }} />
+        <p className="mt-3 line-clamp-2 min-h-9 text-[12.5px] leading-[18px] text-ink2">
+          {pluginText(plugin, 'description', lang)}
+        </p>
+        {busy ? (
+          <div className="mt-3">
+            <div className="progress-track">
+              <div className="progress-fill" style={{ width: `${busy.pct}%` }} />
+            </div>
+          </div>
+        ) : (
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <Meta plugin={plugin} showUpdate={Boolean(update)} lang={lang} />
+            {installedVersion && (
+              <button
+                className="shrink-0 text-[12px] font-medium text-ink3 transition-colors hover:text-red-500"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onUninstall();
+                }}
+              >
+                {t(lang, 'uninstall')}
+              </button>
+            )}
           </div>
         )}
-        <div className="mt-4 flex gap-2">
-          <button className="btn-primary flex-1" disabled={Boolean(busy)} onClick={(event) => { event.stopPropagation(); onInstall(); }}>
-            {busy ? t(lang, 'installing') : installedVersion ? (update ? t(lang, 'update') : t(lang, 'installedState')) : t(lang, 'install')}
-          </button>
-          {installedVersion && (
-            <button className="btn-ghost" disabled={Boolean(busy)} onClick={(event) => { event.stopPropagation(); onUninstall(); }}>
-              {t(lang, 'uninstall')}
-            </button>
-          )}
-        </div>
       </div>
     </article>
   );
@@ -366,74 +460,146 @@ function PluginDetail({
   onInstall: () => void;
   onUninstall: () => void;
 }) {
-  const update = installedVersion && compareVersions(plugin.version, installedVersion) > 0;
+  const update = Boolean(installedVersion && compareVersions(plugin.version, installedVersion) > 0);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-20 bg-black/60 p-6 backdrop-blur-sm" onClick={onClose}>
-      <article className="mx-auto flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-white/10 bg-[#101722] shadow-2xl" onClick={(event) => event.stopPropagation()}>
-        <header className="flex items-start gap-5 border-b border-white/10 p-6">
-          {plugin.icon && <img src={plugin.icon} alt="" className="h-20 w-20 rounded-lg object-cover" />}
+    <div className="animate-backdrop fixed inset-0 z-20 grid place-items-center bg-black/40 p-8 backdrop-blur-[2px]" onClick={onClose}>
+      <article
+        className="animate-sheet flex h-full max-h-[760px] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-bg shadow-sheet"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="relative flex items-center gap-5 border-b border-stroke/70 p-6 pr-14">
+          {plugin.icon ? (
+            <img src={plugin.icon} alt="" className="h-[76px] w-[76px] shrink-0 rounded-[17px] object-cover shadow-card" />
+          ) : (
+            <div className="grid h-[76px] w-[76px] shrink-0 place-items-center rounded-[17px] bg-accent/10 text-3xl text-accent">◆</div>
+          )}
           <div className="min-w-0 flex-1">
-            <h2 className="text-3xl font-semibold">{pluginText(plugin, 'name', lang)}</h2>
-            <p className="mt-1 text-slate-400">by {plugin.author} · v{plugin.version}</p>
-            <Meta plugin={plugin} />
+            <h2 className="truncate text-[22px] font-bold tracking-tight">{pluginText(plugin, 'name', lang)}</h2>
+            <p className="mt-0.5 text-ink2">
+              {plugin.author} · v{plugin.version}
+            </p>
+            <div className="mt-2.5 flex items-center gap-3">
+              <InstallButton lang={lang} installedVersion={installedVersion} update={update} busy={busy} onInstall={onInstall} />
+              {installedVersion && (
+                <button className="btn-pill-ghost !text-red-500" disabled={Boolean(busy)} onClick={onUninstall}>
+                  {t(lang, 'uninstall')}
+                </button>
+              )}
+              <button className="btn-pill-ghost" onClick={() => void window.api.openExternal(plugin.sourceUrl)}>
+                {t(lang, 'source')}
+              </button>
+              {busy && (
+                <div className="progress-track w-40">
+                  <div className="progress-fill" style={{ width: `${busy.pct}%` }} />
+                </div>
+              )}
+            </div>
           </div>
-          <button className="btn-ghost" onClick={onClose}>Close</button>
+          <button
+            className="absolute right-4 top-4 grid h-7 w-7 place-items-center rounded-full bg-black/[0.06] text-ink2 transition-colors hover:bg-black/[0.12] hover:text-ink dark:bg-white/[0.08] dark:hover:bg-white/[0.14]"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="h-3.5 w-3.5">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
         </header>
+
         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-6">
           {plugin.screenshots?.length > 0 && (
-            <div className="mb-6 grid grid-cols-2 gap-3">
+            <div className="mb-6 flex gap-3 overflow-x-auto pb-1">
               {plugin.screenshots.map((shot) => (
-                <img key={shot} src={shot} alt="" className="h-52 w-full rounded-lg border border-white/10 object-cover" />
+                <img key={shot} src={shot} alt="" className="h-56 shrink-0 rounded-xl object-cover shadow-card" />
               ))}
             </div>
           )}
-          <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_180px] xl:grid-cols-[minmax(0,1fr)_200px]">
-            <section className="min-w-0">
-              <h3 className="mb-2 text-lg font-semibold">{t(lang, 'about')}</h3>
-              <p className="overflow-wrap-anywhere whitespace-pre-line leading-7 text-slate-300">{pluginText(plugin, 'longDescription', lang)}</p>
-              {plugin.changelog && (
-                <>
-                  <h3 className="mb-2 mt-6 text-lg font-semibold">{t(lang, 'whatsNew')}</h3>
-                  <Markdown className="rounded-lg border border-white/10 bg-black/20 p-4 text-sm leading-6 text-slate-300" text={plugin.changelog} />
-                </>
-              )}
+
+          <section className="min-w-0">
+            <h3 className="mb-2 text-[16px] font-semibold">{t(lang, 'about')}</h3>
+            <p className="overflow-wrap-anywhere selectable whitespace-pre-line leading-6 text-ink2">
+              {pluginText(plugin, 'longDescription', lang)}
+            </p>
+          </section>
+
+          {plugin.changelog && (
+            <section className="mt-7 min-w-0">
+              <h3 className="mb-2 text-[16px] font-semibold">{t(lang, 'whatsNew')}</h3>
+              <Markdown className="rounded-xl bg-surface p-4 text-sm leading-6 shadow-card" text={plugin.changelog} />
             </section>
-            <aside className="min-w-0 rounded-lg border border-white/10 bg-white/[0.035] p-4">
-              <h3 className="mb-4 font-semibold">{t(lang, 'details')}</h3>
-              <DetailRow label={t(lang, 'version')} value={plugin.version} />
-              {plugin.minSoftwareVersion && <DetailRow label={t(lang, 'minSoftware')} value={plugin.minSoftwareVersion} />}
-              {plugin.languages?.length > 0 && <DetailRow label={t(lang, 'languages')} value={plugin.languages.join(', ')} />}
-              {plugin.publishedAt && <DetailRow label={t(lang, 'published')} value={plugin.publishedAt.slice(0, 10)} />}
-            </aside>
-          </div>
+          )}
+
+          <section className="mt-7">
+            <h3 className="mb-3 text-[16px] font-semibold">{t(lang, 'details')}</h3>
+            <div className="grid grid-cols-2 gap-x-6 rounded-xl bg-surface px-5 shadow-card sm:grid-cols-3 lg:grid-cols-4">
+              <DetailCell label={t(lang, 'version')} value={plugin.version} />
+              {plugin.minSoftwareVersion && <DetailCell label={t(lang, 'minSoftware')} value={plugin.minSoftwareVersion} />}
+              {plugin.languages?.length > 0 && <DetailCell label={t(lang, 'languages')} value={plugin.languages.join(', ')} />}
+              {plugin.publishedAt && <DetailCell label={t(lang, 'published')} value={plugin.publishedAt.slice(0, 10)} />}
+              {(plugin.deviceTypes || []).length > 0 && (
+                <DetailCell label="Devices" value={(plugin.deviceTypes || []).map(deviceLabel).join(', ')} />
+              )}
+            </div>
+          </section>
         </div>
-        <footer className="flex items-center gap-3 border-t border-white/10 p-5">
-          <button className="btn-primary" disabled={Boolean(busy)} onClick={onInstall}>
-            {busy ? t(lang, 'installing') : installedVersion ? (update ? t(lang, 'update') : t(lang, 'installedState')) : t(lang, 'install')}
-          </button>
-          {installedVersion && <button className="btn-ghost" disabled={Boolean(busy)} onClick={onUninstall}>{t(lang, 'uninstall')}</button>}
-          <button className="btn-ghost" onClick={() => void window.api.openExternal(plugin.sourceUrl)}>{t(lang, 'source')}</button>
-          {busy && <div className="h-1.5 flex-1 overflow-hidden rounded bg-white/10"><div className="h-full rounded bg-brand" style={{ width: `${busy.pct}%` }} /></div>}
-        </footer>
       </article>
     </div>
   );
 }
 
-function SettingsView({ lang, settings, setDeveloperMode }: { lang: Lang; settings: Settings; setDeveloperMode: (enabled: boolean) => void }) {
+function SettingsView({
+  lang,
+  settings,
+  setLang,
+  setDeveloperMode,
+}: {
+  lang: Lang;
+  settings: Settings;
+  setLang: (lang: Lang) => void;
+  setDeveloperMode: (enabled: boolean) => void;
+}) {
   return (
-    <div className="p-8">
-      <section className="max-w-2xl rounded-lg border border-white/10 bg-white/[0.045] p-6">
-        <div className="flex items-start justify-between gap-6">
-          <div>
-            <h2 className="text-lg font-semibold">{t(lang, 'developerMode')}</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-400">{t(lang, 'developerModeHelp')}</p>
+    <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
+      <div className="max-w-2xl">
+        <h2 className="mb-6 text-[26px] font-bold tracking-tight">{t(lang, 'settings')}</h2>
+        <section className="card divide-y divide-stroke/60 px-5">
+          <div className="flex items-center justify-between gap-6 py-4">
+            <div>
+              <h3 className="font-semibold">{t(lang, 'language')}</h3>
+              <p className="mt-0.5 text-[12px] text-ink2">{t(lang, 'languageHelp')}</p>
+            </div>
+            <div className="seg shrink-0">
+              {LANGS.map((code) => (
+                <button key={code} className={lang === code ? 'seg-active' : ''} onClick={() => setLang(code)}>
+                  {LANG_NAMES[code]}
+                </button>
+              ))}
+            </div>
           </div>
-          <button className={`toggle ${settings.developerMode ? 'toggle-on' : ''}`} onClick={() => setDeveloperMode(!settings.developerMode)}>
-            <span />
-          </button>
-        </div>
-      </section>
+          <div className="flex items-center justify-between gap-6 py-4">
+            <div>
+              <h3 className="font-semibold">{t(lang, 'developerMode')}</h3>
+              <p className="mt-0.5 text-[12px] text-ink2">{t(lang, 'developerModeHelp')}</p>
+            </div>
+            <button
+              className={`toggle shrink-0 ${settings.developerMode ? 'toggle-on' : ''}`}
+              onClick={() => setDeveloperMode(!settings.developerMode)}
+            >
+              <span />
+            </button>
+          </div>
+        </section>
+        <p className="mt-4 px-1 text-[11px] text-ink3">{t(lang, 'unofficial')}</p>
+      </div>
     </div>
   );
 }
@@ -467,14 +633,21 @@ function SubmitView({ lang }: { lang: Lang }) {
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto px-8 py-6">
-      <div className="max-w-3xl space-y-6">
-        <section className="rounded-lg border border-white/10 bg-white/[0.045] p-6">
-          <ol className="space-y-2 text-sm text-slate-300">
+    <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
+      <div className="max-w-3xl space-y-5">
+        <div>
+          <h2 className="text-[26px] font-bold tracking-tight">{t(lang, 'submit')}</h2>
+          <p className="mt-0.5 text-ink2">{t(lang, 'submitSubtitle')}</p>
+        </div>
+
+        <section className="card p-5">
+          <ol className="space-y-2.5">
             {(['submitStep1', 'submitStep2', 'submitStep3'] as const).map((key, index) => (
               <li key={key} className="flex gap-3">
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand/15 text-xs font-bold text-brand">{index + 1}</span>
-                <span className="leading-6">{renderInlineMarkdown(t(lang, key))}</span>
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent/10 text-[11px] font-bold text-accent">
+                  {index + 1}
+                </span>
+                <span className="leading-6 text-ink2">{renderInlineMarkdown(t(lang, key))}</span>
               </li>
             ))}
           </ol>
@@ -488,12 +661,12 @@ function SubmitView({ lang }: { lang: Lang }) {
           </div>
         </section>
 
-        <section className="rounded-lg border border-white/10 bg-white/[0.045] p-6">
-          <h2 className="text-lg font-semibold">{t(lang, 'submitToolTitle')}</h2>
-          <p className="mt-1 text-sm text-slate-400">{t(lang, 'submitToolHelp')}</p>
+        <section className="card p-5">
+          <h3 className="text-[16px] font-semibold">{t(lang, 'submitToolTitle')}</h3>
+          <p className="mt-1 text-ink2">{t(lang, 'submitToolHelp')}</p>
           <div className="mt-4 flex gap-2">
             <input
-              className="h-11 min-w-0 flex-1 rounded-lg border border-white/10 bg-white/[0.05] px-4 text-sm outline-none transition focus:border-brand/70"
+              className="h-9 min-w-0 flex-1 rounded-[7px] border border-stroke bg-raised/60 px-3 text-[13px] outline-none transition-shadow placeholder:text-ink3 focus:border-accent/70 focus:shadow-[0_0_0_3px_rgb(var(--c-accent)/0.25)]"
               placeholder="https://github.com/you/your-plugin"
               value={repoInput}
               onChange={(event) => setRepoInput(event.target.value)}
@@ -507,7 +680,7 @@ function SubmitView({ lang }: { lang: Lang }) {
             </button>
           </div>
 
-          {networkError && <p className="mt-4 text-sm text-red-400">{t(lang, 'submitNetworkError')}</p>}
+          {networkError && <p className="mt-4 text-[13px] text-red-500">{t(lang, 'submitNetworkError')}</p>}
 
           {result && (
             <ul className="mt-5 space-y-2">
@@ -518,28 +691,28 @@ function SubmitView({ lang }: { lang: Lang }) {
           )}
 
           {result && !result.ok && (
-            <p className="mt-4 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-4 text-sm leading-6 text-amber-200/90">
+            <p className="mt-4 rounded-lg border border-amber-500/25 bg-amber-500/[0.08] p-4 leading-6 text-amber-700 dark:text-amber-300">
               {t(lang, 'submitFixHint')}
             </p>
           )}
 
           {result?.ok && (
-            <div className="mt-5 rounded-lg border border-brand/30 bg-brand/[0.06] p-5">
+            <div className="mt-5 rounded-xl border border-accent/25 bg-accent/[0.05] p-5">
               <div className="flex items-center gap-3">
-                {result.plugin?.icon && <img src={result.plugin.icon} alt="" className="h-10 w-10 rounded-lg object-cover" />}
+                {result.plugin?.icon && <img src={result.plugin.icon} alt="" className="h-10 w-10 rounded-[10px] object-cover shadow-card" />}
                 <div>
-                  <div className="font-semibold text-brand">{t(lang, 'submitReadyTitle')}</div>
+                  <div className="font-semibold text-accent">{t(lang, 'submitReadyTitle')}</div>
                   {result.plugin && (
-                    <div className="text-sm text-slate-300">
+                    <div className="text-ink2">
                       {result.plugin.name} · v{result.plugin.version}
                     </div>
                   )}
                 </div>
               </div>
-              <p className="mt-3 text-sm leading-6 text-slate-300">{t(lang, 'submitReadyText')}</p>
-              <div className="mt-3 rounded-lg border border-white/10 bg-black/30 p-4">
-                <div className="font-mono text-xs text-slate-400">registry/plugins/{result.registryFileName}</div>
-                <pre className="mt-2 overflow-x-auto font-mono text-sm text-slate-200">{result.registryJson.trim()}</pre>
+              <p className="mt-3 leading-6 text-ink2">{t(lang, 'submitReadyText')}</p>
+              <div className="mt-3 rounded-lg border border-stroke bg-raised p-4">
+                <div className="font-mono text-[11px] text-ink3">registry/plugins/{result.registryFileName}</div>
+                <pre className="selectable mt-2 overflow-x-auto font-mono text-[12px] leading-5 text-ink">{result.registryJson.trim()}</pre>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button className="btn-primary" onClick={() => void window.api.openExternal(result.prUrl)}>
@@ -549,13 +722,13 @@ function SubmitView({ lang }: { lang: Lang }) {
                   {copied ? t(lang, 'submitCopied') : t(lang, 'submitCopy')}
                 </button>
               </div>
-              <p className="mt-3 text-xs leading-5 text-slate-400">{t(lang, 'submitPrHint')}</p>
+              <p className="mt-3 text-[11px] leading-5 text-ink3">{t(lang, 'submitPrHint')}</p>
             </div>
           )}
         </section>
 
-        <section className="rounded-lg border border-white/10 bg-white/[0.045] p-6">
-          <Markdown className="text-sm" text={t(lang, 'submitMarkdown')} />
+        <section className="card p-5">
+          <Markdown className="text-[13px]" text={t(lang, 'submitMarkdown')} />
         </section>
       </div>
     </div>
@@ -564,43 +737,60 @@ function SubmitView({ lang }: { lang: Lang }) {
 
 function SubmitCheckRow({ check, lang }: { check: SubmitCheck; lang: Lang }) {
   const styles: Record<SubmitCheck['status'], { badge: string; symbol: string }> = {
-    ok: { badge: 'bg-brand/15 text-brand', symbol: '✓' },
-    warn: { badge: 'bg-amber-400/15 text-amber-300', symbol: '!' },
-    fail: { badge: 'bg-red-400/15 text-red-400', symbol: '✕' },
+    ok: { badge: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400', symbol: '✓' },
+    warn: { badge: 'bg-amber-500/15 text-amber-600 dark:text-amber-300', symbol: '!' },
+    fail: { badge: 'bg-red-500/15 text-red-500', symbol: '✕' },
   };
   const { badge, symbol } = styles[check.status];
   const suffix = check.id === 'store' && check.value === 'invalid' ? '_invalid' : '';
   return (
-    <li className="flex items-start gap-3 text-sm">
-      <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${badge}`}>{symbol}</span>
-      <span className="leading-6 text-slate-300">
+    <li className="flex items-start gap-3">
+      <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-bold ${badge}`}>{symbol}</span>
+      <span className="leading-6 text-ink2">
         {t(lang, `submit_${check.id}_${check.status}${suffix}`, check.value || '')}
       </span>
     </li>
   );
 }
 
-function Meta({ plugin }: { plugin: CatalogPlugin }) {
+function Meta({ plugin, showUpdate, lang }: { plugin: CatalogPlugin; showUpdate?: boolean; lang?: Lang }) {
   return (
-    <div className="mt-3 flex flex-wrap gap-1.5">
-      {(plugin.deviceTypes || []).map((item) => <span className="chip chip-brand" key={item}>{deviceLabel(item)}</span>)}
-      {(plugin.platforms || []).map((item) => <span className="chip" key={item}>{platformLabel(item)}</span>)}
-      {(plugin.tags || []).slice(0, 2).map((item) => <span className="chip" key={item}>{item}</span>)}
+    <div className="flex min-w-0 flex-wrap gap-1.5">
+      {showUpdate && lang && <span className="chip bg-accent text-accent-ink">{t(lang, 'updateBadge')}</span>}
+      {(plugin.deviceTypes || []).map((item) => (
+        <span className="chip chip-brand" key={item}>
+          {deviceLabel(item)}
+        </span>
+      ))}
+      {(plugin.platforms || []).map((item) => (
+        <span className="chip" key={item}>
+          {platformLabel(item)}
+        </span>
+      ))}
+      {(plugin.tags || []).slice(0, 2).map((item) => (
+        <span className="chip" key={item}>
+          {item}
+        </span>
+      ))}
     </div>
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="mb-3">
-      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-sm text-slate-200">{value}</div>
+    <div className="py-4">
+      <div className="text-[11px] font-medium uppercase tracking-wide text-ink3">{label}</div>
+      <div className="selectable mt-1 text-[13px] text-ink">{value}</div>
     </div>
   );
 }
 
 function StateCard({ children }: { children: ReactNode }) {
-  return <div className="grid min-h-72 place-items-center rounded-lg border border-dashed border-white/10 bg-white/[0.025] p-8 text-center text-slate-400">{children}</div>;
+  return (
+    <div className="grid min-h-72 place-items-center rounded-xl border border-dashed border-stroke bg-surface/40 p-8 text-center text-ink2">
+      <div>{children}</div>
+    </div>
+  );
 }
 
 function Markdown({ text, className = '' }: { text: string; className?: string }) {
@@ -716,7 +906,7 @@ function parseMarkdownBlocks(markdown: string): MarkdownBlock[] {
 
 function renderInlineMarkdown(text: string): ReactNode[] {
   const nodes: ReactNode[] = [];
-  const pattern = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
+  const pattern = /(\*\*[^*]+\*\*|`[^`]+`|!\[[^\]]*\]\([^)]+\)|\[[^\]]+\]\([^)]+\)|<img\b[^>]*>)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -727,6 +917,22 @@ function renderInlineMarkdown(text: string): ReactNode[] {
       nodes.push(<strong key={nodes.length}>{token.slice(2, -2)}</strong>);
     } else if (token.startsWith('`')) {
       nodes.push(<code key={nodes.length}>{token.slice(1, -1)}</code>);
+    } else if (token.startsWith('![')) {
+      const image = token.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+      const src = image?.[2] || '';
+      if (/^https?:\/\//.test(src)) {
+        nodes.push(<img key={nodes.length} src={src} alt={image?.[1] || ''} className="my-2 max-w-full rounded-lg" />);
+      } else {
+        nodes.push(token);
+      }
+    } else if (token.startsWith('<img')) {
+      const src = token.match(/\bsrc="([^"]+)"/)?.[1] || '';
+      const alt = token.match(/\balt="([^"]*)"/)?.[1] || '';
+      if (/^https?:\/\//.test(src)) {
+        nodes.push(<img key={nodes.length} src={src} alt={alt} className="my-2 max-w-full rounded-lg" />);
+      } else {
+        nodes.push(token);
+      }
     } else {
       const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
       const href = link?.[2] || '';
