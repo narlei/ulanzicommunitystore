@@ -7,13 +7,13 @@
 **The open-source community store for Ulanzi Deck & Dial plugins.**
 Built by fans of Ulanzi gear — publish in minutes, install in one click, update automatically.
 
-[![Latest release](https://img.shields.io/github/v/release/narlei/ulanzipluginstore?label=download&color=2dd4bf)](https://github.com/narlei/ulanzipluginstore/releases/latest)
-[![Build](https://img.shields.io/github/actions/workflow/status/narlei/ulanzipluginstore/ci.yml?branch=main&label=build)](https://github.com/narlei/ulanzipluginstore/actions)
+[![Latest release](https://img.shields.io/github/v/release/narlei/ulanzicommunitystore?label=download&color=2dd4bf)](https://github.com/narlei/ulanzicommunitystore/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/narlei/ulanzicommunitystore/ci.yml?branch=main&label=build)](https://github.com/narlei/ulanzicommunitystore/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-8b5cf6)](https://github.com/narlei/ulanzipluginstore/releases/latest)
+[![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-8b5cf6)](https://github.com/narlei/ulanzicommunitystore/releases/latest)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-2dd4bf.svg)](#-publish-your-plugin)
 
-[**🌐 Website**](https://ulanzipluginstore.narlei.com) · [**⬇️ Download**](https://github.com/narlei/ulanzipluginstore/releases/latest) · [**🚀 Publish your plugin**](https://narlei.github.io/ulanzipluginstore/#publish) · [**🧩 Browse the community registry**](registry/README.md)
+[**🌐 Website**](https://ulanzicommunitystore.narlei.com) · [**⬇️ Download**](https://github.com/narlei/ulanzicommunitystore/releases/latest) · [**🚀 Publish your plugin**](https://narlei.github.io/ulanzicommunitystore/#publish) · [**🧩 Browse the community registry**](registry/README.md)
 
 <img src="docs/screenshot-store.png" alt="Ulanzi Community Store — store screen" width="850" />
 
@@ -42,12 +42,12 @@ The Ulanzi Deck and Dial are great hardware, and the community keeps building gr
 **macOS — install via Terminal (recommended, no Gatekeeper prompts):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/narlei/ulanzipluginstore/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/install.sh | bash
 ```
 
 [`install.sh`](install.sh) is a small, readable script — check it before running it if you want. It downloads the latest `.zip` straight from GitHub Releases and installs it to `/Applications`.
 
-Or grab the installer manually from the [**releases page**](https://github.com/narlei/ulanzipluginstore/releases/latest):
+Or grab the installer manually from the [**releases page**](https://github.com/narlei/ulanzicommunitystore/releases/latest):
 
 | Platform | Artifact |
 | --- | --- |
@@ -56,7 +56,7 @@ Or grab the installer manually from the [**releases page**](https://github.com/n
 
 macOS `.dmg` downloads trigger a Gatekeeper warning on first launch since the app isn't notarized (no Apple Developer account) — see [Releases](#-releases) below for how to get past it.
 
-Or visit the website: [**ulanzipluginstore.narlei.com**](https://ulanzipluginstore.narlei.com)
+Or visit the website: [**ulanzicommunitystore.narlei.com**](https://ulanzicommunitystore.narlei.com)
 
 ## 🚀 Publish Your Plugin
 
@@ -66,7 +66,7 @@ Built something cool for your Deck or Dial? This is the fast lane: getting it in
 <img src="docs/screenshot-submit.png" alt="Ulanzi Community Store — Send plugin screen" width="850" />
 </div>
 
-**The easy way** — use the **Send plugin** tab in the app, or the [**Publish section on the website**](https://narlei.github.io/ulanzipluginstore/#publish). Paste your GitHub repo URL, and it validates everything and opens the Pull Request for you in one click.
+**The easy way** — use the **Send plugin** tab in the app, or the [**Publish section on the website**](https://narlei.github.io/ulanzicommunitystore/#publish). Paste your GitHub repo URL, and it validates everything and opens the Pull Request for you in one click.
 
 **What your repo needs:**
 
@@ -83,7 +83,7 @@ Publishing here doesn't lock you in — the same plugin can (and should!) also g
 | Path | Purpose |
 | --- | --- |
 | [`apps/store-desktop/`](apps/store-desktop) | Electron + React + TypeScript + Vite desktop app |
-| [`apps/marketing-site/`](apps/marketing-site) | Static marketing site ([ulanzipluginstore.narlei.com](https://ulanzipluginstore.narlei.com)) |
+| [`apps/marketing-site/`](apps/marketing-site) | Static marketing site ([ulanzicommunitystore.narlei.com](https://ulanzicommunitystore.narlei.com)) |
 | [`packages/catalog/`](packages/catalog) | Catalog types, registry validation, and `catalog.json` builder |
 | [`registry/plugins/`](registry/plugins) | **Community registry** — source of truth for approved plugin repos |
 | [`VERSION`](VERSION) | App release version — changing it on `main` triggers a release |
@@ -122,7 +122,7 @@ STORE_CATALOG_URL=https://example.com/catalog.json make app
 **macOS — recommended install:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/narlei/ulanzipluginstore/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/install.sh | bash
 ```
 
 [`install.sh`](install.sh) fetches the latest `.zip` from GitHub Releases and installs it to `/Applications`. Files downloaded via `curl` aren't tagged with the `com.apple.quarantine` attribute the way browser downloads are, so Gatekeeper never blocks the app — it opens right away, no security prompts.
@@ -158,7 +158,7 @@ The catalog (`catalog.json`) is generated — never versioned. Registry entries 
 
 <div align="center">
 
-**[Website](https://ulanzipluginstore.narlei.com)** · **[Download](https://github.com/narlei/ulanzipluginstore/releases/latest)** · **[Publish a plugin](https://narlei.github.io/ulanzipluginstore/#publish)** · **[Report an issue](https://github.com/narlei/ulanzipluginstore/issues)**
+**[Website](https://ulanzicommunitystore.narlei.com)** · **[Download](https://github.com/narlei/ulanzicommunitystore/releases/latest)** · **[Publish a plugin](https://narlei.github.io/ulanzicommunitystore/#publish)** · **[Report an issue](https://github.com/narlei/ulanzicommunitystore/issues)**
 
 *Made with 💚 by the community, for the community. Unofficial project — not affiliated with Ulanzi.*
 

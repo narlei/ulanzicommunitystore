@@ -5,7 +5,7 @@
 import type { SubmitCheck, SubmitCheckResult } from '../shared.js';
 
 const API = 'https://api.github.com';
-const STORE_REPO = 'narlei/ulanzipluginstore';
+const STORE_REPO = 'narlei/ulanzicommunitystore';
 
 const HEADERS = {
   Accept: 'application/vnd.github+json',

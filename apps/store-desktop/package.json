@@ -10,7 +10,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/narlei/ulanzipluginstore.git"
+    "url": "https://github.com/narlei/ulanzicommunitystore.git"
   },
   "scripts": {
     "dev": "npm run build && node ../../scripts/brand-electron-app.mjs && electron .",
@@ -43,7 +43,7 @@
     "vite": "^6.0.3"
   },
   "build": {
-    "appId": "com.narlei.ulanzipluginstore",
+    "appId": "com.narlei.ulanzicommunitystore",
     "productName": "Ulanzi Community Store",
     "directories": {
       "output": "release"
@@ -58,7 +58,7 @@
       {
         "name": "Ulanzi Community Store",
         "schemes": [
-          "ulanzipluginstore"
+          "ulanzicommunitystore"
         ]
       }
     ],
@@ -107,7 +107,7 @@
       {
         "provider": "github",
         "owner": "narlei",
-        "repo": "ulanzipluginstore"
+        "repo": "ulanzicommunitystore"
       }
     ]
   }

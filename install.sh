@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Downloads and installs the latest Ulanzi Community Store build for macOS.
 #
-#   curl -fsSL https://raw.githubusercontent.com/narlei/ulanzipluginstore/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/install.sh | bash
 #
 # Files fetched with curl aren't tagged with the com.apple.quarantine
 # attribute the way browser downloads are, so Gatekeeper never blocks the
 # app — no "unidentified developer" dialog, no System Settings detour.
 set -euo pipefail
 
-REPO="narlei/ulanzipluginstore"
+REPO="narlei/ulanzicommunitystore"
 DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/UlanziPluginStore-mac.zip"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then

@@ -2,7 +2,7 @@
 
 ### Added
 - `install.sh`, a one-line installer (`curl -fsSL .../install.sh | bash`) that downloads the latest macOS `.zip` release and installs it to `/Applications`. Since curl downloads aren't tagged with the `com.apple.quarantine` attribute, Gatekeeper never blocks the app — no security prompts on first launch.
-- Packaged builds now default to the published GitHub Pages catalog (`https://narlei.github.io/ulanzipluginstore/catalog.json`) when `STORE_CATALOG_URL` isn't set, so the app works out of the box without manual configuration.
+- Packaged builds now default to the published GitHub Pages catalog (`https://narlei.github.io/ulanzicommunitystore/catalog.json`) when `STORE_CATALOG_URL` isn't set, so the app works out of the box without manual configuration.
 - `apps/store-desktop/scripts/render-dmg-background.sh`, a headless-Chrome script that regenerates `build/dmg-background.png` from `build/dmg-background.html`, replacing the previous Electron-based renderer.
 - Custom DMG installer layout (`dmg.background`, `dmg.window`, `dmg.contents` in electron-builder config) with a proper app-to-Applications drag target.
 - Predictable release artifact names (`UlanziPluginStore-mac.zip`, `UlanziPluginStore.dmg`, `UlanziPluginStore.exe`) via electron-builder `artifactName` overrides.

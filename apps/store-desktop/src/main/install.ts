@@ -12,7 +12,7 @@ import type { InstallProgress } from '../shared.js';
 import { pluginsDir, ULANZI_APP } from './paths.js';
 
 // Published by .github/workflows/publish-catalog.yml on every registry change.
-const DEFAULT_CATALOG_URL = 'https://narlei.github.io/ulanzipluginstore/catalog.json';
+const DEFAULT_CATALOG_URL = 'https://narlei.github.io/ulanzicommunitystore/catalog.json';
 
 export const CATALOG_URL =
   process.env.STORE_CATALOG_URL || (app.isPackaged ? DEFAULT_CATALOG_URL : '');

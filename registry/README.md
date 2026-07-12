@@ -5,7 +5,7 @@ This folder is the **source of truth** for the Ulanzi Community Store. Each file
 with a Pull Request, and every new GitHub Release ships to users automatically.
 
 > **Easy way:** the **Submit Plugin** tab in the app (or the *Publish* section at
-> [narlei.github.io/ulanzipluginstore](https://narlei.github.io/ulanzipluginstore/#publish))
+> [narlei.github.io/ulanzicommunitystore](https://narlei.github.io/ulanzicommunitystore/#publish))
 > validates your repository, generates this file, and opens the Pull Request for you in one click.
 > The steps below are the equivalent manual process.
 

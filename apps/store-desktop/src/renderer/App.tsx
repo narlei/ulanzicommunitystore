@@ -7,7 +7,7 @@ import { LANG_NAMES, LANGS, detectLang, pluginText, t, type Lang } from './i18n'
 type View = 'store' | 'installed' | 'updates' | 'submit' | 'settings';
 type Sort = 'recent' | 'popular';
 
-const REPO_URL = 'https://github.com/narlei/ulanzipluginstore';
+const REPO_URL = 'https://github.com/narlei/ulanzicommunitystore';
 const SDK_URL = 'https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK';
 type BusyState = Record<string, { pct: number; msg: string }>;
 

@@ -7,7 +7,7 @@ import { getSettings, updateSettings } from './settings.js';
 import { checkSubmission } from './submit.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PROTOCOL = 'ulanzipluginstore';
+const PROTOCOL = 'ulanzicommunitystore';
 
 let win: BrowserWindow | null = null;
 
@@ -106,7 +106,7 @@ if (!gotLock) {
     app.setAboutPanelOptions({
       applicationName: 'Ulanzi Community Store',
       credits: 'The open-source community store for Ulanzi Deck & Dial plugins.\nMade by the community — unofficial project, not affiliated with Ulanzi.',
-      website: 'https://ulanzipluginstore.narlei.com',
+      website: 'https://ulanzicommunitystore.narlei.com',
     });
     if (process.platform === 'darwin') {
       app.dock?.setIcon(nativeImage.createFromPath(appIconPath()));
