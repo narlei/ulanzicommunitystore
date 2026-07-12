@@ -2,7 +2,7 @@ name: deploy-marketing-site
 
 on:
   push:
-    branches: [develop]
+    branches: [main]
     paths:
       - 'apps/marketing-site/**'
       - '.github/workflows/deploy-marketing-site.yml'
