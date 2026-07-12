@@ -16,15 +16,25 @@ function appIconPath(): string {
 }
 
 function createWindow(): void {
+  const isMac = process.platform === 'darwin';
   win = new BrowserWindow({
     width: 1220,
     height: 820,
     minWidth: 900,
     minHeight: 620,
-    backgroundColor: '#0b0f17',
+    // On macOS the window is transparent so the native sidebar vibrancy
+    // (frosted glass) shows through behind the renderer's sidebar.
+    ...(isMac
+      ? {
+          vibrancy: 'sidebar' as const,
+          visualEffectState: 'followWindow' as const,
+          backgroundColor: '#00000000',
+          trafficLightPosition: { x: 20, y: 18 },
+        }
+      : { backgroundColor: '#1e1e1e' }),
     title: 'Ulanzi Plugin Store',
     icon: appIconPath(),
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
       contextIsolation: true,
