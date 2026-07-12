@@ -1,0 +1,96 @@
+name: security-scan
+
+# Daily vulnerability + secret scan of every community plugin repo listed in
+# registry/plugins/*.json. Findings are posted to the job summary and to a single
+# rolling GitHub issue (created when there are findings, closed when everything is clean).
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # every day at 06:00 UTC
+  workflow_dispatch: # allow manual runs from the Actions tab
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: security-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.2.3
+        with:
+          version: v0.58.0
+
+      - name: Run security scan
+        id: scan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SEVERITY: HIGH,CRITICAL
+          REPORT_FILE: security-report.md
+        run: node scripts/security-scan.mjs
+
+      - name: Publish job summary
+        if: always()
+        run: cat security-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open / update / close issue
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('security-report.md', 'utf8');
+            const found = '${{ steps.scan.outputs.found }}' === 'true';
+            const title = '🔒 Community plugin security scan';
+            const marker = '<!-- security-scan-issue -->';
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'security-scan',
+              per_page: 100,
+            });
+            const issue = existing.data.find((i) => (i.body || '').includes(marker));
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const fullBody = `${marker}\n\n${body}\n\n<sub>Last run: ${run}</sub>`;
+
+            if (found) {
+              if (issue) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: issue.number, body: fullBody, state: 'open',
+                });
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `🔁 Scan re-ran and still found issues. See updated report above.\n\n${run}`,
+                });
+              } else {
+                await github.rest.issues.create({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  title, body: fullBody, labels: ['security-scan'],
+                });
+              }
+            } else if (issue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `✅ Latest scan is clean — closing.\n\n${run}`,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: issue.number, state: 'closed',
+              });
+            }

@@ -25,4 +25,4 @@ jobs:
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./apps/marketing-site/
-          server-dir: ./public_html/
+          server-dir: ./
