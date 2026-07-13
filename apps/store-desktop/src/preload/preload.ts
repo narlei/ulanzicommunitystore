@@ -5,8 +5,10 @@ import type { AppUpdateInfo, InstallProgress } from '../shared.js';
 contextBridge.exposeInMainWorld('api', {
   getCatalog: () => ipcRenderer.invoke('catalog:get'),
   listInstalled: () => ipcRenderer.invoke('installed:list'),
-  install: (plugin: CatalogPlugin) => ipcRenderer.invoke('plugin:install', plugin),
+  install: (plugin: CatalogPlugin, options?: { skipRestart?: boolean }) =>
+    ipcRenderer.invoke('plugin:install', plugin, options),
   uninstall: (pluginId: string) => ipcRenderer.invoke('plugin:uninstall', pluginId),
+  restartStudio: () => ipcRenderer.invoke('studio:restart'),
   checkUpdates: () => ipcRenderer.invoke('updates:check'),
   checkAppUpdate: (force?: boolean) => ipcRenderer.invoke('appUpdate:check', force === true),
   applyAppUpdate: () => ipcRenderer.invoke('appUpdate:apply'),

@@ -12,6 +12,31 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = join(__dirname, '..', 'templates');
 const TARGET_DIR = process.cwd();
 
+// ---------- CLI flags (non-interactive automation) ----------
+// Let an orchestrator drive `init` across many repos without stopping on prompts.
+//   --yes            accept every prompt's default (wrap/hoist auto-proceed)
+//   --owner=<handle> GitHub owner (overrides the fork's remote owner)
+//   --device=<d>     deck | dial | both (skips the device-types question)
+//   --minimal        only the store essentials (release.yml); no Makefile,
+//                    .claude skill, resources/ scaffolding, or store.json
+//   --skip-sdk       do not clone the SDK example into ulanzi_plugin_example/
+//   --skip-store     do not write store.json (optional catalog metadata)
+//   --default-branch the branch the release workflow triggers on (default: detected, else main)
+const ARGV = process.argv.slice(2);
+const flagValue = (name) => {
+  const hit = ARGV.find((a) => a.startsWith(`${name}=`));
+  return hit ? hit.slice(name.length + 1) : null;
+};
+const FLAGS = {
+  yes: ARGV.includes('--yes') || ARGV.includes('-y'),
+  minimal: ARGV.includes('--minimal'),
+  skipSdk: ARGV.includes('--skip-sdk'),
+  skipStore: ARGV.includes('--skip-store'),
+  owner: flagValue('--owner'),
+  device: flagValue('--device'),
+  defaultBranch: flagValue('--default-branch'),
+};
+
 // Interactive (TTY): classic readline. Piped/non-TTY: pre-buffer lines so multi-prompt
 // flows still work (Node's readline only reliably handles one question on a pipe).
 let rl = null;
@@ -58,12 +83,14 @@ async function sh(cmd, opts = {}) {
 }
 
 async function ask(query, fallback = '') {
+  if (FLAGS.yes) return fallback;
   const suffix = fallback ? ` [${fallback}]` : '';
   const answer = (await nextLine(`${query}${suffix}: `)).trim();
   return answer || fallback;
 }
 
 async function confirm(query, defaultYes = true) {
+  if (FLAGS.yes) return defaultYes;
   const hint = defaultYes ? 'Y/n' : 'y/N';
   const answer = (await nextLine(`${query} [${hint}]: `)).trim().toLowerCase();
   if (!answer) return defaultYes;
@@ -640,7 +667,7 @@ async function run() {
   console.log('');
 
   // --- GitHub owner (handle). Prefer the logged-in gh user, otherwise ask. ---
-  let owner = git.owner || gh.user || '';
+  let owner = FLAGS.owner || git.owner || gh.user || '';
   owner = await ask('GitHub username (owner)', owner);
   while (!owner) owner = await ask('GitHub username is required', '');
 
@@ -665,7 +692,7 @@ async function run() {
       if (mf.Name) pluginName = mf.Name;
     } catch {}
 
-    const devicesRaw = (await ask('Device types supported (deck, dial, or both)', 'deck')).toLowerCase();
+    const devicesRaw = (FLAGS.device || await ask('Device types supported (deck, dial, or both)', 'deck')).toLowerCase();
     let deviceTypes = ['deck'];
     if (devicesRaw.includes('both')) deviceTypes = ['deck', 'dial'];
     else if (devicesRaw.includes('dial')) deviceTypes = ['dial'];
@@ -679,7 +706,7 @@ async function run() {
     author = await ask('Author (display name)', owner);
     description = await ask('Description', 'A plugin for Ulanzi Deck and Dial.');
 
-    const devicesRaw = (await ask('Device types (deck, dial, or both)', 'deck')).toLowerCase();
+    const devicesRaw = (FLAGS.device || await ask('Device types (deck, dial, or both)', 'deck')).toLowerCase();
     let deviceTypes = ['deck'];
     controllers = ['        "Keypad"'];
     if (devicesRaw.includes('both')) {
@@ -703,14 +730,21 @@ async function run() {
 
   const pluginDir = join(TARGET_DIR, `${pluginId}.ulanziPlugin`);
   await mkdir(pluginDir, { recursive: true });
-  await mkdir(join(pluginDir, 'pi'), { recursive: true });
-  await mkdir(join(TARGET_DIR, 'resources'), { recursive: true });
   await mkdir(join(TARGET_DIR, '.github', 'workflows'), { recursive: true });
-  await mkdir(join(TARGET_DIR, '.claude', 'skills', 'ulanzi-plugin-dev'), { recursive: true });
+  if (!adapted) await mkdir(join(pluginDir, 'pi'), { recursive: true });
+  if (!FLAGS.minimal) {
+    await mkdir(join(TARGET_DIR, 'resources'), { recursive: true });
+    await mkdir(join(TARGET_DIR, '.claude', 'skills', 'ulanzi-plugin-dev'), { recursive: true });
+  }
 
   const tpl = async (name) => readFile(join(TEMPLATES_DIR, name), 'utf-8');
   const storeJson = (await tpl('store.json.tpl')).replace(/\{\{DEVICE_TYPES\}\}/g, deviceTypesJson);
   const makefile = (await tpl('Makefile.tpl')).replace(/\{\{PLUGIN_ID\}\}/g, pluginId);
+  // Branch the release workflow watches. Prefer the flag, else the repo's default, else main.
+  const defaultBranch = FLAGS.defaultBranch
+    || (await sh('git symbolic-ref --quiet --short refs/remotes/origin/HEAD')).stdout.trim().replace(/^origin\//, '')
+    || 'main';
+  const releaseYml = (await tpl('release.yml.tpl')).replace(/\{\{DEFAULT_BRANCH\}\}/g, defaultBranch);
 
   if (!adapted) {
     const manifest = (await tpl('manifest.json.tpl'))
@@ -729,15 +763,19 @@ async function run() {
     await safeWrite(join(pluginDir, 'pi', 'index.html'), piHtml, 'pi/index.html');
   }
 
-  await safeWrite(join(TARGET_DIR, 'store.json'), storeJson, 'store.json');
-  await safeWrite(join(TARGET_DIR, 'Makefile'), makefile, 'Makefile');
-  await safeWrite(join(TARGET_DIR, '.github', 'workflows', 'release.yml'), await tpl('release.yml.tpl'), 'release.yml (GitHub Actions)');
+  if (!FLAGS.skipStore) await safeWrite(join(TARGET_DIR, 'store.json'), storeJson, 'store.json');
+  await safeWrite(join(TARGET_DIR, '.github', 'workflows', 'release.yml'), releaseYml, 'release.yml (GitHub Actions)');
   await safeWrite(join(TARGET_DIR, '.gitignore'), await tpl('gitignore.tpl'), '.gitignore');
-  await safeWrite(join(TARGET_DIR, '.claude', 'skills', 'ulanzi-plugin-dev', 'SKILL.md'), await tpl('SKILL.md.tpl'), 'Claude SKILL.md');
-  await safeWrite(join(TARGET_DIR, 'resources', '.gitkeep'), '', 'resources/ folder');
+  if (!FLAGS.minimal) {
+    await safeWrite(join(TARGET_DIR, 'Makefile'), makefile, 'Makefile');
+    await safeWrite(join(TARGET_DIR, '.claude', 'skills', 'ulanzi-plugin-dev', 'SKILL.md'), await tpl('SKILL.md.tpl'), 'Claude SKILL.md');
+    await safeWrite(join(TARGET_DIR, 'resources', '.gitkeep'), '', 'resources/ folder');
+  }
 
   // --- Reference SDK ---
-  if (await fileExists(join(TARGET_DIR, 'ulanzi_plugin_example'))) {
+  if (FLAGS.skipSdk) {
+    console.log('  - ⏭️  Skipped SDK example (--skip-sdk)');
+  } else if (await fileExists(join(TARGET_DIR, 'ulanzi_plugin_example'))) {
     console.log('  - ⏭️  Skipped SDK example (ulanzi_plugin_example already exists)');
   } else {
     console.log('\n📦 Downloading official Ulanzi SDK example...');
@@ -840,7 +878,9 @@ async function setupGitAndGithub({ git, gh, owner, repoName }) {
 
 // ---------- entry ----------
 
-const cmd = (process.argv[2] || 'init').toLowerCase();
+// The subcommand is the first non-flag arg (e.g. `init --yes --owner=x` or just `--yes ...`
+// from an automation caller that omits the implicit "init").
+const cmd = (process.argv.slice(2).find((a) => !a.startsWith('-')) || 'init').toLowerCase();
 const dispatch = {
   init: run,
   store: runStore,

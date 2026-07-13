@@ -1,6 +1,6 @@
 import AdmZip from 'adm-zip';
 import { app } from 'electron';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import os from 'node:os';
@@ -82,9 +82,15 @@ export async function listInstalled(): Promise<InstalledPlugin[]> {
   return out;
 }
 
+export type InstallOptions = {
+  /** Skip the Ulanzi Studio restart (batch installs restart once at the end). */
+  skipRestart?: boolean;
+};
+
 export async function installPlugin(
   plugin: CatalogPlugin,
   onProgress?: (progress: InstallProgress) => void,
+  options: InstallOptions = {},
 ): Promise<InstalledPlugin> {
   assertCatalogPlugin(plugin);
   const progress = (pct: number, msg: string) => onProgress?.({ id: plugin.id, pct, msg });
@@ -124,8 +130,10 @@ export async function installPlugin(
       await run('xattr', ['-dr', 'com.apple.quarantine', dest]).catch(() => {});
     }
 
-    progress(95, 'restart');
-    await restartUlanzi();
+    if (!options.skipRestart) {
+      progress(95, 'restart');
+      await restartUlanzi();
+    }
     progress(100, 'done');
     return { pluginId: plugin.id, version: plugin.version };
   } finally {
@@ -194,7 +202,7 @@ async function download(url: string, dest: string): Promise<void> {
   await fsp.writeFile(dest, buf);
 }
 
-async function restartUlanzi(): Promise<void> {
+export async function restartUlanzi(): Promise<void> {
   if (process.env.STORE_SKIP_RESTART) return;
   if (process.platform === 'darwin') {
     await run('osascript', ['-e', `tell application "${ULANZI_APP}" to quit`]).catch(() => {});
@@ -203,13 +211,45 @@ async function restartUlanzi(): Promise<void> {
     await sleep(500);
     await run('open', ['-a', ULANZI_APP]).catch(() => {});
   } else if (process.platform === 'win32') {
-    await run('taskkill', ['/IM', 'Ulanzi Studio.exe', '/F']).catch(() => {});
+    // Capture the exe path from the running process before killing it,
+    // so the Studio comes back up instead of staying dead.
+    const exePath = await windowsStudioExePath();
+    await run('taskkill', ['/IM', `${ULANZI_APP}.exe`, '/F']).catch(() => {});
+    if (exePath) {
+      await sleep(800);
+      try {
+        const child = spawn(exePath, [], { detached: true, stdio: 'ignore' });
+        child.unref();
+      } catch {
+        // Leave the Studio closed rather than fail the install.
+      }
+    }
+  }
+}
+
+async function windowsStudioExePath(): Promise<string | null> {
+  try {
+    const out = await runCapture('powershell', [
+      '-NoProfile',
+      '-Command',
+      `(Get-Process -Name '${ULANZI_APP}' -ErrorAction SilentlyContinue | Select-Object -First 1).Path`,
+    ]);
+    const exePath = out.trim();
+    return exePath || null;
+  } catch {
+    return null;
   }
 }
 
 function run(cmd: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
     execFile(cmd, args, (err) => (err ? reject(err) : resolve()));
+  });
+}
+
+function runCapture(cmd: string, args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(cmd, args, (err, stdout) => (err ? reject(err) : resolve(stdout)));
   });
 }
 

@@ -19,8 +19,11 @@ const RELEASE_TAG_CMD = 'git tag v1.0.0 && git push origin v1.0.0';
 const GITHUB_STAR_PROMPT_THRESHOLD = 3;
 const GITHUB_STAR_DISMISSED_KEY = 'githubStarDismissed';
 const PLATFORM_FILTER_KEY = 'platformFilter';
+const SORT_KEY = 'sortOrder';
 
 type BusyState = Record<string, { pct: number; msg: string }>;
+
+type Toast = { id: number; kind: 'error' | 'success' | 'info'; text: string };
 
 const defaultSettings: Settings = { developerMode: false };
 
@@ -48,6 +51,71 @@ function savePlatformFilter(value: PlatformFilter): void {
   } catch {
     // ignore
   }
+}
+
+function loadSort(): Sort {
+  try {
+    const stored = localStorage.getItem(SORT_KEY);
+    if (stored === 'recent' || stored === 'popular') return stored;
+  } catch {
+    // private mode / blocked storage
+  }
+  return 'recent';
+}
+
+function saveSort(value: Sort): void {
+  try {
+    localStorage.setItem(SORT_KEY, value);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Trap Tab focus inside a modal container while it is mounted, and restore
+ * focus to the previously focused element on unmount.
+ */
+function useFocusTrap<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const selector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const focusables = () =>
+      Array.from(node.querySelectorAll<HTMLElement>(selector)).filter(
+        (el) => !el.hasAttribute('disabled') && el.offsetParent !== null,
+      );
+    (focusables()[0] || node).focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Tab') return;
+      const items = focusables();
+      if (items.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || active === node)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    node.addEventListener('keydown', onKeyDown);
+    return () => {
+      node.removeEventListener('keydown', onKeyDown);
+      previous?.focus?.();
+    };
+  }, []);
+
+  return ref;
 }
 
 /** Map catalog platform strings (`mac`, `darwin`, `windows`, …) to filter keys. */
@@ -153,7 +221,7 @@ export function App() {
   const [device, setDevice] = useState('');
   const [platform, setPlatformState] = useState<PlatformFilter>(() => loadPlatformFilter());
   const [category, setCategory] = useState('');
-  const [sort, setSort] = useState<Sort>('recent');
+  const [sort, setSortState] = useState<Sort>(() => loadSort());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
@@ -161,7 +229,27 @@ export function App() {
   const [appUpdateDismissed, setAppUpdateDismissed] = useState<string | null>(null);
   const [appUpdateBusy, setAppUpdateBusy] = useState(false);
   const [githubStarDismissed, setGithubStarDismissed] = useState(() => isGithubStarDismissed());
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [confirmUninstall, setConfirmUninstall] = useState<CatalogPlugin | null>(null);
+  const [updatingAll, setUpdatingAll] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const toastId = useRef(0);
+  // Install state frozen at first load, used only by the recent-sort discovery boost.
+  // Installing during the session must not reorder the list under the user's eyes;
+  // the item settles into its natural position on the next launch.
+  const sortInstalledRef = useRef<Record<string, string | null> | null>(null);
+
+  const pushToast = useCallback((kind: Toast['kind'], text: string) => {
+    const id = ++toastId.current;
+    setToasts((current) => [...current, { id, kind, text }]);
+    window.setTimeout(() => {
+      setToasts((current) => current.filter((toast) => toast.id !== id));
+    }, 6000);
+  }, []);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -173,7 +261,9 @@ export function App() {
         window.api.getSettings(),
       ]);
       setPlugins(catalog.plugins);
-      setInstalled(toInstalledMap(installedList));
+      const installedMap = toInstalledMap(installedList);
+      if (!sortInstalledRef.current) sortInstalledRef.current = installedMap;
+      setInstalled(installedMap);
       setSettings(appSettings);
     } catch {
       setError(true);
@@ -261,6 +351,11 @@ export function App() {
     savePlatformFilter(next);
   }
 
+  function setSort(next: Sort) {
+    setSortState(next);
+    saveSort(next);
+  }
+
   function clearAllFilters() {
     setPlatform('');
     setDevice('');
@@ -344,9 +439,11 @@ export function App() {
       filtered.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
     } else {
       // Recent: uninstalled + NEW first (discovery), then pure recency.
+      // Uses the first-load install snapshot so installing mid-session keeps positions stable.
+      const sortInstalled = sortInstalledRef.current ?? installed;
       filtered.sort((a, b) => {
-        const aDiscover = !installed[a.id] && isPluginNew(a.publishedAt) ? 1 : 0;
-        const bDiscover = !installed[b.id] && isPluginNew(b.publishedAt) ? 1 : 0;
+        const aDiscover = !sortInstalled[a.id] && isPluginNew(a.publishedAt) ? 1 : 0;
+        const bDiscover = !sortInstalled[b.id] && isPluginNew(b.publishedAt) ? 1 : 0;
         if (aDiscover !== bDiscover) return bDiscover - aDiscover;
         return (b.publishedAt || '').localeCompare(a.publishedAt || '');
       });
@@ -362,11 +459,15 @@ export function App() {
     view === 'installed' ? installedCount > 0 : view === 'updates' ? updateCount > 0 : plugins.length > 0;
   const offerClearFilters = !loading && !error && visible.length === 0 && hasActiveFilters && viewHasItems;
 
-  async function install(plugin: CatalogPlugin) {
+  async function install(plugin: CatalogPlugin, options?: { skipRestart?: boolean }) {
     setBusy((current) => ({ ...current, [plugin.id]: { pct: 2, msg: 'start' } }));
     try {
-      const result = await window.api.install(plugin);
+      const result = await window.api.install(plugin, options);
       setInstalled((current) => ({ ...current, [result.pluginId]: result.version }));
+      return true;
+    } catch {
+      pushToast('error', t(lang, 'installError', pluginText(plugin, 'name', lang)));
+      return false;
     } finally {
       setBusy((current) => {
         const next = { ...current };
@@ -385,12 +486,37 @@ export function App() {
         delete next[plugin.id];
         return next;
       });
+    } catch {
+      pushToast('error', t(lang, 'uninstallError', pluginText(plugin, 'name', lang)));
     } finally {
       setBusy((current) => {
         const next = { ...current };
         delete next[plugin.id];
         return next;
       });
+    }
+  }
+
+  async function updateAll() {
+    if (updatingAll) return;
+    const targets = plugins.filter((plugin) => hasUpdate(plugin, installed));
+    if (targets.length === 0) return;
+    setUpdatingAll(true);
+    try {
+      let failed = 0;
+      // Sequential installs with skipRestart — the Studio restarts once at the end.
+      for (const plugin of targets) {
+        const ok = await install(plugin, { skipRestart: true });
+        if (!ok) failed += 1;
+      }
+      await window.api.restartStudio().catch(() => {});
+      if (failed > 0) {
+        pushToast('error', t(lang, 'updateAllPartial', failed, targets.length));
+      } else {
+        pushToast('success', t(lang, 'updateAllDone'));
+      }
+    } finally {
+      setUpdatingAll(false);
     }
   }
 
@@ -529,11 +655,25 @@ export function App() {
                   onLater={dismissGithubStar}
                 />
               )}
-              <div className="mb-4">
-                <h2 className="text-[26px] font-bold tracking-tight">
-                  {view === 'store' ? t(lang, 'title') : t(lang, view)}
-                </h2>
-                <p className="mt-0.5 text-ink2">{t(lang, 'subtitle')}</p>
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+                <div>
+                  <h2 className="text-[26px] font-bold tracking-tight">
+                    {view === 'store' ? t(lang, 'title') : t(lang, view)}
+                  </h2>
+                  <p className="mt-0.5 text-ink2">{t(lang, 'subtitle')}</p>
+                </div>
+                {view === 'updates' && updateCount > 0 && (
+                  <div className="text-right">
+                    <button
+                      className="btn-primary"
+                      disabled={updatingAll}
+                      onClick={() => void updateAll()}
+                    >
+                      {t(lang, 'updateAll')} ({updateCount})
+                    </button>
+                    <p className="mt-1 text-[11px] text-ink3">{t(lang, 'updateAllHint')}</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -649,7 +789,17 @@ export function App() {
             </div>
 
             <div className="px-7 pb-6 pt-5">
-              {loading && <StateCard>{t(lang, 'loading')}</StateCard>}
+              {loading && (
+                <div
+                  className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5 pb-4"
+                  role="status"
+                  aria-label={t(lang, 'loading')}
+                >
+                  {Array.from({ length: 8 }, (_, index) => (
+                    <SkeletonCard key={index} />
+                  ))}
+                </div>
+              )}
               {error && (
                 <StateCard>
                   <div>{t(lang, 'catalogError')}</div>
@@ -704,10 +854,123 @@ export function App() {
           busy={busy[selected.id]}
           onClose={() => setSelected(null)}
           onInstall={() => void install(selected)}
-          onUninstall={() => void uninstall(selected)}
+          onUninstall={() => setConfirmUninstall(selected)}
         />
       )}
+
+      {confirmUninstall && (
+        <ConfirmDialog
+          title={t(lang, 'confirmUninstallTitle', pluginText(confirmUninstall, 'name', lang))}
+          body={t(lang, 'confirmUninstallBody')}
+          confirmLabel={t(lang, 'uninstall')}
+          cancelLabel={t(lang, 'cancel')}
+          onCancel={() => setConfirmUninstall(null)}
+          onConfirm={() => {
+            const plugin = confirmUninstall;
+            setConfirmUninstall(null);
+            void uninstall(plugin);
+          }}
+        />
+      )}
+
+      {toasts.length > 0 && (
+        <div className="toast-stack">
+          {toasts.map((toast) => (
+            <div key={toast.id} className={`toast toast-${toast.kind}`} role="status" aria-live="polite">
+              <span className="toast-dot" aria-hidden="true" />
+              <span className="min-w-0 flex-1">{toast.text}</span>
+              <button
+                type="button"
+                className="toast-close"
+                onClick={() => dismissToast(toast.id)}
+                aria-label={t(lang, 'close')}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="h-3 w-3" aria-hidden="true">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </main>
+  );
+}
+
+function ConfirmDialog({
+  title,
+  body,
+  confirmLabel,
+  cancelLabel,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  body: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const trapRef = useFocusTrap<HTMLDivElement>();
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.stopImmediatePropagation();
+        onCancel();
+      }
+    }
+    // Capture so Escape closes the dialog before the detail sheet underneath.
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [onCancel]);
+
+  return (
+    <div className="animate-backdrop no-drag fixed inset-0 z-30 grid place-items-center bg-black/40 p-8 backdrop-blur-[2px]" onClick={onCancel}>
+      <div
+        ref={trapRef}
+        tabIndex={-1}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={title}
+        className="animate-sheet w-full max-w-sm rounded-2xl bg-bg p-5 shadow-sheet outline-none"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h3 className="text-[15px] font-semibold">{title}</h3>
+        <p className="mt-1.5 leading-6 text-ink2">{body}</p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="btn-ghost" onClick={onCancel}>
+            {cancelLabel}
+          </button>
+          <button className="btn-primary !bg-red-500" onClick={onConfirm}>
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonCard() {
+  return (
+    <div className="card flex flex-col overflow-hidden" aria-hidden="true">
+      <div className="skeleton h-32 w-full !rounded-none" />
+      <div className="flex flex-1 flex-col p-4">
+        <div className="flex items-center gap-3">
+          <div className="skeleton h-10 w-10 shrink-0 !rounded-[10px]" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="skeleton h-3.5 w-2/3" />
+            <div className="skeleton h-3 w-1/3" />
+          </div>
+          <div className="skeleton h-6 w-16 shrink-0 !rounded-full" />
+        </div>
+        <div className="mt-4 space-y-2">
+          <div className="skeleton h-3 w-full" />
+          <div className="skeleton h-3 w-4/5" />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -792,9 +1055,11 @@ function PluginCard({
   onInstall: () => void;
 }) {
   const update = Boolean(installedVersion && compareVersions(plugin.version, installedVersion) > 0);
-  // NEW from catalog publishedAt (latest release). Hidden when already installed
-  // (installed + newer version uses the Update chip instead).
+  // NEW from catalog publishedAt (latest release) while not installed. Once installed
+  // and up to date, a recent release shows "recently updated" instead; installed with
+  // a pending newer version keeps only the Update chip.
   const showNew = !installedVersion && isPluginNew(plugin.publishedAt);
+  const showUpdated = Boolean(installedVersion) && !update && isPluginNew(plugin.publishedAt);
   return (
     <article
       className="card card-interactive animate-card group flex cursor-pointer flex-col overflow-hidden"
@@ -818,6 +1083,11 @@ function PluginCard({
         {showNew && (
           <span className="absolute left-2 top-2 z-[1] rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-ink shadow-sm">
             {t(lang, 'newBadge')}
+          </span>
+        )}
+        {showUpdated && (
+          <span className="absolute left-2 top-2 z-[1] rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+            {t(lang, 'updatedBadge')}
           </span>
         )}
         <PopularityBadges plugin={plugin} className="absolute right-2 top-2" />
@@ -868,19 +1138,37 @@ function PluginDetail({
   onUninstall: () => void;
 }) {
   const update = Boolean(installedVersion && compareVersions(plugin.version, installedVersion) > 0);
+  const [lightbox, setLightbox] = useState<number | null>(null);
+  const trapRef = useFocusTrap<HTMLElement>();
+  const screenshots = plugin.screenshots || [];
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') {
+        setLightbox((current) => {
+          if (current === null) onClose();
+          return null;
+        });
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        const delta = event.key === 'ArrowLeft' ? -1 : 1;
+        setLightbox((current) =>
+          current === null ? current : (current + delta + screenshots.length) % screenshots.length,
+        );
+      }
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  }, [onClose, screenshots.length]);
 
   return (
-    <div className="animate-backdrop fixed inset-0 z-20 grid place-items-center bg-black/40 p-8 backdrop-blur-[2px]" onClick={onClose}>
+    <div className="animate-backdrop no-drag fixed inset-0 z-20 grid place-items-center bg-black/40 p-8 backdrop-blur-[2px]" onClick={onClose}>
       <article
-        className="animate-sheet flex h-full max-h-[760px] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-bg shadow-sheet"
+        ref={trapRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={pluginText(plugin, 'name', lang)}
+        className="animate-sheet flex h-full max-h-[760px] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-bg shadow-sheet outline-none"
         onClick={(event) => event.stopPropagation()}
       >
         <header className="relative flex items-center gap-5 border-b border-stroke/70 p-6 pr-14">
@@ -938,7 +1226,7 @@ function PluginDetail({
           <button
             className="absolute right-4 top-4 grid h-7 w-7 place-items-center rounded-full bg-black/[0.06] text-ink2 transition-colors hover:bg-black/[0.12] hover:text-ink dark:bg-white/[0.08] dark:hover:bg-white/[0.14]"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t(lang, 'close')}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="h-3.5 w-3.5">
               <path d="M6 6l12 12M18 6L6 18" />
@@ -947,10 +1235,21 @@ function PluginDetail({
         </header>
 
         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-6">
-          {plugin.screenshots?.length > 0 && (
+          {screenshots.length > 0 && (
             <div className="mb-6 flex gap-3 overflow-x-auto pb-1">
-              {plugin.screenshots.map((shot) => (
-                <img key={shot} src={shot} alt="" className="h-56 shrink-0 rounded-xl object-cover shadow-card" />
+              {screenshots.map((shot, index) => (
+                <button
+                  key={shot}
+                  type="button"
+                  className="group/shot shrink-0 cursor-pointer rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  onClick={() => setLightbox(index)}
+                >
+                  <img
+                    src={shot}
+                    alt=""
+                    className="h-56 rounded-xl object-cover shadow-card transition-opacity group-hover/shot:opacity-90"
+                  />
+                </button>
               ))}
             </div>
           )}
@@ -983,7 +1282,7 @@ function PluginDetail({
               {plugin.languages?.length > 0 && <DetailCell label={t(lang, 'languages')} value={plugin.languages.join(', ')} />}
               {plugin.publishedAt && <DetailCell label={t(lang, 'published')} value={plugin.publishedAt.slice(0, 10)} />}
               {(plugin.deviceTypes || []).length > 0 && (
-                <DetailCell label="Devices" value={(plugin.deviceTypes || []).map(deviceLabel).join(', ')} />
+                <DetailCell label={t(lang, 'devices')} value={(plugin.deviceTypes || []).map(deviceLabel).join(', ')} />
               )}
               {(plugin.tags || []).length > 0 && (
                 <DetailCell
@@ -995,6 +1294,100 @@ function PluginDetail({
           </section>
         </div>
       </article>
+
+      {lightbox !== null && screenshots[lightbox] && (
+        <Lightbox
+          lang={lang}
+          shots={screenshots}
+          index={lightbox}
+          onSelect={setLightbox}
+          onClose={() => setLightbox(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function Lightbox({
+  lang,
+  shots,
+  index,
+  onSelect,
+  onClose,
+}: {
+  lang: Lang;
+  shots: string[];
+  index: number;
+  onSelect: (index: number) => void;
+  onClose: () => void;
+}) {
+  const trapRef = useFocusTrap<HTMLDivElement>();
+  const step = (delta: number) => onSelect((index + delta + shots.length) % shots.length);
+
+  return (
+    <div
+      ref={trapRef}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      className="animate-backdrop no-drag fixed inset-0 z-30 flex items-center justify-center bg-black/75 p-10 outline-none"
+      onClick={(event) => {
+        event.stopPropagation();
+        onClose();
+      }}
+    >
+      <img
+        src={shots[index]}
+        alt=""
+        className="max-h-full max-w-full rounded-xl object-contain shadow-sheet"
+        onClick={(event) => event.stopPropagation()}
+      />
+      <button
+        type="button"
+        className="absolute right-5 top-5 grid h-8 w-8 cursor-pointer place-items-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25"
+        onClick={(event) => {
+          event.stopPropagation();
+          onClose();
+        }}
+        aria-label={t(lang, 'close')}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="h-4 w-4" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+      {shots.length > 1 && (
+        <>
+          <button
+            type="button"
+            className="absolute left-5 top-1/2 grid h-9 w-9 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25"
+            onClick={(event) => {
+              event.stopPropagation();
+              step(-1);
+            }}
+            aria-label={t(lang, 'previous')}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="absolute right-5 top-1/2 grid h-9 w-9 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25"
+            onClick={(event) => {
+              event.stopPropagation();
+              step(1);
+            }}
+            aria-label={t(lang, 'next')}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+          </button>
+          <span className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-2.5 py-0.5 text-[11px] font-medium tabular-nums text-white">
+            {index + 1} / {shots.length}
+          </span>
+        </>
+      )}
     </div>
   );
 }

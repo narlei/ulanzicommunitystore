@@ -410,6 +410,68 @@ button:disabled {
     animation: card-in 0.32s cubic-bezier(0.25, 0.8, 0.25, 1) both;
   }
 
+  /* Toast notifications (install errors, batch update results) */
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .toast-stack {
+    @apply pointer-events-none fixed bottom-5 right-5 z-40 flex w-[340px] flex-col gap-2;
+    -webkit-app-region: no-drag;
+  }
+
+  .toast {
+    @apply pointer-events-auto flex items-start gap-2.5 rounded-xl border border-stroke/70 bg-surface px-4 py-3 text-[12.5px] leading-5 text-ink shadow-sheet;
+    animation: toast-in 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .toast-error {
+    @apply border-red-500/30;
+  }
+
+  .toast-error .toast-dot {
+    @apply bg-red-500;
+  }
+
+  .toast-success .toast-dot {
+    background: rgb(52 199 89);
+  }
+
+  .toast-info .toast-dot {
+    @apply bg-accent;
+  }
+
+  .toast-dot {
+    @apply mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full;
+  }
+
+  .toast-close {
+    @apply -mr-1 mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-ink3 transition-colors hover:bg-black/10 hover:text-ink dark:hover:bg-white/10;
+  }
+
+  /* Skeleton loading cards */
+  @keyframes skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+
+  .skeleton {
+    @apply rounded-md bg-black/[0.07] dark:bg-white/[0.09];
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+
   .markdown-body {
     @apply space-y-4;
     min-width: 0;

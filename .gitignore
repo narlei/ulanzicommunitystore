@@ -6,3 +6,6 @@ apps/store-desktop/dist/
 apps/store-desktop/release/
 *.log
 .claude/launch.json
+
+# Local clones of author forks used by scripts/onboard-store-prs.mjs
+.plugin-forks/

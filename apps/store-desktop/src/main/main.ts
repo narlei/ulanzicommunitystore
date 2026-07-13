@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compareVersions, isPluginId, isRepoSlug, type CatalogPlugin } from '@ulanzideck/catalog';
 import { applyAppUpdate, checkAppUpdate } from './app-update.js';
-import { fetchCatalog, installPlugin, listInstalled, uninstallPlugin } from './install.js';
+import { fetchCatalog, installPlugin, listInstalled, restartUlanzi, uninstallPlugin, type InstallOptions } from './install.js';
 import { getSettings, updateSettings } from './settings.js';
 import { checkSubmission } from './submit.js';
 import type { AppUpdateInfo } from '../shared.js';
@@ -235,11 +235,18 @@ ipcMain.handle('settings:developerMode', (_event, enabled: unknown) =>
   updateSettings({ developerMode: enabled === true }),
 );
 
-ipcMain.handle('plugin:install', (event, plugin: CatalogPlugin) =>
-  installPlugin(plugin, (progress) => event.sender.send('plugin:progress', progress)).finally(() => {
+ipcMain.handle('plugin:install', (event, plugin: CatalogPlugin, options?: InstallOptions) =>
+  installPlugin(plugin, (progress) => event.sender.send('plugin:progress', progress), {
+    skipRestart: options?.skipRestart === true,
+  }).finally(() => {
     scheduleUpdateCheck();
   }),
 );
+
+ipcMain.handle('studio:restart', async () => {
+  await restartUlanzi();
+  return { ok: true };
+});
 
 ipcMain.handle('plugin:uninstall', async (event, pluginId: unknown) => {
   if (typeof pluginId !== 'string' || !isPluginId(pluginId)) throw new Error('Invalid pluginId');
