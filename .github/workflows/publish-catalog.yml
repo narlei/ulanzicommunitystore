@@ -11,6 +11,8 @@ on:
     # 07:00 America/Sao_Paulo (GitHub Actions cron uses UTC).
     - cron: '0 10 * * *'
   workflow_dispatch: {}
+  repository_dispatch:
+    types: [rebuild-catalog]
 
 permissions:
   contents: read
