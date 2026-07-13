@@ -196,13 +196,41 @@
 
   function metaBits(plugin) {
     var bits = ['v' + plugin.version];
-    if (typeof plugin.downloads === 'number') {
-      bits.push(t('catalog_downloads_n', formatDownloads(plugin.downloads)));
-    }
     (plugin.deviceTypes || []).forEach(function (d) {
       bits.push(deviceLabel(d));
     });
     return bits.map(escapeHtml).join(' · ');
+  }
+
+  function popularityHtml(plugin) {
+    var bits = [];
+    var titles = [];
+    if (typeof plugin.stars === 'number') {
+      titles.push(t('catalog_stars_n', formatDownloads(plugin.stars)));
+      bits.push(
+        '<span class="catalog-card-stat-item">' +
+          '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M12 2.5l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 16.4 6.6 19.3l1-6.1L3.2 8.9l6.1-.9L12 2.5z"/></svg>' +
+          escapeHtml(formatDownloads(plugin.stars)) +
+          '</span>'
+      );
+    }
+    if (typeof plugin.downloads === 'number') {
+      titles.push(t('catalog_downloads_n', formatDownloads(plugin.downloads)));
+      bits.push(
+        '<span class="catalog-card-stat-item">' +
+          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>' +
+          escapeHtml(formatDownloads(plugin.downloads)) +
+          '</span>'
+      );
+    }
+    if (!bits.length) return '';
+    return (
+      '<div class="catalog-card-popularity" title="' +
+      escapeHtml(titles.join(' · ')) +
+      '">' +
+      bits.join('') +
+      '</div>'
+    );
   }
 
   function cardHtml(plugin) {
@@ -224,7 +252,10 @@
       '<article class="card catalog-card" role="button" tabindex="0" data-plugin-id="' +
       escapeHtml(plugin.id) +
       '">' +
+      '<div class="catalog-card-cover-wrap">' +
       cover +
+      popularityHtml(plugin) +
+      '</div>' +
       '<div class="catalog-card-body">' +
       '<div class="catalog-card-top">' +
       icon +
@@ -340,6 +371,14 @@
           escapeHtml(t('catalog_source')) +
           '</a>'
         : '') +
+      (plugin.sourceUrl
+        ? '<a class="button secondary button-sm" href="' +
+          escapeHtml(plugin.sourceUrl) +
+          '" target="_blank" rel="noopener noreferrer">' +
+          escapeHtml(t('catalog_star')) +
+          (typeof plugin.stars === 'number' ? ' · ' + escapeHtml(formatDownloads(plugin.stars)) : '') +
+          '</a>'
+        : '') +
       '</div>' +
       '</div>' +
       '</header>' +
@@ -362,6 +401,10 @@
       detailCell(
         t('catalog_downloads'),
         typeof plugin.downloads === 'number' ? formatDownloads(plugin.downloads) : ''
+      ) +
+      detailCell(
+        t('catalog_stars'),
+        typeof plugin.stars === 'number' ? formatDownloads(plugin.stars) : ''
       ) +
       detailCell(t('catalog_devices'), devices) +
       detailCell(t('catalog_platforms'), platforms) +

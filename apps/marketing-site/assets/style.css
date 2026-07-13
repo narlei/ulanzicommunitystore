@@ -854,6 +854,41 @@ h1, h2, h3 {
   outline-offset: 3px;
 }
 
+.catalog-card-cover-wrap {
+  position: relative;
+}
+
+.catalog-card-popularity {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+.catalog-card-stat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.catalog-card-stat-item svg {
+  flex-shrink: 0;
+  opacity: 0.92;
+}
+
 .catalog-card-cover {
   display: block;
   width: 100%;

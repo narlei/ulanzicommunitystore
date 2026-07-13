@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="228" height="20" viewBox="0 0 228 20" role="img" aria-label="Ulanzi Community Store: available">
+  <title>Ulanzi Community Store: available</title>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="r">
+    <rect width="228" height="20" rx="3" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#r)">
+    <rect width="163" height="20" fill="#1f2937"/>
+    <rect x="163" width="65" height="20" fill="#41e6c3"/>
+    <rect width="228" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110">
+    <text aria-hidden="true" x="825" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="1530">Ulanzi Community Store</text>
+    <text x="825" y="140" transform="scale(.1)" fill="#fff" textLength="1530">Ulanzi Community Store</text>
+    <text aria-hidden="true" x="1945" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="550">available</text>
+    <text x="1945" y="140" transform="scale(.1)" fill="#05221b" font-weight="700" textLength="550">available</text>
+  </g>
+</svg>

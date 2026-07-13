@@ -66,3 +66,10 @@ Once your plugin is generated:
 1. Commit your changes and push them to GitHub.
 2. Create and push a tag (e.g. `git tag v1.0.0` && `git push origin v1.0.0`). The included GitHub Action will automatically create a Release with the compiled `.zip` file.
 3. Submit your plugin to the Ulanzi Community Store by pasting your GitHub repo URL in the "Publish" section of the store.
+4. Optional — after you're listed, add the Community Store badge to your plugin README:
+
+```markdown
+[![Available on Ulanzi Community Store](https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/docs/badges/ulanzi-community-store.svg)](https://ulanzicommunitystore.narlei.com)
+```
+
+Variants: [docs/badges](https://github.com/narlei/ulanzicommunitystore/tree/main/docs/badges).

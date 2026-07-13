@@ -27,6 +27,8 @@ export type CatalogPlugin = {
   publishedAt: string | null;
   /** Sum of downloads for .ulanziPlugin.zip assets across all releases. Absent in older catalogs. */
   downloads?: number;
+  /** GitHub stargazers_count at catalog build time. Absent in older catalogs. */
+  stars?: number;
   downloadUrl: string;
   sourceUrl: string;
 };
