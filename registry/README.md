@@ -50,3 +50,15 @@ To submit yours:
 ```
 
 Image paths are relative to the root of your repo.
+
+## Badge for your plugin README
+
+Once your plugin is merged into this registry, you can show it on your repo:
+
+[![Available on Ulanzi Community Store](../docs/badges/ulanzi-community-store.svg)](https://ulanzicommunitystore.narlei.com)
+
+```markdown
+[![Available on Ulanzi Community Store](https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/docs/badges/ulanzi-community-store.svg)](https://ulanzicommunitystore.narlei.com)
+```
+
+More variants (shield style, shields.io): [docs/badges/README.md](../docs/badges/README.md).

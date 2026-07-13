@@ -85,6 +85,18 @@ Once your PR is merged, a GitHub Action reads your manifest and latest release a
 
 Publishing here doesn't lock you in — the same plugin can (and should!) also go to the official Ulanzi Studio Marketplace. The Community Store is simply where it can live and evolve while you iterate.
 
+### 🏷️ Badge for your plugin README
+
+After your plugin is listed, add this to your README so people can see you're on the Community Store:
+
+[![Available on Ulanzi Community Store](docs/badges/ulanzi-community-store.svg)](https://ulanzicommunitystore.narlei.com)
+
+```markdown
+[![Available on Ulanzi Community Store](https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/docs/badges/ulanzi-community-store.svg)](https://ulanzicommunitystore.narlei.com)
+```
+
+Shield-style and shields.io alternatives live in [`docs/badges/`](docs/badges/README.md).
+
 ## 🧰 Plugin Starter Kit
 
 Don't want to build the folder structure from scratch? We provide an official scaffolding tool that generates the manifest, a `Makefile` for local testing, and the GitHub Actions workflow for automatic releases.

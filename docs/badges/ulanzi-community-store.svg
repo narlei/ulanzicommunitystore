@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="262" height="28" viewBox="0 0 262 28" role="img" aria-label="Available on Ulanzi Community Store">
+  <title>Available on Ulanzi Community Store</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#101a2e"/>
+    </linearGradient>
+    <linearGradient id="key" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a4a63"/>
+      <stop offset="100%" stop-color="#243246"/>
+    </linearGradient>
+    <linearGradient id="heart" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6cf0d4"/>
+      <stop offset="100%" stop-color="#41e6c3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Pill background -->
+  <rect width="262" height="28" rx="6" fill="url(#bg)" stroke="rgba(255,255,255,0.10)"/>
+
+  <!-- Mini app icon (3×3 deck keys + teal heart) -->
+  <g transform="translate(5 4)">
+    <rect width="20" height="20" rx="4.5" fill="#0d1726" stroke="rgba(255,255,255,0.08)"/>
+    <!-- row 1 -->
+    <rect x="3.2" y="3.2" width="3.8" height="3.8" rx="0.9" fill="url(#key)"/>
+    <rect x="8.1" y="3.2" width="3.8" height="3.8" rx="0.9" fill="url(#key)"/>
+    <rect x="13" y="3.2" width="3.8" height="3.8" rx="0.9" fill="url(#heart)"/>
+    <!-- row 2 -->
+    <rect x="3.2" y="8.1" width="3.8" height="3.8" rx="0.9" fill="url(#key)"/>
+    <rect x="8.1" y="8.1" width="3.8" height="3.8" rx="0.9" fill="url(#key)"/>
+    <rect x="13" y="8.1" width="3.8" height="3.8" rx="0.9" fill="url(#key)"/>
+    <!-- row 3 -->
+    <rect x="3.2" y="13" width="3.8" height="3.8" rx="0.9" fill="url(#key)"/>
+    <rect x="8.1" y="13" width="3.8" height="3.8" rx="0.9" fill="url(#key)"/>
+    <rect x="13" y="13" width="3.8" height="3.8" rx="0.9" fill="url(#key)"/>
+    <!-- heart glyph on teal key -->
+    <path d="M14.9 4.55c0.28-0.28 0.74-0.28 1.02 0l0.18 0.18 0.18-0.18c0.28-0.28 0.74-0.28 1.02 0 0.28 0.28 0.28 0.74 0 1.02l-1.2 1.2-1.2-1.2c-0.28-0.28-0.28-0.74 0-1.02z" fill="#fff"/>
+  </g>
+
+  <!-- Label -->
+  <text x="32" y="18" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="600" fill="#e8eef7">Available on</text>
+  <text x="102" y="18" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#41e6c3">Ulanzi Community Store</text>
+</svg>

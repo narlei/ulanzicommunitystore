@@ -430,7 +430,6 @@ export function App() {
                   busy={busy[plugin.id]}
                   onOpen={() => setSelected(plugin)}
                   onInstall={() => void install(plugin)}
-                  onUninstall={() => void uninstall(plugin)}
                 />
               ))}
             </div>
@@ -496,7 +495,6 @@ function PluginCard({
   busy,
   onOpen,
   onInstall,
-  onUninstall,
 }: {
   plugin: CatalogPlugin;
   index: number;
@@ -505,7 +503,6 @@ function PluginCard({
   busy?: { pct: number; msg: string };
   onOpen: () => void;
   onInstall: () => void;
-  onUninstall: () => void;
 }) {
   const update = Boolean(installedVersion && compareVersions(plugin.version, installedVersion) > 0);
   return (
@@ -522,12 +519,13 @@ function PluginCard({
         }
       }}
     >
-      <div className="h-32 w-full overflow-hidden bg-raised">
+      <div className="relative h-32 w-full overflow-hidden bg-raised">
         {plugin.cover ? (
           <img src={plugin.cover} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
         ) : (
           <div className="grid h-full place-items-center text-3xl text-accent/50">◆</div>
         )}
+        <PopularityBadges plugin={plugin} className="absolute right-2 top-2" />
       </div>
       <div className="flex flex-1 flex-col p-4">
         <div className="flex items-center gap-3">
@@ -552,19 +550,8 @@ function PluginCard({
             </div>
           </div>
         ) : (
-          <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="mt-2">
             <Meta plugin={plugin} showUpdate={Boolean(update)} lang={lang} />
-            {installedVersion && (
-              <button
-                className="shrink-0 text-[12px] font-medium text-ink3 transition-colors hover:text-red-500"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onUninstall();
-                }}
-              >
-                {t(lang, 'uninstall')}
-              </button>
-            )}
           </div>
         )}
       </div>
@@ -626,6 +613,12 @@ function PluginDetail({
               <button className="btn-pill-ghost" onClick={() => void window.api.openExternal(plugin.sourceUrl)}>
                 {t(lang, 'source')}
               </button>
+              {plugin.sourceUrl && (
+                <button className="btn-pill-ghost" onClick={() => void window.api.openExternal(plugin.sourceUrl)}>
+                  {t(lang, 'starOnGithub')}
+                  {typeof plugin.stars === 'number' ? ` · ${formatDownloads(plugin.stars)}` : ''}
+                </button>
+              )}
               {busy && (
                 <div className="progress-track w-40">
                   <div className="progress-fill" style={{ width: `${busy.pct}%` }} />
@@ -673,6 +666,9 @@ function PluginDetail({
               <DetailCell label={t(lang, 'version')} value={plugin.version} />
               {typeof plugin.downloads === 'number' && (
                 <DetailCell label={t(lang, 'downloads')} value={plugin.downloads.toLocaleString()} />
+              )}
+              {typeof plugin.stars === 'number' && (
+                <DetailCell label={t(lang, 'stars')} value={plugin.stars.toLocaleString()} />
               )}
               {plugin.minSoftwareVersion && <DetailCell label={t(lang, 'minSoftware')} value={plugin.minSoftwareVersion} />}
               {plugin.languages?.length > 0 && <DetailCell label={t(lang, 'languages')} value={plugin.languages.join(', ')} />}
@@ -1046,16 +1042,34 @@ function SubmitCheckRow({ check, lang }: { check: SubmitCheck; lang: Lang }) {
   );
 }
 
-function DownloadCount({ count }: { count: number }) {
+function PopularityBadges({ plugin, className = '' }: { plugin: CatalogPlugin; className?: string }) {
+  const hasStars = typeof plugin.stars === 'number';
+  const hasDownloads = typeof plugin.downloads === 'number';
+  if (!hasStars && !hasDownloads) return null;
+
   return (
-    <span className="chip flex items-center gap-1 tabular-nums">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 shrink-0">
-        <path d="M12 4v11" />
-        <path d="M7 11l5 5 5-5" />
-        <path d="M5 20h14" />
-      </svg>
-      {formatDownloads(count)}
-    </span>
+    <div
+      className={`inline-flex items-center gap-2 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-medium tabular-nums text-white shadow-sm backdrop-blur-sm ${className}`}
+    >
+      {hasStars && (
+        <span className="inline-flex items-center gap-1">
+          <svg viewBox="0 0 24 24" fill="currentColor" className="h-3 w-3 shrink-0 opacity-90">
+            <path d="M12 2.5l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 16.4 6.6 19.3l1-6.1L3.2 8.9l6.1-.9L12 2.5z" />
+          </svg>
+          {formatDownloads(plugin.stars!)}
+        </span>
+      )}
+      {hasDownloads && (
+        <span className="inline-flex items-center gap-1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 shrink-0">
+            <path d="M12 4v11" />
+            <path d="M7 11l5 5 5-5" />
+            <path d="M5 20h14" />
+          </svg>
+          {formatDownloads(plugin.downloads!)}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -1063,7 +1077,6 @@ function Meta({ plugin, showUpdate, lang }: { plugin: CatalogPlugin; showUpdate?
   return (
     <div className="flex min-w-0 flex-wrap gap-1.5">
       {showUpdate && lang && <span className="chip bg-accent text-accent-ink">{t(lang, 'updateBadge')}</span>}
-      {typeof plugin.downloads === 'number' && <DownloadCount count={plugin.downloads} />}
       {(plugin.deviceTypes || []).map((item) => (
         <span className="chip chip-brand" key={item}>
           {deviceLabel(item)}

@@ -170,9 +170,10 @@ async function buildEntry(repo) {
   // `latest/download/<pluginId>.zip`, so we use the release asset URL directly.
   const isVersionedAsset = zipAsset.name !== `${pluginId}.zip`;
 
-  // 2) default branch
+  // 2) default branch + stars (same API call)
   const repoInfo = await ghJson(`/repos/${repo}`);
   const ref = repoInfo.default_branch || 'main';
+  const stars = typeof repoInfo.stargazers_count === 'number' ? repoInfo.stargazers_count : 0;
 
   // 3) manifest.json
   const manifestText = await ghRawFile(repo, `${pluginId}/manifest.json`, ref);
@@ -233,6 +234,7 @@ async function buildEntry(repo) {
     changelog: release.body || '',
     publishedAt: release.published_at,
     downloads,
+    stars,
     // Fixed name: stable permalink that always points to the latest release.
     // Versioned name: specific asset URL (updates on every catalog rebuild).
     downloadUrl: isVersionedAsset
