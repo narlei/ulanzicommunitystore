@@ -12,6 +12,14 @@ To create a new plugin, run the following command in the directory where you wan
 npx ulanzi-plugin-starter@latest init
 ```
 
+Already have a plugin repo and only need the Community Store listing file? From inside the repo:
+
+```bash
+npx ulanzi-plugin-starter@latest store
+```
+
+That command reads your `*.ulanziPlugin/manifest.json`, scans `resources/` (and similar folders) for cover/banner images, and writes a filled-in `store.json`.
+
 > **Requirements:** [Node.js](https://nodejs.org) is required to run `npx`. The [GitHub CLI](https://cli.github.com) (`gh`) is optional but recommended — when it's installed and authenticated the kit can create your GitHub repository and push the first commit for you.
 
 ### Context-aware
@@ -60,6 +68,36 @@ Once your plugin is generated:
 1. Write your logic inside `app.js` and configure your settings UI in `pi/index.html`.
 2. Run `make install` to test the plugin locally. This will symlink your plugin folder to the Ulanzi Deck Plugins directory and automatically restart the Ulanzi Studio app (macOS).
 3. Check the `ulanzi_plugin_example/` directory if you need inspiration or want to see how the official examples are built.
+
+## 🛍️ `store` — generate `store.json` for an existing repo
+
+Use this when the plugin already works and you only want the optional Store metadata
+(cover, screenshots, long description, device types, tags):
+
+```bash
+cd your-plugin-repo
+npx ulanzi-plugin-starter@latest store
+```
+
+What it does:
+
+1. Finds the root `com.<you>.<plugin>.ulanziPlugin/manifest.json` and reuses **Name**, **Description**, and **Controllers** (deck/dial).
+2. Lists images under `resources/`, `images/`, `screenshots/`, `docs/`, etc. (skips icons inside the plugin folder).
+3. Suggests a **cover** (`resources/cover.png` when present) and **screenshots** (`banner*`, `screenshot*`, …).
+4. Asks you to confirm or pick by number / path, then writes `store.json` at the repo root.
+
+Example against a repo that already has marketing art:
+
+```text
+resources/
+  cover.png
+  banner1.png
+  banner2.png
+```
+
+→ defaults to cover = `resources/cover.png`, screenshots = the two banners.
+
+You can pass a `.md` / `.txt` path for the long description, or edit `store.json` afterwards.
 
 ## 📦 Publishing
 

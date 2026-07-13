@@ -1043,6 +1043,39 @@ h1, h2, h3 {
   margin-top: 14px;
 }
 
+.catalog-btn-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.catalog-btn-emoji {
+  font-size: 0.95em;
+  line-height: 1;
+}
+
+.catalog-detail-actions .catalog-btn-source {
+  color: var(--text);
+}
+
+.catalog-detail-actions .catalog-btn-star {
+  color: #f5b301;
+}
+
+.catalog-detail-actions .catalog-btn-star:hover {
+  background: rgba(245, 179, 1, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(245, 179, 1, 0.35);
+}
+
+.catalog-detail-actions .catalog-btn-danger {
+  color: #f87171;
+}
+
+.catalog-detail-actions .catalog-btn-danger:hover {
+  background: rgba(248, 113, 113, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.35);
+}
+
 .catalog-detail-scroll {
   max-height: min(58vh, 520px);
   overflow-y: auto;

@@ -12,11 +12,38 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = join(__dirname, '..', 'templates');
 const TARGET_DIR = process.cwd();
 
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-const question = (query) => new Promise((resolve) => {
-  // Resolve to '' instead of throwing if stdin has already closed (piped/non-interactive input).
-  try { rl.question(query, resolve); } catch { resolve(''); }
-});
+// Interactive (TTY): classic readline. Piped/non-TTY: pre-buffer lines so multi-prompt
+// flows still work (Node's readline only reliably handles one question on a pipe).
+let rl = null;
+let pipedLines = null; // string[] | null — null until first read when !isTTY
+
+async function nextLine(query) {
+  if (process.stdin.isTTY) {
+    if (!rl) rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    return new Promise((resolve) => {
+      try { rl.question(query, resolve); } catch { resolve(''); }
+    });
+  }
+  if (!pipedLines) {
+    const chunks = [];
+    for await (const chunk of process.stdin) chunks.push(chunk);
+    const text = Buffer.concat(chunks).toString('utf8');
+    pipedLines = text.length ? text.split(/\r?\n/) : [];
+    // Final trailing newline produces an empty last cell — drop it.
+    if (pipedLines.length && pipedLines[pipedLines.length - 1] === '') pipedLines.pop();
+  }
+  process.stdout.write(query);
+  const line = pipedLines.length ? pipedLines.shift() : '';
+  process.stdout.write(`${line}\n`);
+  return line;
+}
+
+function closeInput() {
+  if (rl) {
+    rl.close();
+    rl = null;
+  }
+}
 
 // ---------- small helpers ----------
 
@@ -32,13 +59,13 @@ async function sh(cmd, opts = {}) {
 
 async function ask(query, fallback = '') {
   const suffix = fallback ? ` [${fallback}]` : '';
-  const answer = (await question(`${query}${suffix}: `)).trim();
+  const answer = (await nextLine(`${query}${suffix}: `)).trim();
   return answer || fallback;
 }
 
 async function confirm(query, defaultYes = true) {
   const hint = defaultYes ? 'Y/n' : 'y/N';
-  const answer = (await question(`${query} [${hint}]: `)).trim().toLowerCase();
+  const answer = (await nextLine(`${query} [${hint}]: `)).trim().toLowerCase();
   if (!answer) return defaultYes;
   return answer === 'y' || answer === 'yes';
 }
@@ -265,6 +292,320 @@ async function resolvePluginStructure(targetDir, owner) {
   return { pluginId: null, adapted: false, aborted: false };
 }
 
+// ---------- store.json command ----------
+
+const IMAGE_EXT = /\.(png|jpe?g|webp|gif)$/i;
+const IMAGE_SKIP_DIRS = new Set([
+  '.git', 'node_modules', 'ulanzi_plugin_example', 'dist', 'build',
+  '.github', '.claude', '.cursor', '.vscode', '.idea',
+]);
+// Names that look like in-plugin UI assets (not store marketing art).
+const UI_ASSET_RE = /^(icon|action|category|logo|state|pressed|image)(\b|[_-]|\d|$)/i;
+
+function deviceTypesFromManifest(manifest) {
+  const set = new Set();
+  for (const action of manifest.Actions || []) {
+    for (const c of action.Controllers || []) {
+      if (c === 'Keypad') set.add('deck');
+      if (c === 'Encoder') set.add('dial');
+    }
+  }
+  return [...set];
+}
+
+// Locate the plugin folder + parse its manifest (root-level *.ulanziPlugin only).
+async function loadRootPlugin(targetDir) {
+  const pluginId = await getExistingPluginId(targetDir);
+  if (!pluginId) return null;
+  const manifestPath = join(targetDir, `${pluginId}.ulanziPlugin`, 'manifest.json');
+  if (!(await fileExists(manifestPath))) return { pluginId, manifest: null, manifestPath };
+  try {
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf-8'));
+    return { pluginId, manifest, manifestPath };
+  } catch {
+    return { pluginId, manifest: null, manifestPath };
+  }
+}
+
+// Collect image files that could be store cover/screenshots.
+// Prefers marketing folders at the repo root; skips *.ulanziPlugin internals
+// (those icons are for the Deck UI, not the store listing).
+async function findStoreImages(root, maxDepth = 3) {
+  const results = [];
+  async function walk(dir, rel, depth) {
+    if (depth > maxDepth) return;
+    let ents;
+    try { ents = await readdir(dir, { withFileTypes: true }); } catch { return; }
+    for (const ent of ents) {
+      const relPath = rel ? `${rel}/${ent.name}` : ent.name;
+      if (ent.isDirectory()) {
+        if (IMAGE_SKIP_DIRS.has(ent.name)) continue;
+        if (ent.name.endsWith('.ulanziPlugin')) continue;
+        await walk(join(dir, ent.name), relPath, depth + 1);
+        continue;
+      }
+      if (!ent.isFile() || !IMAGE_EXT.test(ent.name)) continue;
+      // Skip tiny UI-style names at non-marketing paths; still keep cover/banner-ish names.
+      const base = ent.name.replace(IMAGE_EXT, '');
+      const inMarketingDir = /^(resources|images|img|screenshots|docs|assets|media|promo)(\/|$)/i.test(relPath);
+      if (!inMarketingDir && UI_ASSET_RE.test(base)) continue;
+      results.push(relPath.replace(/\\/g, '/'));
+    }
+  }
+  await walk(root, '', 0);
+  // Prefer resources/ first, then alphabetical for stable numbering.
+  results.sort((a, b) => {
+    const score = (p) => (p.startsWith('resources/') ? 0 : p.startsWith('images/') ? 1 : 2);
+    const d = score(a) - score(b);
+    return d !== 0 ? d : a.localeCompare(b);
+  });
+  return results;
+}
+
+function guessCover(images, existing) {
+  if (existing && images.includes(existing)) return existing;
+  if (existing && !images.length) return existing;
+  const byName = images.find((p) => /(?:^|\/)cover(?:[._-]|$)/i.test(p));
+  if (byName) return byName;
+  // resources/cover.* style already covered; try hero / banner0 / thumbnail
+  const hero = images.find((p) => /(?:^|\/)(hero|thumb(?:nail)?|poster)(?:[._-]|$)/i.test(p));
+  if (hero) return hero;
+  return images[0] || existing || '';
+}
+
+// basename looks like banner1, screenshot_2, preview-a, …
+function isScreenshotName(path) {
+  const base = path.split('/').pop() || path;
+  return /^(banner|screenshot|screen|shot|preview|gallery|promo|slide)([._-]?\d|[._-]|$)/i.test(base);
+}
+
+function isCoverName(path) {
+  const base = path.split('/').pop() || path;
+  return /^cover([._-]|$)/i.test(base);
+}
+
+function guessScreenshots(images, cover, existing) {
+  if (Array.isArray(existing) && existing.length) {
+    return existing.filter((p) => p && p !== cover);
+  }
+  const bannerish = images.filter((p) => p !== cover && isScreenshotName(p));
+  if (bannerish.length) return bannerish;
+  // Everything except cover that lives in a marketing folder.
+  return images.filter(
+    (p) => p !== cover && /^(resources|images|img|screenshots|docs|assets|media|promo)\//i.test(p),
+  );
+}
+
+function parseListAnswer(answer, numbered, fallback) {
+  const raw = (answer || '').trim();
+  if (!raw) return fallback;
+  // "all" / "*" → every numbered image
+  if (/^(all|\*)$/i.test(raw)) return [...numbered];
+  // "none" / "-" → empty
+  if (/^(none|-)$/i.test(raw)) return [];
+  const parts = raw.split(/[,;\s]+/).map((s) => s.trim()).filter(Boolean);
+  const out = [];
+  for (const part of parts) {
+    if (/^\d+$/.test(part)) {
+      const idx = Number(part) - 1;
+      if (idx >= 0 && idx < numbered.length) out.push(numbered[idx]);
+      else console.log(`   ⚠️  Ignoring out-of-range index: ${part}`);
+    } else {
+      out.push(part.replace(/\\/g, '/'));
+    }
+  }
+  // de-dupe, preserve order
+  return [...new Set(out)];
+}
+
+function formatDeviceTypesDefault(types) {
+  if (!types.length) return 'deck';
+  if (types.includes('deck') && types.includes('dial')) return 'both';
+  return types[0];
+}
+
+function parseDeviceTypes(raw, fallback) {
+  const s = (raw || '').toLowerCase().trim();
+  if (!s) return fallback.length ? fallback : ['deck'];
+  if (s.includes('both') || (s.includes('deck') && s.includes('dial'))) return ['deck', 'dial'];
+  if (s.includes('dial')) return ['dial'];
+  if (s.includes('deck')) return ['deck'];
+  return fallback.length ? fallback : ['deck'];
+}
+
+async function loadExistingStore(targetDir) {
+  const path = join(targetDir, 'store.json');
+  if (!(await fileExists(path))) return null;
+  try {
+    return JSON.parse(await readFile(path, 'utf-8'));
+  } catch {
+    console.log('⚠️  Existing store.json is invalid JSON — it will be replaced.');
+    return null;
+  }
+}
+
+async function runStore() {
+  console.log('\n🛍️  Ulanzi Plugin Starter — create store.json\n');
+
+  const plugin = await loadRootPlugin(TARGET_DIR);
+  if (!plugin) {
+    console.log('No `*.ulanziPlugin/` folder found at the repository root.');
+    console.log('Run `npx ulanzi-plugin-starter init` first (or move your plugin folder to the root),');
+    console.log('then re-run `npx ulanzi-plugin-starter store`.');
+    closeInput();
+    return;
+  }
+
+  const { pluginId, manifest } = plugin;
+  console.log(`🔍 Plugin folder: ${pluginId}.ulanziPlugin`);
+  if (manifest) {
+    if (manifest.Name) console.log(`   Name: ${manifest.Name}`);
+    if (manifest.Author) console.log(`   Author: ${manifest.Author}`);
+    if (manifest.Version) console.log(`   Version: ${manifest.Version}`);
+    if (manifest.Description) {
+      const short = manifest.Description.length > 100
+        ? `${manifest.Description.slice(0, 100)}…`
+        : manifest.Description;
+      console.log(`   Description: ${short}`);
+    }
+  } else {
+    console.log('   ⚠️  Could not read manifest.json — some defaults will be empty.');
+  }
+
+  const existing = await loadExistingStore(TARGET_DIR);
+  if (existing) {
+    console.log('\n📄 Found existing store.json — answers default to current values.');
+  }
+
+  const images = await findStoreImages(TARGET_DIR);
+  if (images.length) {
+    console.log(`\n📂 Found ${images.length} image(s) usable for the store:`);
+    images.forEach((p, i) => {
+      const marks = [];
+      if (isCoverName(p)) marks.push('cover?');
+      if (isScreenshotName(p)) marks.push('screenshot?');
+      console.log(`   ${String(i + 1).padStart(2)}. ${p}${marks.length ? `  (${marks.join(', ')})` : ''}`);
+    });
+  } else {
+    console.log('\n📂 No images found under resources/, images/, screenshots/, docs/, etc.');
+    console.log('   You can still type relative paths (e.g. resources/cover.png) if you plan to add them.');
+  }
+
+  const defaultCover = guessCover(images, existing?.cover || '');
+  const defaultShots = guessScreenshots(images, defaultCover, existing?.screenshots);
+  const defaultDevices = (
+    Array.isArray(existing?.deviceTypes) && existing.deviceTypes.length
+      ? existing.deviceTypes
+      : deviceTypesFromManifest(manifest || {})
+  );
+  const defaultLong = (existing?.longDescription != null && existing.longDescription !== '')
+    ? existing.longDescription
+    : (manifest?.Description || '');
+  const defaultTags = Array.isArray(existing?.tags) ? existing.tags : [];
+
+  console.log('');
+  const coverAnswer = await ask(
+    'Cover image (number from the list, or path)',
+    defaultCover || '',
+  );
+  let cover = coverAnswer;
+  if (/^\d+$/.test(coverAnswer) && images.length) {
+    const idx = Number(coverAnswer) - 1;
+    cover = images[idx] || coverAnswer;
+  }
+  cover = (cover || '').replace(/\\/g, '/');
+
+  const shotsHint = defaultShots.length
+    ? defaultShots.map((p) => {
+        const i = images.indexOf(p);
+        return i >= 0 ? String(i + 1) : p;
+      }).join(',')
+    : (images.length > 1 ? 'all' : 'none');
+  const shotsAnswer = await ask(
+    'Screenshots (numbers/paths comma-separated, or "all" / "none")',
+    shotsHint,
+  );
+  let screenshots = parseListAnswer(shotsAnswer, images, defaultShots);
+  screenshots = screenshots.filter((p) => p && p !== cover);
+
+  // Validate referenced files when they look like local paths.
+  for (const img of [cover, ...screenshots].filter(Boolean)) {
+    if (!(await fileExists(join(TARGET_DIR, img)))) {
+      console.log(`   ⚠️  "${img}" does not exist yet — store validation will fail until you add it.`);
+    }
+  }
+
+  const devicesRaw = await ask(
+    'Device types (deck, dial, or both)',
+    formatDeviceTypesDefault(defaultDevices),
+  );
+  const deviceTypes = parseDeviceTypes(devicesRaw, defaultDevices);
+
+  console.log('\nLong description (shown on the plugin detail page).');
+  console.log('  Tip: leave empty to reuse the manifest Description, or pass a path to a .md/.txt file.');
+  let longDescription = await ask('Long description', defaultLong ? '(press Enter to keep default)' : '');
+  if (!longDescription || longDescription === '(press Enter to keep default)') {
+    longDescription = defaultLong;
+  } else if (/\.(md|txt)$/i.test(longDescription) && (await fileExists(join(TARGET_DIR, longDescription)))) {
+    const fromFile = longDescription;
+    longDescription = await readFile(join(TARGET_DIR, fromFile), 'utf-8');
+    console.log(`   ✅ Loaded text from ${fromFile}`);
+  }
+
+  const tagsRaw = await ask(
+    'Tags (comma-separated, e.g. productivity, timer)',
+    defaultTags.join(', '),
+  );
+  const tags = tagsRaw
+    ? tagsRaw.split(',').map((t) => t.trim()).filter(Boolean)
+    : [];
+
+  const store = {
+    cover: cover || '',
+    screenshots,
+    longDescription: longDescription || '',
+    deviceTypes,
+    tags,
+  };
+
+  const outPath = join(TARGET_DIR, 'store.json');
+  if (existing && !(await confirm(`\nOverwrite ${outPath}?`, true))) {
+    console.log('Cancelled — store.json was not modified.');
+    closeInput();
+    return;
+  }
+
+  await writeFile(outPath, `${JSON.stringify(store, null, 2)}\n`);
+  console.log(`
+✅ Wrote store.json
+
+${JSON.stringify(store, null, 2)}
+
+Next:
+  1. Commit and push store.json (images must live in the repo at those paths).
+  2. Submit / re-submit the plugin so the catalog picks up cover, screenshots and tags.
+  3. Optional badge for your README:
+     https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/docs/badges/ulanzi-community-store.svg
+`);
+  closeInput();
+}
+
+// ---------- help ----------
+
+function showHelp() {
+  console.log(`
+ulanzi-plugin-starter — scaffold and store helpers for Ulanzi Deck/Dial plugins
+
+Usage:
+  npx ulanzi-plugin-starter@latest init     Scaffold or adapt a plugin for the Community Store
+  npx ulanzi-plugin-starter@latest store    Create/update store.json from the current repo
+  npx ulanzi-plugin-starter@latest help     Show this help
+
+\`store\` reads the root *.ulanziPlugin/manifest.json and scans resources/ (and similar
+folders) for cover/banner images, then asks only for what it cannot infer.
+`);
+}
+
 // ---------- main ----------
 
 async function run() {
@@ -293,7 +634,7 @@ async function run() {
   if (resolved.aborted) {
     console.log('\nNo changes were made. Once the plugin lives in a `com.<you>.<plugin>.ulanziPlugin/`');
     console.log('folder at the repo root, run this command again to finish the setup.');
-    rl.close();
+    closeInput();
     return;
   }
 
@@ -419,7 +760,7 @@ Next steps:
   Ask it to "read the ulanzi-plugin-dev skill" — it's bundled in .claude/skills/.
 `);
 
-  rl.close();
+  closeInput();
 }
 
 // Handles: git init, a first commit (with a GitHub-based local identity),
@@ -482,8 +823,27 @@ async function setupGitAndGithub({ git, gh, owner, repoName }) {
   }
 }
 
-run().catch((err) => {
-  console.error('Error:', err);
-  rl.close();
+// ---------- entry ----------
+
+const cmd = (process.argv[2] || 'init').toLowerCase();
+const dispatch = {
+  init: run,
+  store: runStore,
+  help: async () => { showHelp(); closeInput(); },
+  '--help': async () => { showHelp(); closeInput(); },
+  '-h': async () => { showHelp(); closeInput(); },
+};
+
+const handler = dispatch[cmd];
+if (!handler) {
+  console.error(`Unknown command: ${process.argv[2]}`);
+  showHelp();
+  closeInput();
   process.exit(1);
-});
+} else {
+  handler().catch((err) => {
+    console.error('Error:', err);
+    closeInput();
+    process.exit(1);
+  });
+}
