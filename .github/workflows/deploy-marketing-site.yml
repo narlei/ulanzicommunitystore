@@ -26,3 +26,4 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./apps/marketing-site/
           server-dir: ./
+
