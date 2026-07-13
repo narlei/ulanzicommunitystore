@@ -1,0 +1,14 @@
+# Prefer short cache for HTML so deploys show up quickly.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "public, max-age=0, must-revalidate"
+  </FilesMatch>
+
+  # Fingerprinted assets (?v=...) can be cached; without a query string keep it short.
+  <FilesMatch "\.(css|js)$">
+    Header set Cache-Control "public, max-age=300, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# Serve /plugins as /plugins/
+DirectorySlash On

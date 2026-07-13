@@ -164,6 +164,8 @@ h1, h2, h3 {
 
 .nav-actions {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 12px;
   flex: none;
