@@ -84,6 +84,7 @@ What it does:
 1. Finds the root `com.<you>.<plugin>.ulanziPlugin/manifest.json` and reuses **Name**, **Description**, and **Controllers** (deck/dial).
 2. Lists images under `resources/`, `images/`, `screenshots/`, `docs/`, etc. (skips icons inside the plugin folder).
 3. Suggests a **cover** (`resources/cover.png` when present) and **screenshots** (`banner*`, `screenshot*`, …).
+   The cover may also be a screenshot — when set, it is always included again as the **first** screenshot.
 4. Asks you to confirm or pick by number / path, then writes `store.json` at the repo root.
 
 Example against a repo that already has marketing art:
@@ -95,7 +96,8 @@ resources/
   banner2.png
 ```
 
-→ defaults to cover = `resources/cover.png`, screenshots = the two banners.
+→ defaults to cover = `resources/cover.png`, screenshots = cover + the two banners
+  (`["resources/cover.png", "resources/banner1.png", "resources/banner2.png"]`).
 
 You can pass a `.md` / `.txt` path for the long description, or edit `store.json` afterwards.
 

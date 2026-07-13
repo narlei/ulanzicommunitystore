@@ -384,16 +384,30 @@ function isCoverName(path) {
   return /^cover([._-]|$)/i.test(base);
 }
 
+// Cover may also be a screenshot — always keep it as the first entry when set.
+function withCoverAsFirstScreenshot(screenshots, cover) {
+  const list = (screenshots || []).filter(Boolean);
+  if (!cover) return [...new Set(list)];
+  const rest = list.filter((p) => p !== cover);
+  return [cover, ...rest];
+}
+
 function guessScreenshots(images, cover, existing) {
+  let shots;
   if (Array.isArray(existing) && existing.length) {
-    return existing.filter((p) => p && p !== cover);
+    shots = existing.filter(Boolean);
+  } else {
+    const bannerish = images.filter((p) => isScreenshotName(p));
+    if (bannerish.length) {
+      shots = bannerish;
+    } else {
+      // Marketing-folder images (cover may be included — that is intentional).
+      shots = images.filter(
+        (p) => /^(resources|images|img|screenshots|docs|assets|media|promo)\//i.test(p),
+      );
+    }
   }
-  const bannerish = images.filter((p) => p !== cover && isScreenshotName(p));
-  if (bannerish.length) return bannerish;
-  // Everything except cover that lives in a marketing folder.
-  return images.filter(
-    (p) => p !== cover && /^(resources|images|img|screenshots|docs|assets|media|promo)\//i.test(p),
-  );
+  return withCoverAsFirstScreenshot(shots, cover);
 }
 
 function parseListAnswer(answer, numbered, fallback) {
@@ -526,7 +540,8 @@ async function runStore() {
     shotsHint,
   );
   let screenshots = parseListAnswer(shotsAnswer, images, defaultShots);
-  screenshots = screenshots.filter((p) => p && p !== cover);
+  // Cover is allowed as a screenshot and should lead the gallery.
+  screenshots = withCoverAsFirstScreenshot(screenshots, cover);
 
   // Validate referenced files when they look like local paths.
   for (const img of [cover, ...screenshots].filter(Boolean)) {

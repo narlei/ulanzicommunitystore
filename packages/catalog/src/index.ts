@@ -24,6 +24,7 @@ export type CatalogPlugin = {
   minSoftwareVersion: string | null;
   releaseTag: string;
   changelog: string;
+  /** Latest GitHub release `published_at` at catalog build time. */
   publishedAt: string | null;
   /** Sum of downloads for .ulanziPlugin.zip assets across all releases. Absent in older catalogs. */
   downloads?: number;
@@ -32,6 +33,9 @@ export type CatalogPlugin = {
   downloadUrl: string;
   sourceUrl: string;
 };
+
+/** Days a plugin stays marked as NEW after the latest catalog release date (`publishedAt`). */
+export const NEW_PLUGIN_WINDOW_DAYS = 14;
 
 export type Catalog = {
   generatedAt: string | null;
@@ -61,4 +65,22 @@ export function compareVersions(a: string | null | undefined, b: string | null |
     if (diff !== 0) return diff > 0 ? 1 : -1;
   }
   return 0;
+}
+
+/**
+ * True when the latest release in the catalog is within the NEW window.
+ * Uses catalog `publishedAt` (GitHub latest release). Recent updates also light up NEW —
+ * useful for discovery. UI should hide NEW when the plugin is already installed.
+ */
+export function isPluginNew(
+  publishedAt: string | null | undefined,
+  now: Date = new Date(),
+  windowDays: number = NEW_PLUGIN_WINDOW_DAYS,
+): boolean {
+  if (!publishedAt) return false;
+  const published = Date.parse(publishedAt);
+  if (Number.isNaN(published)) return false;
+  const ageMs = now.getTime() - published;
+  if (ageMs < 0) return true; // clock skew / future-dated → still show NEW
+  return ageMs < windowDays * 24 * 60 * 60 * 1000;
 }

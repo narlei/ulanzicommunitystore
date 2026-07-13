@@ -1,7 +1,9 @@
 HOST ?= 127.0.0.1
 PORT ?= 8123
+# plugin-starter: patch | minor | major (or an explicit semver like 1.3.0)
+BUMP ?= patch
 
-.PHONY: run install app build typecheck catalog catalog_validate release marketing version
+.PHONY: run install app build typecheck catalog catalog_validate release marketing version publish-plugin-starter
 
 run:
 	npm install
@@ -43,3 +45,22 @@ marketing:
 
 version:
 	@cat VERSION
+
+# Bump plugin-starter/package.json and publish to npm (public).
+# Does not commit — commit the version bump afterwards if you want it tracked.
+#
+#   make publish-plugin-starter
+#   make publish-plugin-starter BUMP=minor
+#   make publish-plugin-starter BUMP=major
+#   make publish-plugin-starter BUMP=1.3.0
+#   make publish-plugin-starter OTP=123456
+publish-plugin-starter:
+	@set -e; \
+	cd plugin-starter; \
+	old=$$(node -p "require('./package.json').version"); \
+	npm version $(BUMP) --no-git-tag-version; \
+	new=$$(node -p "require('./package.json').version"); \
+	echo "📦 Bumped ulanzi-plugin-starter $$old → $$new"; \
+	npm publish --access public $(if $(OTP),--otp=$(OTP),); \
+	echo "✅ Published ulanzi-plugin-starter@$$new"; \
+	echo "   Remember to commit plugin-starter/package.json if needed."

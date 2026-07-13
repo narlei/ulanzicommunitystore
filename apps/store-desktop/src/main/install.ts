@@ -133,10 +133,17 @@ export async function installPlugin(
   }
 }
 
-export async function uninstallPlugin(pluginId: string): Promise<void> {
+export async function uninstallPlugin(
+  pluginId: string,
+  onProgress?: (progress: InstallProgress) => void,
+): Promise<void> {
   if (!isPluginId(pluginId)) throw new Error('Invalid pluginId');
+  const progress = (pct: number, msg: string) => onProgress?.({ id: pluginId, pct, msg });
+  progress(35, 'remove');
   await fsp.rm(safePluginPath(pluginsDir(), pluginId), { recursive: true, force: true });
+  progress(80, 'restart');
   await restartUlanzi();
+  progress(100, 'done');
 }
 
 function assertCatalogPlugin(plugin: CatalogPlugin): void {

@@ -20,7 +20,14 @@ const strings: Record<Lang, Record<string, string>> = {
     title: 'Community Store',
     subtitle: 'Install, update, and manage community plugins for Ulanzi Deck and Dial.',
     search: 'Search plugins...',
+    clearSearch: 'Clear search',
     all: 'All',
+    allCategories: 'All categories',
+    allPlatforms: 'All platforms',
+    filterPlatform: 'Platform',
+    filterDevice: 'Device',
+    filterCategory: 'Category',
+    clearFilters: 'Clear filters',
     loading: 'Loading catalog...',
     retry: 'Try again',
     catalogError: 'Could not load the catalog. Check your connection and try again.',
@@ -31,6 +38,15 @@ const strings: Record<Lang, Record<string, string>> = {
     uninstall: 'Remove',
     installing: 'Installing',
     uninstalling: 'Removing',
+    progressStart: 'Preparing…',
+    progressDownload: 'Downloading…',
+    progressValidate: 'Validating package…',
+    progressExtract: 'Extracting…',
+    progressInstall: 'Copying plugin files…',
+    progressQuarantine: 'Clearing macOS quarantine…',
+    progressRestart: 'Restarting Ulanzi Studio…',
+    progressDone: 'Done',
+    progressRemove: 'Removing plugin…',
     source: 'Source',
     details: 'Details',
     about: 'About',
@@ -76,38 +92,61 @@ const strings: Record<Lang, Record<string, string>> = {
     githubStarSidebarHelp: 'Helps more people find the store',
     unofficial: 'The open-source community store for Ulanzi Deck & Dial plugins. Unofficial project, not affiliated with Ulanzi.',
     updateBadge: 'Update',
+    newBadge: 'New',
     installedCount: '%s installed',
     updateCount: '%s updates',
     emptyInstalled: 'No installed plugins detected yet.',
     emptyUpdates: 'Everything is up to date.',
     submit: 'Send plugin',
-    submitSubtitle: 'Publish your own plugin to the Ulanzi Community Store.',
+    submitSubtitle: 'Scaffold with our official CLI, tag a release, then paste your repo URL — we open the Pull Request for you.',
+    submitHappyPathTitle: 'The happy path',
+    submitStep1: 'Scaffold or adapt your plugin with **ulanzi-plugin-starter** — Makefile, GitHub Actions release workflow, and optional `store.json` included.',
+    submitStep2: 'Push a version tag. The starter workflow builds and attaches `*.ulanziPlugin.zip` automatically.',
+    submitStep3: 'Paste your public GitHub repo URL below. We validate everything and open the Pull Request.',
+    submitPathNewBadge: 'New project',
+    submitPathNewTitle: 'Starting from scratch',
+    submitPathNewBody: 'In an empty folder, generate a ready-to-publish project with local install (`make install`), release pipeline, and an AI skill for vibe-coding.',
+    submitPathExistingBadge: 'Existing repo',
+    submitPathExistingTitle: 'Already have a plugin?',
+    submitPathExistingBody: 'Run **init** inside your repo to add store files without touching source — or **store** if you only need cover, screenshots and tags.',
+    submitCmdInitLabel: 'Scaffold or adapt',
+    submitCmdStoreLabel: 'Generate store.json only',
+    submitStarterNote: 'Requires Node.js 18+. Optional: authenticated GitHub CLI (gh) to create the repo and push for you.',
+    submitStarterDocs: 'Starter docs',
     submitRegistry: 'Browse registry examples',
     submitSdk: 'Official Ulanzi SDK',
-    submitStep1: 'Build your plugin with the official Ulanzi SDK: a `com.you.plugin.ulanziPlugin/` folder with a `manifest.json`.',
-    submitStep2: 'Publish a **GitHub Release** with the asset `com.you.plugin.ulanziPlugin.zip` (the plugin folder zipped).',
-    submitStep3: 'Paste your repository URL below. The app validates everything and opens the Pull Request for you.',
-    submitStarterKitTitle: 'Start from scratch',
-    submitStarterKitHelp: 'Don\'t have a plugin yet? Use our official CLI to instantly generate a ready-to-publish project.',
-    submitStarterKitNote: 'Requires Node.js. Run this in your terminal to bootstrap a plugin with a local Makefile, a GitHub Actions release pipeline, and an AI skill to make vibe-coding a breeze.',
     submitToolTitle: 'Validate and submit',
-    submitToolHelp: 'Paste the GitHub repository of your plugin. Only public GitHub data is read, nothing is uploaded.',
+    submitToolHelp: 'Paste a public GitHub repository. Only public GitHub data is read — nothing is uploaded.',
     submitValidate: 'Validate',
     submitChecking: 'Checking...',
     submitNetworkError: 'Could not reach GitHub. Check your connection and try again.',
     submit_repo_ok: 'Repository found: %s',
     submit_repo_fail: 'Repository not found. Use a public GitHub URL like https://github.com/you/your-plugin.',
     submit_release_ok: 'Latest release: %s',
-    submit_release_fail: 'No GitHub Release found. Publish a release before submitting.',
+    submit_release_fail: 'No GitHub Release found. Tag a version first — the starter ships a release workflow.',
     submit_asset_ok: 'Release asset: %s',
-    submit_asset_fail: 'The latest release has no *.ulanziPlugin.zip asset. Zip the plugin folder and attach it to the release.',
+    submit_asset_fail: 'Latest release has no *.ulanziPlugin.zip. With the starter, push a version tag after the workflow is in place.',
     submit_manifest_ok: 'manifest.json is valid: %s',
     submit_manifest_warn: 'manifest.json found in %s/ but Name or Version is missing.',
     submit_manifest_fail: 'manifest.json missing or invalid in %s/.',
     submit_store_ok: 'store.json found. Cover, screenshots and tags will show in the store.',
-    submit_store_warn: 'No store.json (optional). Add one for cover image, screenshots and tags.',
+    submit_store_warn: 'No store.json (optional). Run the store command for cover, screenshots and tags.',
     submit_store_warn_invalid: 'store.json exists but is not valid JSON, so it will be ignored.',
-    submitFixHint: 'Fix the items above and validate again. The official SDK and the registry examples can help.',
+    submitFixTitle: 'How to fix',
+    submitFixGeneric: 'Fix the items above and validate again.',
+    submitFix_repo_title: 'Invalid repository URL',
+    submitFix_repo: 'Use a public GitHub URL like `https://github.com/you/your-plugin` (or just `you/your-plugin`).',
+    submitFix_release_title: 'No release yet',
+    submitFix_release: 'If you used the starter, push a version tag — the workflow attaches the zip automatically:',
+    submitFix_asset_title: 'Release has no plugin zip',
+    submitFix_asset: 'The latest release needs a `*.ulanziPlugin.zip` asset. With the starter workflow, ensure the plugin folder is at the repo root, then tag again:',
+    submitFix_manifest_title: 'Plugin layout issue',
+    submitFix_manifest: 'Expect `com.<you>.<plugin>.ulanziPlugin/manifest.json` at the repo root. Run **init** inside your repo to adapt the layout without rewriting your code:',
+    submitFix_store_title: 'Make your listing shine',
+    submitFix_store: 'Optional but recommended — generate `store.json` for cover, screenshots, tags and a long description:',
+    submitFix_store_invalid: 'Your `store.json` is not valid JSON. Regenerate it or fix the syntax:',
+    submitStoreNudgeTitle: 'Optional upgrade',
+    submitStoreNudgeBody: 'Your plugin can go live as-is. Add `store.json` for cover art, screenshots and tags in the store listing:',
     submitReadyTitle: 'Ready to publish!',
     submitReadyText: 'This is your registry entry. Click the button below: GitHub forks the store repository, creates the file and opens the Pull Request. No manual editing needed.',
     submitOpenPr: 'Open Pull Request on GitHub',
@@ -115,10 +154,23 @@ const strings: Record<Lang, Record<string, string>> = {
     submitCopyCmd: 'Copy',
     submitCopied: 'Copied!',
     submitPrHint: 'Once the PR is merged, your plugin goes live automatically. Every new release in your repo becomes an update in the store.',
-    submitMarkdown: `## What your repo needs
-- A \`com.<you>.<plugin>.ulanziPlugin/\` folder with \`manifest.json\`, following the official Ulanzi Deck Plugin SDK.
-- A **GitHub Release** whose asset is \`com.<you>.<plugin>.ulanziPlugin.zip\` (the plugin folder zipped at the root).
-- Optional: a \`store.json\` at the repo root with cover, screenshots, long description, device types and tags.
+    submitDetailsTitle: 'What your repo needs',
+    submitDetailsShow: 'Show',
+    submitDetailsHide: 'Hide',
+    submitMarkdown: `The store only needs a public GitHub repo that already ships a plugin release.
+
+- A \`com.<you>.<plugin>.ulanziPlugin/\` folder with \`manifest.json\` at the **repo root**
+- A **GitHub Release** with asset \`com.<you>.<plugin>.ulanziPlugin.zip\`
+- Optional: \`store.json\` at the repo root (cover, screenshots, long description, device types, tags)
+
+Generate or adapt everything with the starter:
+
+\`\`\`
+npx ulanzi-plugin-starter@latest init
+npx ulanzi-plugin-starter@latest store
+\`\`\`
+
+Example \`store.json\`:
 
 \`\`\`json
 {
@@ -140,7 +192,14 @@ Image paths are relative to your repo root.`,
     title: 'Community Store',
     subtitle: 'Instale, atualize e gerencie plugins da comunidade para Ulanzi Deck e Dial.',
     search: 'Buscar plugins...',
+    clearSearch: 'Limpar busca',
     all: 'Todos',
+    allCategories: 'Todas as categorias',
+    allPlatforms: 'Todas as plataformas',
+    filterPlatform: 'Plataforma',
+    filterDevice: 'Dispositivo',
+    filterCategory: 'Categoria',
+    clearFilters: 'Limpar filtros',
     loading: 'Carregando catalogo...',
     retry: 'Tentar de novo',
     catalogError: 'Nao consegui carregar o catalogo. Verifique a conexao e tente novamente.',
@@ -151,6 +210,15 @@ Image paths are relative to your repo root.`,
     uninstall: 'Remover',
     installing: 'Instalando',
     uninstalling: 'Removendo',
+    progressStart: 'Preparando…',
+    progressDownload: 'Baixando…',
+    progressValidate: 'Validando pacote…',
+    progressExtract: 'Extraindo…',
+    progressInstall: 'Copiando arquivos do plugin…',
+    progressQuarantine: 'Removendo quarentena do macOS…',
+    progressRestart: 'Reiniciando o Ulanzi Studio…',
+    progressDone: 'Concluido',
+    progressRemove: 'Removendo plugin…',
     source: 'Codigo',
     details: 'Detalhes',
     about: 'Sobre',
@@ -196,38 +264,61 @@ Image paths are relative to your repo root.`,
     githubStarSidebarHelp: 'Ajuda mais gente a achar a loja',
     unofficial: 'A loja open source da comunidade para plugins de Ulanzi Deck & Dial. Projeto nao-oficial, nao afiliado a Ulanzi.',
     updateBadge: 'Update',
+    newBadge: 'Novo',
     installedCount: '%s instalados',
     updateCount: '%s updates',
     emptyInstalled: 'Nenhum plugin instalado foi detectado ainda.',
     emptyUpdates: 'Tudo esta atualizado.',
     submit: 'Enviar plugin',
-    submitSubtitle: 'Publique o seu proprio plugin na Ulanzi Community Store.',
+    submitSubtitle: 'Gere com o CLI oficial, publique uma release e cole a URL do repo — a gente abre o Pull Request pra voce.',
+    submitHappyPathTitle: 'O caminho feliz',
+    submitStep1: 'Crie ou adapte o plugin com o **ulanzi-plugin-starter** — Makefile, workflow de release no GitHub Actions e `store.json` opcional incluidos.',
+    submitStep2: 'Envie uma tag de versao. O workflow do starter monta e anexa o `*.ulanziPlugin.zip` automaticamente.',
+    submitStep3: 'Cole a URL publica do repositorio abaixo. Validamos tudo e abrimos o Pull Request.',
+    submitPathNewBadge: 'Projeto novo',
+    submitPathNewTitle: 'Comecando do zero',
+    submitPathNewBody: 'Em uma pasta vazia, gere um projeto pronto pra publicar com instalacao local (`make install`), pipeline de release e skill de IA pro vibe-coding.',
+    submitPathExistingBadge: 'Repo existente',
+    submitPathExistingTitle: 'Ja tem um plugin?',
+    submitPathExistingBody: 'Rode **init** dentro do repo para adicionar os arquivos da loja sem mexer no codigo — ou **store** se so precisar de capa, screenshots e tags.',
+    submitCmdInitLabel: 'Criar ou adaptar',
+    submitCmdStoreLabel: 'So gerar store.json',
+    submitStarterNote: 'Requer Node.js 18+. Opcional: GitHub CLI (gh) autenticado para criar o repo e fazer o push.',
+    submitStarterDocs: 'Docs do starter',
     submitRegistry: 'Ver exemplos no registry',
     submitSdk: 'SDK oficial da Ulanzi',
-    submitStep1: 'Crie seu plugin com o SDK oficial da Ulanzi: uma pasta `com.voce.plugin.ulanziPlugin/` com `manifest.json`.',
-    submitStep2: 'Publique uma **GitHub Release** com o asset `com.voce.plugin.ulanziPlugin.zip` (a pasta do plugin zipada).',
-    submitStep3: 'Cole a URL do seu repositorio abaixo. O app valida tudo e abre o Pull Request pra voce.',
-    submitStarterKitTitle: 'Comece do zero',
-    submitStarterKitHelp: 'Ainda nao tem um plugin? Use nosso CLI oficial para gerar um projeto pronto para publicar.',
-    submitStarterKitNote: 'Requer Node.js. Rode no seu terminal para gerar um projeto com um Makefile local, uma pipeline de release (GitHub Actions) e uma skill de IA para facilitar o vibe-coding.',
     submitToolTitle: 'Validar e enviar',
-    submitToolHelp: 'Cole o repositorio do seu plugin no GitHub. So dados publicos do GitHub sao lidos, nada e enviado.',
+    submitToolHelp: 'Cole um repositorio publico do GitHub. So dados publicos sao lidos — nada e enviado.',
     submitValidate: 'Validar',
     submitChecking: 'Verificando...',
     submitNetworkError: 'Nao consegui acessar o GitHub. Verifique a conexao e tente de novo.',
     submit_repo_ok: 'Repositorio encontrado: %s',
     submit_repo_fail: 'Repositorio nao encontrado. Use uma URL publica do GitHub, ex.: https://github.com/voce/seu-plugin.',
     submit_release_ok: 'Release mais nova: %s',
-    submit_release_fail: 'Nenhuma GitHub Release encontrada. Publique uma release antes de enviar.',
+    submit_release_fail: 'Nenhuma GitHub Release encontrada. Crie uma tag de versao — o starter ja traz o workflow de release.',
     submit_asset_ok: 'Asset da release: %s',
-    submit_asset_fail: 'A release mais nova nao tem um asset *.ulanziPlugin.zip. Zipe a pasta do plugin e anexe na release.',
+    submit_asset_fail: 'A release mais nova nao tem um asset *.ulanziPlugin.zip. Com o starter, envie uma tag depois que o workflow estiver no repo.',
     submit_manifest_ok: 'manifest.json valido: %s',
     submit_manifest_warn: 'manifest.json encontrado em %s/ mas falta Name ou Version.',
     submit_manifest_fail: 'manifest.json ausente ou invalido em %s/.',
     submit_store_ok: 'store.json encontrado. Capa, screenshots e tags vao aparecer na loja.',
-    submit_store_warn: 'Sem store.json (opcional). Adicione um para ter capa, screenshots e tags.',
+    submit_store_warn: 'Sem store.json (opcional). Rode o comando store para capa, screenshots e tags.',
     submit_store_warn_invalid: 'store.json existe mas nao e um JSON valido, entao sera ignorado.',
-    submitFixHint: 'Corrija os itens acima e valide de novo. O SDK oficial e os exemplos do registry podem ajudar.',
+    submitFixTitle: 'Como corrigir',
+    submitFixGeneric: 'Corrija os itens acima e valide de novo.',
+    submitFix_repo_title: 'URL do repositorio invalida',
+    submitFix_repo: 'Use uma URL publica do GitHub como `https://github.com/voce/seu-plugin` (ou so `voce/seu-plugin`).',
+    submitFix_release_title: 'Ainda sem release',
+    submitFix_release: 'Se usou o starter, envie uma tag de versao — o workflow anexa o zip sozinho:',
+    submitFix_asset_title: 'Release sem zip do plugin',
+    submitFix_asset: 'A release mais nova precisa de um asset `*.ulanziPlugin.zip`. Com o workflow do starter, deixe a pasta do plugin na raiz do repo e crie a tag de novo:',
+    submitFix_manifest_title: 'Layout do plugin',
+    submitFix_manifest: 'Esperamos `com.<voce>.<plugin>.ulanziPlugin/manifest.json` na raiz do repo. Rode **init** dentro do repo para adaptar o layout sem reescrever o codigo:',
+    submitFix_store_title: 'Deixe a listagem impecavel',
+    submitFix_store: 'Opcional, mas recomendado — gere o `store.json` com capa, screenshots, tags e descricao longa:',
+    submitFix_store_invalid: 'Seu `store.json` nao e um JSON valido. Regenere ou corrija a sintaxe:',
+    submitStoreNudgeTitle: 'Upgrade opcional',
+    submitStoreNudgeBody: 'Seu plugin ja pode ir ao ar. Adicione um `store.json` para capa, screenshots e tags na listagem da loja:',
     submitReadyTitle: 'Pronto pra publicar!',
     submitReadyText: 'Esta e a sua entrada no registry. Clique no botao abaixo: o GitHub faz o fork do repositorio da loja, cria o arquivo e abre o Pull Request. Sem edicao manual.',
     submitOpenPr: 'Abrir Pull Request no GitHub',
@@ -235,10 +326,23 @@ Image paths are relative to your repo root.`,
     submitCopyCmd: 'Copiar',
     submitCopied: 'Copiado!',
     submitPrHint: 'Quando o PR for mesclado, seu plugin entra no ar automaticamente. Toda nova release no seu repo vira um update na loja.',
-    submitMarkdown: `## O que o seu repo precisa ter
-- Uma pasta \`com.<voce>.<plugin>.ulanziPlugin/\` com \`manifest.json\`, no padrao do SDK oficial da Ulanzi.
-- Uma **GitHub Release** cujo asset seja \`com.<voce>.<plugin>.ulanziPlugin.zip\` (o zip da pasta do plugin na raiz).
-- Opcional: um \`store.json\` na raiz do repo com capa, screenshots, descricao longa, tipos de device e tags.
+    submitDetailsTitle: 'O que o seu repo precisa ter',
+    submitDetailsShow: 'Mostrar',
+    submitDetailsHide: 'Ocultar',
+    submitMarkdown: `A loja so precisa de um repo publico no GitHub que ja publique um release do plugin.
+
+- Uma pasta \`com.<voce>.<plugin>.ulanziPlugin/\` com \`manifest.json\` na **raiz do repo**
+- Uma **GitHub Release** com o asset \`com.<voce>.<plugin>.ulanziPlugin.zip\`
+- Opcional: \`store.json\` na raiz (capa, screenshots, descricao longa, tipos de device, tags)
+
+Gere ou adapte tudo com o starter:
+
+\`\`\`
+npx ulanzi-plugin-starter@latest init
+npx ulanzi-plugin-starter@latest store
+\`\`\`
+
+Exemplo de \`store.json\`:
 
 \`\`\`json
 {
@@ -260,7 +364,14 @@ Caminhos de imagem sao relativos a raiz do seu repo.`,
     title: 'Community Store',
     subtitle: '安装、更新并管理 Ulanzi Deck 和 Dial 的社区插件。',
     search: '搜索插件...',
+    clearSearch: '清除搜索',
     all: '全部',
+    allCategories: '全部分类',
+    allPlatforms: '全部平台',
+    filterPlatform: '平台',
+    filterDevice: '设备',
+    filterCategory: '分类',
+    clearFilters: '清除筛选',
     loading: '正在加载目录...',
     retry: '重试',
     catalogError: '无法加载目录。请检查网络连接后重试。',
@@ -271,6 +382,15 @@ Caminhos de imagem sao relativos a raiz do seu repo.`,
     uninstall: '移除',
     installing: '正在安装',
     uninstalling: '正在移除',
+    progressStart: '准备中…',
+    progressDownload: '下载中…',
+    progressValidate: '正在验证安装包…',
+    progressExtract: '正在解压…',
+    progressInstall: '正在复制插件文件…',
+    progressQuarantine: '正在清除 macOS 隔离属性…',
+    progressRestart: '正在重启 Ulanzi Studio…',
+    progressDone: '完成',
+    progressRemove: '正在移除插件…',
     source: '源码',
     details: '详情',
     about: '关于',
@@ -316,38 +436,61 @@ Caminhos de imagem sao relativos a raiz do seu repo.`,
     githubStarSidebarHelp: '帮助更多人发现本商店',
     unofficial: 'Ulanzi Deck 和 Dial 插件的开源社区商店。非官方项目，与 Ulanzi 无关联。',
     updateBadge: '更新',
+    newBadge: '新',
     installedCount: '已安装 %s',
     updateCount: '%s 个更新',
     emptyInstalled: '尚未检测到已安装插件。',
     emptyUpdates: '全部都是最新版本。',
     submit: '提交插件',
-    submitSubtitle: '将你自己的插件发布到 Ulanzi Community Store。',
+    submitSubtitle: '用官方 CLI 搭建，打上版本标签，再粘贴仓库 URL——我们帮你打开 Pull Request。',
+    submitHappyPathTitle: '推荐流程',
+    submitStep1: '用 **ulanzi-plugin-starter** 搭建或适配插件——包含 Makefile、GitHub Actions 发布流程和可选的 `store.json`。',
+    submitStep2: '推送版本标签。starter 的 workflow 会自动构建并附加 `*.ulanziPlugin.zip`。',
+    submitStep3: '在下方粘贴公开的 GitHub 仓库 URL。我们会验证一切并打开 Pull Request。',
+    submitPathNewBadge: '全新项目',
+    submitPathNewTitle: '从零开始',
+    submitPathNewBody: '在空文件夹中生成可直接发布的项目：本地安装（`make install`）、发布流水线，以及方便 vibe-coding 的 AI skill。',
+    submitPathExistingBadge: '已有仓库',
+    submitPathExistingTitle: '已有插件？',
+    submitPathExistingBody: '在仓库内运行 **init** 可添加商店文件且不改动源码——若只需封面、截图和标签，运行 **store** 即可。',
+    submitCmdInitLabel: '搭建或适配',
+    submitCmdStoreLabel: '仅生成 store.json',
+    submitStarterNote: '需要 Node.js 18+。可选：已登录的 GitHub CLI（gh）用于创建仓库并推送。',
+    submitStarterDocs: 'Starter 文档',
     submitRegistry: '查看 registry 示例',
     submitSdk: 'Ulanzi 官方 SDK',
-    submitStep1: '使用 Ulanzi 官方 SDK 构建插件：一个含 `manifest.json` 的 `com.you.plugin.ulanziPlugin/` 文件夹。',
-    submitStep2: '发布一个 **GitHub Release**，资源文件为 `com.you.plugin.ulanziPlugin.zip`（插件文件夹打包的 zip）。',
-    submitStep3: '在下方粘贴你的仓库 URL。应用会自动验证并为你打开 Pull Request。',
-    submitStarterKitTitle: '从零开始',
-    submitStarterKitHelp: '还没有插件吗？使用我们的官方 CLI 快速生成一个可直接发布的项目。',
-    submitStarterKitNote: '需要 Node.js。在终端中运行此命令以使用本地 Makefile、GitHub Actions 发布流程以及让 vibe-coding 更轻松的专属 AI skill 引导您的插件项目。',
     submitToolTitle: '验证并提交',
-    submitToolHelp: '粘贴你插件的 GitHub 仓库地址。只读取 GitHub 公开数据，不会上传任何内容。',
+    submitToolHelp: '粘贴公开的 GitHub 仓库。只读取 GitHub 公开数据——不会上传任何内容。',
     submitValidate: '验证',
     submitChecking: '正在检查...',
     submitNetworkError: '无法访问 GitHub。请检查网络连接后重试。',
     submit_repo_ok: '找到仓库：%s',
     submit_repo_fail: '未找到仓库。请使用公开的 GitHub 地址，例如 https://github.com/you/your-plugin。',
     submit_release_ok: '最新 release：%s',
-    submit_release_fail: '未找到 GitHub Release。请先发布一个 release 再提交。',
+    submit_release_fail: '未找到 GitHub Release。请先打上版本标签——starter 已包含发布 workflow。',
     submit_asset_ok: 'Release 资源文件：%s',
-    submit_asset_fail: '最新 release 中没有 *.ulanziPlugin.zip 资源文件。请将插件文件夹打包为 zip 并附加到 release。',
+    submit_asset_fail: '最新 release 中没有 *.ulanziPlugin.zip。使用 starter 时，在 workflow 就绪后推送版本标签。',
     submit_manifest_ok: 'manifest.json 有效：%s',
     submit_manifest_warn: '在 %s/ 中找到 manifest.json，但缺少 Name 或 Version。',
     submit_manifest_fail: '%s/ 中的 manifest.json 缺失或无效。',
     submit_store_ok: '找到 store.json。封面、截图和标签将在商店中展示。',
-    submit_store_warn: '没有 store.json（可选）。添加后可展示封面、截图和标签。',
+    submit_store_warn: '没有 store.json（可选）。运行 store 命令可添加封面、截图和标签。',
     submit_store_warn_invalid: 'store.json 存在但不是有效的 JSON，将被忽略。',
-    submitFixHint: '修复上面的问题后再次验证。官方 SDK 和 registry 示例可以提供帮助。',
+    submitFixTitle: '如何修复',
+    submitFixGeneric: '修复上面的问题后再次验证。',
+    submitFix_repo_title: '仓库 URL 无效',
+    submitFix_repo: '请使用公开的 GitHub URL，例如 `https://github.com/you/your-plugin`（或 `you/your-plugin`）。',
+    submitFix_release_title: '还没有 release',
+    submitFix_release: '若使用了 starter，推送版本标签即可——workflow 会自动附加 zip：',
+    submitFix_asset_title: 'Release 缺少插件 zip',
+    submitFix_asset: '最新 release 需要 `*.ulanziPlugin.zip` 资源。使用 starter workflow 时，确保插件文件夹在仓库根目录，然后重新打标签：',
+    submitFix_manifest_title: '插件目录结构问题',
+    submitFix_manifest: '期望在仓库根目录有 `com.<you>.<plugin>.ulanziPlugin/manifest.json`。在仓库内运行 **init** 可适配布局且不改写代码：',
+    submitFix_store_title: '让商店列表更出色',
+    submitFix_store: '可选但推荐——生成 `store.json`，用于封面、截图、标签和长描述：',
+    submitFix_store_invalid: '你的 `store.json` 不是有效 JSON。请重新生成或修复语法：',
+    submitStoreNudgeTitle: '可选增强',
+    submitStoreNudgeBody: '插件已经可以上架。添加 `store.json` 可在商店列表中显示封面、截图和标签：',
     submitReadyTitle: '可以发布了！',
     submitReadyText: '这就是你的 registry 条目。点击下方按钮：GitHub 会自动 fork 商店仓库、创建文件并打开 Pull Request，无需手动编辑。',
     submitOpenPr: '在 GitHub 上打开 Pull Request',
@@ -355,10 +498,23 @@ Caminhos de imagem sao relativos a raiz do seu repo.`,
     submitCopyCmd: '复制',
     submitCopied: '已复制！',
     submitPrHint: 'PR 合并后，你的插件会自动上线。之后你仓库里的每个新 release 都会成为商店中的更新。',
-    submitMarkdown: `## 你的仓库需要包含
-- 一个 \`com.<you>.<plugin>.ulanziPlugin/\` 文件夹，内含 \`manifest.json\`，遵循 Ulanzi 官方 SDK 规范。
-- 一个 **GitHub Release**，其资源文件为 \`com.<you>.<plugin>.ulanziPlugin.zip\`（插件文件夹在根目录打包的 zip）。
-- 可选：仓库根目录下的 \`store.json\`，包含封面、截图、长描述、设备类型和标签。
+    submitDetailsTitle: '仓库需要包含什么',
+    submitDetailsShow: '展开',
+    submitDetailsHide: '收起',
+    submitMarkdown: `商店只需要一个已发布插件 release 的公开 GitHub 仓库。
+
+- 仓库**根目录**下的 \`com.<you>.<plugin>.ulanziPlugin/\` 文件夹，内含 \`manifest.json\`
+- 一个 **GitHub Release**，资源为 \`com.<you>.<plugin>.ulanziPlugin.zip\`
+- 可选：根目录的 \`store.json\`（封面、截图、长描述、设备类型、标签）
+
+用 starter 生成或适配：
+
+\`\`\`
+npx ulanzi-plugin-starter@latest init
+npx ulanzi-plugin-starter@latest store
+\`\`\`
+
+\`store.json\` 示例：
 
 \`\`\`json
 {
@@ -370,7 +526,7 @@ Caminhos de imagem sao relativos a raiz do seu repo.`,
 }
 \`\`\`
 
-图片路径相对于你的仓库根目录。`,
+图片路径相对于仓库根目录。`,
   },
 };
 
@@ -387,6 +543,27 @@ export function t(lang: Lang, key: string, ...args: Array<string | number>): str
   let value = strings[lang][key] || strings.en[key] || key;
   for (const arg of args) value = value.replace('%s', String(arg));
   return value;
+}
+
+/** Maps install/uninstall progress stage ids from the main process to UI copy. */
+const PROGRESS_MSG_KEYS: Record<string, string> = {
+  start: 'progressStart',
+  download: 'progressDownload',
+  validate: 'progressValidate',
+  extract: 'progressExtract',
+  install: 'progressInstall',
+  quarantine: 'progressQuarantine',
+  restart: 'progressRestart',
+  done: 'progressDone',
+  remove: 'progressRemove',
+};
+
+export function progressLabel(lang: Lang, msg?: string | null): string {
+  if (!msg) return t(lang, 'installing');
+  const key = PROGRESS_MSG_KEYS[msg];
+  if (key) return t(lang, key);
+  if (msg === 'uninstalling') return t(lang, 'uninstalling');
+  return t(lang, 'installing');
 }
 
 export function pluginText(plugin: CatalogPlugin, field: keyof PluginText, lang: Lang): string {

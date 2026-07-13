@@ -26,9 +26,9 @@
     <link rel="alternate" hreflang="zh-CN" href="https://ulanzicommunitystore.narlei.com/plugins/">
     <link rel="alternate" hreflang="x-default" href="https://ulanzicommunitystore.narlei.com/plugins/">
 
-    <link rel="stylesheet" href="/assets/style.css?v=20260713b">
-    <script src="/assets/i18n.js?v=20260713b"></script>
-    <script src="/assets/catalog.js?v=20260713b" defer></script>
+    <link rel="stylesheet" href="/assets/style.css?v=20260713e">
+    <script src="/assets/i18n.js?v=20260713e"></script>
+    <script src="/assets/catalog.js?v=20260713g" defer></script>
   </head>
   <body id="top" class="page-catalog">
     <div class="bg" aria-hidden="true">
@@ -94,7 +94,13 @@
               <button type="button" class="seg-btn is-active" data-sort="recent" data-i18n="catalog_sort_recent">Recent</button>
               <button type="button" class="seg-btn" data-sort="popular" data-i18n="catalog_sort_popular">Popular</button>
             </div>
-            <div class="seg" id="catalogDevices" role="group"></div>
+            <div class="seg" id="catalogPlatforms" role="group" aria-label="Platform" hidden></div>
+            <div class="seg" id="catalogDevices" role="group" aria-label="Device" hidden></div>
+            <label class="catalog-category-select" id="catalogCategoryWrap" hidden>
+              <span class="sr-only">Category</span>
+              <select id="catalogCategories" aria-label="Category"></select>
+            </label>
+            <button type="button" class="catalog-clear-filters" id="catalogClearFilters" hidden>Clear filters</button>
             <span class="catalog-count" id="catalogCount"></span>
           </div>
         </div>
@@ -203,11 +209,20 @@
 
       (function () {
         var header = document.getElementById('siteHeader');
+        if (!header) return;
+
+        function syncHeaderHeight() {
+          var h = Math.ceil(header.getBoundingClientRect().height);
+          if (h > 0) document.documentElement.style.setProperty('--site-header-h', h + 'px');
+        }
+
         var onScroll = function () {
           header.classList.toggle('scrolled', window.scrollY > 12);
         };
         window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', syncHeaderHeight, { passive: true });
         onScroll();
+        syncHeaderHeight();
       })();
 
       (function () {

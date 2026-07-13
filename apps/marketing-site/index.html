@@ -320,11 +320,16 @@
           </li>
           <li class="card reveal">
             <span class="step-index">2</span>
-            <h3 data-i18n="starter_2_title">Run the scaffolding tool</h3>
-            <p data-i18n-html="starter_2_body">Open your Terminal in an empty folder (or an existing plugin repository) and run the command below. It will ask you a few questions and instantly generate a complete plugin structure, including a <code>Makefile</code> for local testing, a GitHub Actions pipeline, and a built-in AI skill to make vibe-coding a breeze.</p>
-            <div class="modal-code" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+            <h3 data-i18n="starter_2_title">Scaffold or adapt</h3>
+            <p data-i18n-html="starter_2_body">In an empty folder (new plugin) or inside an existing plugin repo (adapt mode), run the command below. It generates a complete structure: <code>Makefile</code>, GitHub Actions release pipeline, optional <code>store.json</code>, and an AI skill for vibe-coding.</p>
+            <div class="modal-code" style="margin-top: 1.5rem; margin-bottom: 1rem;">
               <code style="display: block; padding-right: 4.5rem; word-break: break-word;">npx ulanzi-plugin-starter@latest init</code>
               <button class="modal-copy js-copy-btn" type="button" data-copy="npx ulanzi-plugin-starter@latest init" data-i18n="copy">Copy</button>
+            </div>
+            <p data-i18n-html="starter_store_help">Already have a working plugin and only need cover, screenshots and tags?</p>
+            <div class="modal-code" style="margin-top: 0.75rem; margin-bottom: 1.5rem;">
+              <code style="display: block; padding-right: 4.5rem; word-break: break-word;">npx ulanzi-plugin-starter@latest store</code>
+              <button class="modal-copy js-copy-btn" type="button" data-copy="npx ulanzi-plugin-starter@latest store" data-i18n="copy">Copy</button>
             </div>
             <div style="margin-top: 1.5rem;">
               <a class="button secondary button-sm" href="https://github.com/narlei/ulanzicommunitystore/tree/main/plugin-starter" target="_blank" rel="noopener noreferrer" data-i18n="starter_docs">Read the full documentation</a>
@@ -340,13 +345,13 @@
         <ol class="steps">
           <li class="card reveal">
             <span class="step-index">1</span>
-            <h3 data-i18n="publish_1_title">Build your plugin</h3>
-            <p data-i18n-html="publish_1_body">Create it with the <a href="https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK" target="_blank" rel="noopener noreferrer">official Ulanzi SDK</a>: a <code>com.you.plugin.ulanziPlugin/</code> folder containing a <code>manifest.json</code>.</p>
+            <h3 data-i18n="publish_1_title">Scaffold or adapt with the starter</h3>
+            <p data-i18n-html="publish_1_body">Use <a href="#starter-kit">ulanzi-plugin-starter</a> to create a new plugin or adapt an existing repo — Makefile, release workflow and <code>store.json</code> included. The <a href="https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK" target="_blank" rel="noopener noreferrer">official Ulanzi SDK</a> remains the reference for the plugin API.</p>
           </li>
           <li class="card reveal">
             <span class="step-index">2</span>
-            <h3 data-i18n="publish_2_title">Publish a GitHub Release</h3>
-            <p data-i18n-html="publish_2_body">Zip the plugin folder and attach it to a release as <code>com.you.plugin.ulanziPlugin.zip</code>. Every new release becomes an update in the store.</p>
+            <h3 data-i18n="publish_2_title">Tag a GitHub Release</h3>
+            <p data-i18n-html="publish_2_body">Push a version tag (<code>git tag v1.0.0 &amp;&amp; git push origin v1.0.0</code>). The starter workflow builds and attaches <code>*.ulanziPlugin.zip</code>. Every new release becomes an update in the store.</p>
           </li>
           <li class="card reveal">
             <span class="step-index">3</span>
@@ -363,6 +368,10 @@
             <button class="button" type="submit" id="publishBtn" data-i18n="publish_validate">Validate</button>
           </form>
           <ul class="publish-checks" id="publishChecks" hidden></ul>
+          <div class="publish-fixes" id="publishFixes" hidden>
+            <h4 data-i18n="publish_fix_title">How to fix</h4>
+            <div id="publishFixesBody"></div>
+          </div>
           <p class="publish-error" id="publishError" hidden></p>
           <div class="publish-ready" id="publishReady" hidden>
             <p class="publish-file">registry/plugins/<code id="publishFileName"></code></p>
@@ -372,10 +381,17 @@
               <button class="button secondary" type="button" id="publishCopy" data-i18n="publish_copy_json">Copy JSON</button>
             </div>
             <p class="publish-hint" data-i18n="publish_hint">GitHub forks the store repository and creates the file for you — just confirm with “Propose changes”. Once the PR is merged, your plugin goes live automatically.</p>
+            <div class="publish-nudge" id="publishStoreNudge" hidden>
+              <p data-i18n-html="publish_store_nudge">Optional: generate <code>store.json</code> for cover, screenshots and tags:</p>
+              <div class="modal-code" style="margin-top: 0.75rem;">
+                <code style="display: block; padding-right: 4.5rem; word-break: break-word;">npx ulanzi-plugin-starter@latest store</code>
+                <button class="modal-copy js-copy-btn" type="button" data-copy="npx ulanzi-plugin-starter@latest store" data-i18n="copy">Copy</button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <p class="publish-doc reveal" data-i18n-html="publish_doc">Want a cover image, screenshots and tags? Add a <code>store.json</code> to your repo — see the <a href="https://github.com/narlei/ulanzicommunitystore/tree/main/registry" target="_blank" rel="noopener noreferrer">full submission guide</a>.</p>
+        <p class="publish-doc reveal" data-i18n-html="publish_doc">Want a cover image, screenshots and tags? Run <code>npx ulanzi-plugin-starter@latest store</code> in your repo — or see the <a href="https://github.com/narlei/ulanzicommunitystore/tree/main/plugin-starter" target="_blank" rel="noopener noreferrer">starter docs</a>.</p>
       </section>
 
       <!-- ============ FINAL CTA ============ -->
@@ -627,16 +643,25 @@
       // ---- Publish tool: validate a plugin repo and generate the registry PR ----
       (function () {
         var STORE_REPO = 'narlei/ulanzicommunitystore';
+        var STARTER_INIT = 'npx ulanzi-plugin-starter@latest init';
+        var STARTER_STORE = 'npx ulanzi-plugin-starter@latest store';
+        var RELEASE_TAG = 'git tag v1.0.0 && git push origin v1.0.0';
+        // Matches fixed and versioned zip names, same as the desktop app.
+        var ASSET_RE = /\.ulanziPlugin(?:[-_][^/]*)?\.zip$/;
         var form = document.getElementById('publishForm');
         var input = document.getElementById('publishInput');
         var button = document.getElementById('publishBtn');
         var list = document.getElementById('publishChecks');
+        var fixesEl = document.getElementById('publishFixes');
+        var fixesBody = document.getElementById('publishFixesBody');
         var errorEl = document.getElementById('publishError');
         var ready = document.getElementById('publishReady');
+        var storeNudge = document.getElementById('publishStoreNudge');
         var fileNameEl = document.getElementById('publishFileName');
         var jsonEl = document.getElementById('publishJson');
         var prLink = document.getElementById('publishPrLink');
         var copyBtn = document.getElementById('publishCopy');
+        var lastIssues = [];
 
         function parseRepo(value) {
           value = value.trim().replace(/\/+$/, '');
@@ -664,6 +689,47 @@
           errorEl.hidden = false;
         }
 
+        function addCopyBlock(parent, command) {
+          var row = document.createElement('div');
+          row.className = 'modal-code publish-fix-cmd';
+          var code = document.createElement('code');
+          code.style.display = 'block';
+          code.style.paddingRight = '4.5rem';
+          code.style.wordBreak = 'break-word';
+          code.textContent = command;
+          var btn = document.createElement('button');
+          btn.className = 'modal-copy js-copy-btn';
+          btn.type = 'button';
+          btn.setAttribute('data-copy', command);
+          btn.textContent = t('copy');
+          row.appendChild(code);
+          row.appendChild(btn);
+          parent.appendChild(row);
+        }
+
+        function renderFixes(issues, includeStoreWarn) {
+          fixesBody.innerHTML = '';
+          var items = issues.slice();
+          if (!items.length) {
+            fixesEl.hidden = true;
+            return;
+          }
+          items.forEach(function (issue) {
+            if (issue.id === 'store' && !includeStoreWarn) return;
+            var card = document.createElement('div');
+            card.className = 'publish-fix-item';
+            var title = document.createElement('strong');
+            title.textContent = t(issue.titleKey);
+            var body = document.createElement('p');
+            body.innerHTML = t(issue.bodyKey);
+            card.appendChild(title);
+            card.appendChild(body);
+            if (issue.cmd) addCopyBlock(card, issue.cmd);
+            fixesBody.appendChild(card);
+          });
+          fixesEl.hidden = !fixesBody.children.length;
+        }
+
         async function gh(path) {
           var res = await fetch('https://api.github.com' + path, {
             headers: { Accept: 'application/vnd.github+json' },
@@ -680,11 +746,15 @@
 
         async function validate(repo) {
           var failed = false;
+          var issues = [];
+          var storeMissing = false;
 
           var repoRes = await gh('/repos/' + repo);
           if (!repoRes.ok) {
             addCheck('fail', t('publish_repo_fail'));
-            return false;
+            issues.push({ id: 'repo', titleKey: 'publish_fix_repo_title', bodyKey: 'publish_fix_repo' });
+            lastIssues = issues;
+            return { ok: false, storeMissing: false };
           }
           var repoInfo = await repoRes.json();
           var ref = repoInfo.default_branch || 'main';
@@ -693,58 +763,110 @@
           var relRes = await gh('/repos/' + repo + '/releases/latest');
           if (!relRes.ok) {
             addCheck('fail', t('publish_release_fail'));
-            return false;
+            issues.push({
+              id: 'release',
+              titleKey: 'publish_fix_release_title',
+              bodyKey: 'publish_fix_release',
+              cmd: RELEASE_TAG,
+            });
+            lastIssues = issues;
+            return { ok: false, storeMissing: false };
           }
           var release = await relRes.json();
           addCheck('ok', t('publish_release_ok', release.tag_name));
 
-          var asset = (release.assets || []).find(function (a) { return a.name.endsWith('.ulanziPlugin.zip'); });
+          var asset = (release.assets || []).find(function (a) { return ASSET_RE.test(a.name); });
           if (!asset) {
             addCheck('fail', t('publish_asset_fail'));
-            return false;
+            issues.push({
+              id: 'asset',
+              titleKey: 'publish_fix_asset_title',
+              bodyKey: 'publish_fix_asset',
+              cmd: RELEASE_TAG,
+            });
+            lastIssues = issues;
+            return { ok: false, storeMissing: false };
           }
           addCheck('ok', t('publish_asset_ok', asset.name));
-          var pluginId = asset.name.replace(/\.zip$/, '');
+          // com.<...>.ulanziPlugin — strip version suffix and .zip
+          var pluginId = asset.name.replace(/(\.ulanziPlugin)(?:[-_][^/]*)?\.zip$/, '$1');
 
           try {
             var manifestText = await raw(repo, ref, pluginId + '/manifest.json');
             if (!manifestText) {
               addCheck('fail', t('publish_manifest_fail', pluginId));
               failed = true;
+              issues.push({
+                id: 'manifest',
+                titleKey: 'publish_fix_manifest_title',
+                bodyKey: 'publish_fix_manifest',
+                cmd: STARTER_INIT,
+              });
             } else {
               var manifest = JSON.parse(manifestText);
               if (manifest.Name && manifest.Version) {
                 addCheck('ok', t('publish_manifest_ok', manifest.Name + ' v' + manifest.Version));
               } else {
                 addCheck('warn', t('publish_manifest_warn', pluginId));
+                issues.push({
+                  id: 'manifest',
+                  titleKey: 'publish_fix_manifest_title',
+                  bodyKey: 'publish_fix_manifest',
+                  cmd: STARTER_INIT,
+                });
               }
             }
           } catch (err) {
             addCheck('fail', t('publish_manifest_fail', pluginId));
             failed = true;
+            issues.push({
+              id: 'manifest',
+              titleKey: 'publish_fix_manifest_title',
+              bodyKey: 'publish_fix_manifest',
+              cmd: STARTER_INIT,
+            });
           }
 
           try {
             var storeText = await raw(repo, ref, 'store.json');
             if (storeText === null) {
               addCheck('warn', t('publish_store_warn'));
+              storeMissing = true;
+              issues.push({
+                id: 'store',
+                titleKey: 'publish_fix_store_title',
+                bodyKey: 'publish_fix_store',
+                cmd: STARTER_STORE,
+              });
             } else {
               JSON.parse(storeText);
               addCheck('ok', t('publish_store_ok'));
             }
           } catch (err) {
             addCheck('warn', t('publish_store_warn_invalid'));
+            storeMissing = true;
+            issues.push({
+              id: 'store',
+              titleKey: 'publish_fix_store_title',
+              bodyKey: 'publish_fix_store_invalid',
+              cmd: STARTER_STORE,
+            });
           }
 
-          return !failed;
+          lastIssues = issues;
+          return { ok: !failed, storeMissing: storeMissing };
         }
 
         form.addEventListener('submit', function (event) {
           event.preventDefault();
           list.innerHTML = '';
           list.hidden = true;
+          fixesEl.hidden = true;
+          fixesBody.innerHTML = '';
           errorEl.hidden = true;
           ready.hidden = true;
+          storeNudge.hidden = true;
+          lastIssues = [];
           copyBtn.textContent = t('publish_copy_json');
 
           var repo = parseRepo(input.value);
@@ -756,8 +878,11 @@
           button.disabled = true;
           button.textContent = t('publish_checking');
 
-          validate(repo).then(function (ok) {
-            if (!ok) return;
+          validate(repo).then(function (result) {
+            if (!result.ok) {
+              renderFixes(lastIssues, true);
+              return;
+            }
             var fileName = repo.replace('/', '__') + '.json';
             var json = '{\n  "repo": "' + repo + '"\n}\n';
             fileNameEl.textContent = fileName;
@@ -765,6 +890,7 @@
             prLink.href = 'https://github.com/' + STORE_REPO + '/new/main/registry/plugins?filename=' +
               encodeURIComponent(fileName) + '&value=' + encodeURIComponent(json);
             ready.hidden = false;
+            storeNudge.hidden = !result.storeMissing;
           }).catch(function () {
             showError(t('publish_error_network'));
           }).finally(function () {

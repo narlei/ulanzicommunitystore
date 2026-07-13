@@ -73,13 +73,17 @@ Built something cool for your Deck or Dial? This is the fast lane: getting it in
 <img src="docs/screenshot-submit.png" alt="Ulanzi Community Store — Send plugin screen" width="850" />
 </div>
 
-**The easy way** — use the **Send plugin** tab in the app, or the [**Publish section on the website**](https://narlei.github.io/ulanzicommunitystore/#publish). Paste your GitHub repo URL, and it validates everything and opens the Pull Request for you in one click.
+**The happy path:**
+
+1. 🧰 Scaffold or adapt with the [plugin starter](plugin-starter/README.md): `npx ulanzi-plugin-starter@latest init` (or `store` if you only need `store.json`).
+2. 🏷️ Push a version tag — the starter workflow attaches `*.ulanziPlugin.zip` for you.
+3. 📤 Paste the repo URL in the app's **Send plugin** tab or the [**Publish section on the website**](https://ulanzicommunitystore.narlei.com/#publish). We validate and open the Pull Request.
 
 **What your repo needs:**
 
-1. 📦 A `com.<you>.<plugin>.ulanziPlugin/` folder with a `manifest.json` — standard from the [official Ulanzi SDK](https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK).
+1. 📦 A `com.<you>.<plugin>.ulanziPlugin/` folder with a `manifest.json` at the repo root ([official Ulanzi SDK](https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK) is the API reference).
 2. 🏷️ A **GitHub Release** whose asset is `com.<you>.<plugin>.ulanziPlugin.zip`.
-3. 🎨 Optional: a `store.json` at the repo root with cover image, screenshots, long description, device types, and tags.
+3. 🎨 Optional: a `store.json` at the repo root — generate with `npx ulanzi-plugin-starter@latest store`.
 
 Once your PR is merged, a GitHub Action reads your manifest and latest release and publishes the plugin automatically. **Every new release you ship becomes an update for every user.** Full details in the [registry guide](registry/README.md).
 

@@ -3,16 +3,57 @@
   'use strict';
 
   var CATALOG_URL = 'https://narlei.github.io/ulanzicommunitystore/catalog.json';
+  var PLATFORM_FILTER_KEY = 'catalogPlatformFilter';
   var LOCALE_MAP = {
     en: ['en'],
     pt: ['pt_BR', 'pt'],
     zh: ['zh_CN', 'zh_HK', 'zh_TW'],
   };
 
+  function detectHostPlatform() {
+    var ua = '';
+    try {
+      ua = String(
+        (navigator.userAgentData && navigator.userAgentData.platform) ||
+          navigator.platform ||
+          navigator.userAgent ||
+          ''
+      ).toLowerCase();
+    } catch (err) {
+      ua = '';
+    }
+    if (ua.indexOf('mac') !== -1 || ua.indexOf('darwin') !== -1 || ua.indexOf('iphone') !== -1 || ua.indexOf('ipad') !== -1) {
+      return 'mac';
+    }
+    if (ua.indexOf('win') !== -1) return 'windows';
+    return '';
+  }
+
+  function loadPlatformFilter() {
+    try {
+      var stored = localStorage.getItem(PLATFORM_FILTER_KEY);
+      if (stored === '' || stored === 'mac' || stored === 'windows') return stored;
+    } catch (err) {
+      // private mode / blocked storage
+    }
+    // Default to the visitor's OS so Windows-only plugins stay out of the way on Mac (and vice-versa).
+    return detectHostPlatform();
+  }
+
+  function savePlatformFilter(value) {
+    try {
+      localStorage.setItem(PLATFORM_FILTER_KEY, value);
+    } catch (err) {
+      // ignore
+    }
+  }
+
   var state = {
     plugins: [],
     query: '',
     device: '',
+    platform: loadPlatformFilter(),
+    category: '',
     sort: 'recent',
     selectedId: null,
   };
@@ -68,6 +109,29 @@
     return value;
   }
 
+  function normalizePlatform(value) {
+    var lower = String(value || '').toLowerCase();
+    if (lower.indexOf('mac') === 0 || lower === 'darwin') return 'mac';
+    if (lower.indexOf('win') === 0) return 'windows';
+    return 'other';
+  }
+
+  function platformFilterLabel(value) {
+    if (value === 'mac') return 'macOS';
+    if (value === 'windows') return 'Windows';
+    return platformLabel(value);
+  }
+
+  function pluginSupportsPlatform(plugin, platform) {
+    if (!platform) return true;
+    var platforms = plugin.platforms || [];
+    if (!platforms.length) return true;
+    for (var i = 0; i < platforms.length; i++) {
+      if (normalizePlatform(platforms[i]) === platform) return true;
+    }
+    return false;
+  }
+
   function formatDownloads(n) {
     if (typeof n !== 'number') return '';
     try {
@@ -96,18 +160,64 @@
     return Object.keys(set).sort();
   }
 
+  function platformsFrom(plugins) {
+    var set = {};
+    plugins.forEach(function (plugin) {
+      (plugin.platforms || []).forEach(function (p) {
+        var key = normalizePlatform(p);
+        if (key === 'mac' || key === 'windows') set[key] = true;
+      });
+    });
+    return Object.keys(set).sort();
+  }
+
+  // Categories in the UI come from store.json `tags` (e.g. productivity), not
+  // manifest.Category (often the plugin product name).
+  function categoriesFrom(plugins) {
+    var set = {};
+    plugins.forEach(function (plugin) {
+      (plugin.tags || []).forEach(function (tag) {
+        var value = String(tag || '').trim();
+        if (value) set[value] = true;
+      });
+    });
+    return Object.keys(set).sort(function (a, b) {
+      return a.localeCompare(b);
+    });
+  }
+
+  function categoryLabel(value) {
+    return String(value || '')
+      .split(/[\s_-]+/)
+      .filter(Boolean)
+      .map(function (part) {
+        return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+      })
+      .join(' ');
+  }
+
+  function pluginHasCategory(plugin, category) {
+    if (!category) return true;
+    var tags = plugin.tags || [];
+    for (var i = 0; i < tags.length; i++) {
+      if (String(tags[i] || '').trim() === category) return true;
+    }
+    return false;
+  }
+
   function filteredPlugins() {
     var q = state.query.trim().toLowerCase();
     var list = state.plugins.filter(function (plugin) {
       if (state.device && (plugin.deviceTypes || []).indexOf(state.device) === -1) {
         return false;
       }
+      if (!pluginSupportsPlatform(plugin, state.platform)) return false;
+      if (!pluginHasCategory(plugin, state.category)) return false;
       if (!q) return true;
       var haystack = [
         pluginText(plugin, 'name'),
         pluginText(plugin, 'description'),
         plugin.author,
-        plugin.category,
         (plugin.tags || []).join(' '),
       ]
         .join(' ')
@@ -162,36 +272,111 @@
     el.innerHTML = '<p>' + escapeHtml(message) + '</p>';
   }
 
-  function renderToolbar(devices) {
+  function renderToolbar() {
     var countEl = document.getElementById('catalogCount');
+    var platformEl = document.getElementById('catalogPlatforms');
     var deviceEl = document.getElementById('catalogDevices');
+    var categoryEl = document.getElementById('catalogCategories');
+    var clearEl = document.getElementById('catalogClearFilters');
     var visible = filteredPlugins();
+    var platforms = platformsFrom(state.plugins);
+    var devices = devicesFrom(state.plugins);
+    var categories = categoriesFrom(state.plugins);
+    var html;
+    var i;
 
     if (countEl) {
       countEl.textContent = t('catalog_count', String(visible.length));
     }
 
-    if (!deviceEl) return;
+    if (platformEl) {
+      if (!platforms.length) {
+        platformEl.hidden = true;
+        platformEl.innerHTML = '';
+      } else {
+        platformEl.hidden = false;
+        html =
+          '<button type="button" class="seg-btn' +
+          (state.platform === '' ? ' is-active' : '') +
+          '" data-platform="">' +
+          escapeHtml(t('catalog_all')) +
+          '</button>';
+        for (i = 0; i < platforms.length; i++) {
+          html +=
+            '<button type="button" class="seg-btn' +
+            (state.platform === platforms[i] ? ' is-active' : '') +
+            '" data-platform="' +
+            escapeHtml(platforms[i]) +
+            '">' +
+            escapeHtml(platformFilterLabel(platforms[i])) +
+            '</button>';
+        }
+        platformEl.innerHTML = html;
+      }
+    }
 
-    var html =
-      '<button type="button" class="seg-btn' +
-      (state.device === '' ? ' is-active' : '') +
-      '" data-device="">' +
-      escapeHtml(t('catalog_all')) +
-      '</button>';
+    // Only show when 2+ device types exist — a single option (e.g. all Deck) is noise.
+    if (deviceEl) {
+      if (devices.length < 2) {
+        deviceEl.hidden = true;
+        deviceEl.innerHTML = '';
+        // Drop a stale device filter if the catalog collapsed to one type.
+        if (state.device) state.device = '';
+      } else {
+        deviceEl.hidden = false;
+        html =
+          '<button type="button" class="seg-btn' +
+          (state.device === '' ? ' is-active' : '') +
+          '" data-device="">' +
+          escapeHtml(t('catalog_all')) +
+          '</button>';
+        for (i = 0; i < devices.length; i++) {
+          html +=
+            '<button type="button" class="seg-btn' +
+            (state.device === devices[i] ? ' is-active' : '') +
+            '" data-device="' +
+            escapeHtml(devices[i]) +
+            '">' +
+            escapeHtml(deviceLabel(devices[i])) +
+            '</button>';
+        }
+        deviceEl.innerHTML = html;
+      }
+    }
 
-    devices.forEach(function (device) {
-      html +=
-        '<button type="button" class="seg-btn' +
-        (state.device === device ? ' is-active' : '') +
-        '" data-device="' +
-        escapeHtml(device) +
-        '">' +
-        escapeHtml(deviceLabel(device)) +
-        '</button>';
-    });
+    var categoryWrap = document.getElementById('catalogCategoryWrap');
+    if (categoryEl) {
+      if (!categories.length) {
+        if (categoryWrap) categoryWrap.hidden = true;
+        categoryEl.innerHTML = '';
+        categoryEl.classList.remove('is-active');
+      } else {
+        if (categoryWrap) categoryWrap.hidden = false;
+        html =
+          '<option value="">' +
+          escapeHtml(t('catalog_all_categories')) +
+          '</option>';
+        for (i = 0; i < categories.length; i++) {
+          html +=
+            '<option value="' +
+            escapeHtml(categories[i]) +
+            '"' +
+            (state.category === categories[i] ? ' selected' : '') +
+            '>' +
+            escapeHtml(categoryLabel(categories[i])) +
+            '</option>';
+        }
+        categoryEl.innerHTML = html;
+        categoryEl.value = state.category;
+        categoryEl.classList.toggle('is-active', Boolean(state.category));
+      }
+    }
 
-    deviceEl.innerHTML = html;
+    if (clearEl) {
+      var hasFilters = Boolean(state.platform || state.device || state.category);
+      clearEl.hidden = !hasFilters;
+      clearEl.textContent = t('catalog_clear_filters');
+    }
   }
 
   function metaBits(plugin) {
@@ -200,6 +385,18 @@
       bits.push(deviceLabel(d));
     });
     return bits.map(escapeHtml).join(' · ');
+  }
+
+  // NEW badge from catalog publishedAt (latest GitHub release), 14-day window.
+  var NEW_PLUGIN_WINDOW_DAYS = 14;
+
+  function isPluginNew(publishedAt) {
+    if (!publishedAt) return false;
+    var published = Date.parse(publishedAt);
+    if (isNaN(published)) return false;
+    var ageMs = Date.now() - published;
+    if (ageMs < 0) return true;
+    return ageMs < NEW_PLUGIN_WINDOW_DAYS * 24 * 60 * 60 * 1000;
   }
 
   function popularityHtml(plugin) {
@@ -233,6 +430,13 @@
     );
   }
 
+  function newBadgeHtml(plugin) {
+    if (!isPluginNew(plugin.publishedAt)) return '';
+    return (
+      '<span class="catalog-card-new">' + escapeHtml(t('catalog_new')) + '</span>'
+    );
+  }
+
   function cardHtml(plugin) {
     var name = pluginText(plugin, 'name') || plugin.name;
     var desc = pluginText(plugin, 'description') || '';
@@ -244,9 +448,12 @@
     var cover = plugin.cover
       ? '<img class="catalog-card-cover" src="' + escapeHtml(plugin.cover) + '" alt="" loading="lazy">'
       : '<div class="catalog-card-cover catalog-card-cover-fallback" aria-hidden="true"></div>';
-    var category = plugin.category
-      ? '<span class="chip">' + escapeHtml(plugin.category) + '</span>'
-      : '';
+    var tagsHtml = (plugin.tags || [])
+      .slice(0, 2)
+      .map(function (tag) {
+        return '<span class="chip">' + escapeHtml(categoryLabel(tag)) + '</span>';
+      })
+      .join('');
 
     return (
       '<article class="card catalog-card" role="button" tabindex="0" data-plugin-id="' +
@@ -254,6 +461,7 @@
       '">' +
       '<div class="catalog-card-cover-wrap">' +
       cover +
+      newBadgeHtml(plugin) +
       popularityHtml(plugin) +
       '</div>' +
       '<div class="catalog-card-body">' +
@@ -278,7 +486,7 @@
       '<span class="catalog-card-bits">' +
       metaBits(plugin) +
       '</span>' +
-      category +
+      tagsHtml +
       '</div>' +
       '</div>' +
       '</article>'
@@ -290,7 +498,7 @@
     if (!grid) return;
 
     var list = filteredPlugins();
-    renderToolbar(devicesFrom(state.plugins));
+    renderToolbar();
 
     if (!list.length) {
       setStatus('empty', t('catalog_no_results'));
@@ -346,7 +554,7 @@
 
     var devices = (plugin.deviceTypes || []).map(deviceLabel).join(', ');
     var platforms = (plugin.platforms || []).map(platformLabel).join(', ');
-    var tags = (plugin.tags || []).slice(0, 6).join(', ');
+    var tags = (plugin.tags || []).slice(0, 6).map(categoryLabel).join(', ');
 
     body.innerHTML =
       '<header class="catalog-detail-head">' +
@@ -447,7 +655,10 @@
   function bindEvents() {
     var search = document.getElementById('catalogSearch');
     var sortEl = document.getElementById('catalogSort');
+    var platformEl = document.getElementById('catalogPlatforms');
     var deviceEl = document.getElementById('catalogDevices');
+    var categoryEl = document.getElementById('catalogCategories');
+    var clearEl = document.getElementById('catalogClearFilters');
     var grid = document.getElementById('catalogGrid');
     var detailOverlay = document.getElementById('pluginDetailModal');
     var detailClose = document.getElementById('pluginDetailClose');
@@ -472,11 +683,38 @@
       });
     }
 
+    if (platformEl) {
+      platformEl.addEventListener('click', function (event) {
+        var btn = event.target.closest('[data-platform]');
+        if (!btn) return;
+        state.platform = btn.getAttribute('data-platform') || '';
+        savePlatformFilter(state.platform);
+        renderGrid();
+      });
+    }
+
     if (deviceEl) {
       deviceEl.addEventListener('click', function (event) {
         var btn = event.target.closest('[data-device]');
         if (!btn) return;
         state.device = btn.getAttribute('data-device') || '';
+        renderGrid();
+      });
+    }
+
+    if (categoryEl) {
+      categoryEl.addEventListener('change', function () {
+        state.category = categoryEl.value || '';
+        renderGrid();
+      });
+    }
+
+    if (clearEl) {
+      clearEl.addEventListener('click', function () {
+        state.platform = '';
+        state.device = '';
+        state.category = '';
+        savePlatformFilter('');
         renderGrid();
       });
     }

@@ -241,9 +241,9 @@ ipcMain.handle('plugin:install', (event, plugin: CatalogPlugin) =>
   }),
 );
 
-ipcMain.handle('plugin:uninstall', async (_event, pluginId: unknown) => {
+ipcMain.handle('plugin:uninstall', async (event, pluginId: unknown) => {
   if (typeof pluginId !== 'string' || !isPluginId(pluginId)) throw new Error('Invalid pluginId');
-  await uninstallPlugin(pluginId);
+  await uninstallPlugin(pluginId, (progress) => event.sender.send('plugin:progress', progress));
   scheduleUpdateCheck();
   return { ok: true };
 });
