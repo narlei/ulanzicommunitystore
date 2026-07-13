@@ -20,7 +20,13 @@
     <meta name="twitter:description" content="The open-source community store for Ulanzi Deck &amp; Dial plugins — publish in minutes, install in one click, update automatically. macOS and Windows.">
     <meta name="twitter:image" content="https://ulanzicommunitystore.narlei.com/assets/logo-512.png">
 
+    <link rel="alternate" hreflang="en" href="https://ulanzicommunitystore.narlei.com/">
+    <link rel="alternate" hreflang="pt-BR" href="https://ulanzicommunitystore.narlei.com/">
+    <link rel="alternate" hreflang="zh-CN" href="https://ulanzicommunitystore.narlei.com/">
+    <link rel="alternate" hreflang="x-default" href="https://ulanzicommunitystore.narlei.com/">
+
     <link rel="stylesheet" href="assets/style.css">
+    <script src="assets/i18n.js"></script>
   </head>
   <body id="top">
     <div class="bg" aria-hidden="true">
@@ -36,18 +42,23 @@
           <span>Ulanzi&nbsp;Community&nbsp;Store</span>
         </a>
         <div class="nav-links">
-          <a href="#community">Community</a>
-          <a href="#features">Features</a>
-          <a href="#plugins">Plugins</a>
-          <a href="#how-it-works">How it works</a>
-          <a href="#starter-kit">Create a plugin</a>
-          <a href="#publish">Publish</a>
-          <a href="https://github.com/narlei/ulanzicommunitystore" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href="plugins/" data-i18n="nav_plugins">Plugins</a>
+          <a href="#how-it-works" data-i18n="nav_how">How it works</a>
+          <a href="#starter-kit" data-i18n="nav_starter">Create a plugin</a>
+          <a href="#publish" data-i18n="nav_publish">Publish</a>
+          <a href="https://github.com/narlei/ulanzicommunitystore" target="_blank" rel="noopener noreferrer" data-i18n="nav_github">GitHub</a>
         </div>
-        <a class="button button-sm js-download-trigger" href="https://github.com/narlei/ulanzicommunitystore/releases/latest" target="_blank" rel="noopener noreferrer">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v7.19l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0L3.72 7.53a.75.75 0 0 1 1.06-1.06l2.47 2.47V1.75A.75.75 0 0 1 8 1ZM2 12.25a.75.75 0 0 1 1.5 0v1.25h9v-1.25a.75.75 0 0 1 1.5 0v1.5c0 .69-.56 1.25-1.25 1.25H3.25C2.56 15 2 14.44 2 13.75v-1.5Z"/></svg>
-          Download
-        </a>
+        <div class="nav-actions">
+          <div class="lang-switcher" role="group" data-i18n-aria="lang_label" aria-label="Language">
+            <button type="button" class="lang-btn" data-set-lang="en" aria-pressed="true">EN</button>
+            <button type="button" class="lang-btn" data-set-lang="pt" aria-pressed="false">PT</button>
+            <button type="button" class="lang-btn" data-set-lang="zh" aria-pressed="false">中文</button>
+          </div>
+          <a class="button button-sm js-download-trigger" href="https://github.com/narlei/ulanzicommunitystore/releases/latest" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v7.19l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0L3.72 7.53a.75.75 0 0 1 1.06-1.06l2.47 2.47V1.75A.75.75 0 0 1 8 1ZM2 12.25a.75.75 0 0 1 1.5 0v1.25h9v-1.25a.75.75 0 0 1 1.5 0v1.5c0 .69-.56 1.25-1.25 1.25H3.25C2.56 15 2 14.44 2 13.75v-1.5Z"/></svg>
+            <span data-i18n="nav_download">Download</span>
+          </a>
+        </div>
       </nav>
     </header>
 
@@ -57,23 +68,23 @@
         <div class="hero-copy">
           <p class="badge">
             <span class="badge-dot"></span>
-            By the community · Open source · Free
+            <span data-i18n="hero_badge">By the community · Open source · Free</span>
           </p>
           <h1>
-            The community store for
-            <span class="gradient-text">Ulanzi&nbsp;Deck &amp; Dial plugins.</span>
+            <span data-i18n="hero_title_1">The community store for</span>
+            <span class="gradient-text" data-i18n="hero_title_2">Ulanzi&nbsp;Deck &amp; Dial plugins.</span>
           </h1>
-          <p class="lead">
+          <p class="lead" data-i18n="hero_lead">
             Install and update community plugins in one click — or publish your own
             with a single Pull Request.
           </p>
           <div class="actions">
             <a class="button button-lg js-download-trigger" href="https://github.com/narlei/ulanzicommunitystore/releases/latest" target="_blank" rel="noopener noreferrer">
               <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v7.19l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0L3.72 7.53a.75.75 0 0 1 1.06-1.06l2.47 2.47V1.75A.75.75 0 0 1 8 1ZM2 12.25a.75.75 0 0 1 1.5 0v1.25h9v-1.25a.75.75 0 0 1 1.5 0v1.5c0 .69-.56 1.25-1.25 1.25H3.25C2.56 15 2 14.44 2 13.75v-1.5Z"/></svg>
-              Download for free
+              <span data-i18n="hero_download">Download for free</span>
             </a>
             <a class="button button-lg secondary" href="#publish">
-              Publish a plugin
+              <span data-i18n="hero_publish">Publish a plugin</span>
             </a>
           </div>
           <p class="platforms">
@@ -83,7 +94,7 @@
             <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M0 2.26 6.53 1.4v6.24H0V2.26Zm7.32-.97L16 0v7.64H7.32V1.29ZM0 8.43h6.53v6.25L0 13.78V8.43Zm7.32 0H16V16l-8.68-1.24V8.43Z"/></svg>
             Windows
             <span class="dot-sep">·</span>
-            No account needed
+            <span data-i18n="hero_no_account">No account needed</span>
           </p>
         </div>
 
@@ -97,7 +108,7 @@
               <span class="window-title">Ulanzi Community Store</span>
               <span class="window-search">
                 <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M11.7 10.3a6 6 0 1 0-1.4 1.4l3 3a1 1 0 0 0 1.4-1.4l-3-3ZM7 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/></svg>
-                Search plugins…
+                <span data-i18n="window_search">Search plugins…</span>
               </span>
             </div>
             <div class="window-body">
@@ -105,25 +116,25 @@
                 <img class="wp-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_ticktick/main/com.narlei.ticktickfocus.ulanziPlugin/resources/icon.png" alt="" loading="lazy">
                 <div class="wp-meta">
                   <strong>TickTick Focus</strong>
-                  <span>Pomodoro control on a smart button · v1.0.1</span>
+                  <span data-i18n="window_ticktick_desc">Pomodoro control on a smart button · v1.0.1</span>
                 </div>
-                <span class="wp-btn wp-installed">✓ Installed</span>
+                <span class="wp-btn wp-installed" data-i18n="window_installed">✓ Installed</span>
               </div>
               <div class="window-row">
                 <img class="wp-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck-ai-cost/main/com.narlei.aicost.ulanziPlugin/resources/icon.png" alt="" loading="lazy">
                 <div class="wp-meta">
                   <strong>AI Cost Monitor</strong>
-                  <span>Track AI coding spend locally · v1.0.3</span>
+                  <span data-i18n="window_aicost_desc">Track AI coding spend locally · v1.0.3</span>
                 </div>
-                <span class="wp-btn wp-installing"><span class="wp-progress"></span><span class="wp-btn-label">Installing…</span></span>
+                <span class="wp-btn wp-installing"><span class="wp-progress"></span><span class="wp-btn-label" data-i18n="window_installing">Installing…</span></span>
               </div>
               <div class="window-row">
                 <img class="wp-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_claude/main/com.claude.usage.ulanziPlugin/resources/icon.png" alt="" loading="lazy">
                 <div class="wp-meta">
                   <strong>Claude Code Usage</strong>
-                  <span>Live subscription limits · v1.0.6</span>
+                  <span data-i18n="window_claude_desc">Live subscription limits · v1.0.6</span>
                 </div>
-                <span class="wp-btn">Install</span>
+                <span class="wp-btn" data-i18n="window_install">Install</span>
               </div>
             </div>
           </div>
@@ -135,188 +146,188 @@
       <section class="stats reveal">
         <div class="stat">
           <strong>1‑click</strong>
-          <span>install &amp; update</span>
+          <span data-i18n="stat_1_label">install &amp; update</span>
         </div>
         <div class="stat">
           <strong>100%</strong>
-          <span>open source</span>
+          <span data-i18n="stat_2_label">open source</span>
         </div>
         <div class="stat">
-          <strong>minutes</strong>
-          <span>from PR to published plugin</span>
+          <strong data-i18n="stat_3_value">minutes</strong>
+          <span data-i18n="stat_3_label">from PR to published plugin</span>
         </div>
         <div class="stat">
           <strong>0</strong>
-          <span>accounts, trackers or ads</span>
+          <span data-i18n="stat_4_label">accounts, trackers or ads</span>
         </div>
       </section>
 
       <!-- ============ POSITIONING ============ -->
       <section class="section" id="community">
-        <p class="section-eyebrow reveal">Why a community store?</p>
-        <h2 class="section-title reveal">A companion to the official marketplace.<br>Not a competitor.</h2>
+        <p class="section-eyebrow reveal" data-i18n="community_eyebrow">Why a community store?</p>
+        <h2 class="section-title reveal" data-i18n-html="community_title">A companion to the official marketplace.<br>Not a competitor.</h2>
         <div class="feature-grid">
           <article class="card reveal">
             <div class="card-icon">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 8.6a5 5 0 0 0-8.1-1.5L12 7.8l-.7-.7a5 5 0 0 0-8.1 1.5c-1 2.3-.2 4.7 1.6 6.4L12 21l7.2-6c1.8-1.7 2.6-4.1 1.6-6.4z"/></svg>
             </div>
-            <h3>Made by fans of Ulanzi gear</h3>
-            <p>This project exists because we love the hardware and want more people building for it. Every plugin here is one more reason to plug in a Deck or Dial.</p>
+            <h3 data-i18n="community_1_title">Made by fans of Ulanzi gear</h3>
+            <p data-i18n="community_1_body">This project exists because we love the hardware and want more people building for it. Every plugin here is one more reason to plug in a Deck or Dial.</p>
           </article>
           <article class="card reveal">
             <div class="card-icon">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
             </div>
-            <h3>The fast lane for makers</h3>
-            <p>The official Ulanzi Studio Marketplace has a careful review process. The Community Store is where you ship today, iterate with users, and push updates the moment you cut a release.</p>
+            <h3 data-i18n="community_2_title">The fast lane for makers</h3>
+            <p data-i18n="community_2_body">The official Ulanzi Studio Marketplace has a careful review process. The Community Store is where you ship today, iterate with users, and push updates the moment you cut a release.</p>
           </article>
           <article class="card reveal">
             <div class="card-icon">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9.5" r="2.4"/><path d="M3.5 19c.6-3 2.9-4.6 5.5-4.6s4.9 1.6 5.5 4.6M14.8 14.9c2.2.2 4.2 1.6 4.7 4.1"/></svg>
             </div>
-            <h3>Owned by the community</h3>
-            <p>Open registry, open pipeline, open app — all MIT-licensed on GitHub. No accounts, no lock-in: publish here <em>and</em> on the official marketplace. It's your plugin.</p>
+            <h3 data-i18n="community_3_title">Owned by the community</h3>
+            <p data-i18n-html="community_3_body">Open registry, open pipeline, open app — all MIT-licensed on GitHub. No accounts, no lock-in: publish here <em>and</em> on the official marketplace. It's your plugin.</p>
           </article>
         </div>
       </section>
 
       <!-- ============ FEATURES ============ -->
       <section class="section" id="features">
-        <p class="section-eyebrow reveal">Why you'll love it</p>
-        <h2 class="section-title reveal">Install it. Update it.<br>Trust it.</h2>
+        <p class="section-eyebrow reveal" data-i18n="features_eyebrow">Why you'll love it</p>
+        <h2 class="section-title reveal" data-i18n-html="features_title">Install it. Update it.<br>Trust it.</h2>
         <div class="feature-grid">
           <article class="card reveal">
             <div class="card-icon">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
             </div>
-            <h3>One-click installs</h3>
-            <p>The app grabs the latest release and drops it straight into your Ulanzi plugins folder. No unzipping, no path juggling.</p>
+            <h3 data-i18n="feature_1_title">One-click installs</h3>
+            <p data-i18n="feature_1_body">The app grabs the latest release and drops it straight into your Ulanzi plugins folder. No unzipping, no path juggling.</p>
           </article>
           <article class="card reveal">
             <div class="card-icon">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
             </div>
-            <h3>Updates that find you</h3>
-            <p>See at a glance when an installed plugin has a new version and update it with a single click.</p>
+            <h3 data-i18n="feature_2_title">Updates that find you</h3>
+            <p data-i18n="feature_2_body">See at a glance when an installed plugin has a new version and update it with a single click.</p>
           </article>
           <article class="card reveal">
             <div class="card-icon">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2.4"/></svg>
             </div>
-            <h3>Community registry</h3>
-            <p>Every plugin comes from the reviewed community registry, generated automatically from GitHub releases and manifests.</p>
+            <h3 data-i18n="feature_3_title">Community registry</h3>
+            <p data-i18n="feature_3_body">Every plugin comes from the reviewed community registry, generated automatically from GitHub releases and manifests.</p>
           </article>
           <article class="card reveal">
             <div class="card-icon">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
             </div>
-            <h3>macOS &amp; Windows</h3>
-            <p>Native desktop builds for both platforms, published automatically through GitHub Releases.</p>
+            <h3 data-i18n="feature_4_title">macOS &amp; Windows</h3>
+            <p data-i18n="feature_4_body">Native desktop builds for both platforms, published automatically through GitHub Releases.</p>
           </article>
           <article class="card reveal">
             <div class="card-icon">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4z"/><path d="m9 12 2 2 4-4"/></svg>
             </div>
-            <h3>Safe by default</h3>
-            <p>ZIP extraction validates plugin IDs and entry paths before anything is written to disk. Only catalog plugins install by default.</p>
+            <h3 data-i18n="feature_5_title">Safe by default</h3>
+            <p data-i18n="feature_5_body">ZIP extraction validates plugin IDs and entry paths before anything is written to disk. Only catalog plugins install by default.</p>
           </article>
           <article class="card reveal">
             <div class="card-icon">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 8-5 4 5 4M15 8l5 4-5 4"/></svg>
             </div>
-            <h3>Open source</h3>
-            <p>The app, the registry, and the catalog pipeline are all public on GitHub. Audit it, fork it, contribute to it.</p>
+            <h3 data-i18n="feature_6_title">Open source</h3>
+            <p data-i18n="feature_6_body">The app, the registry, and the catalog pipeline are all public on GitHub. Audit it, fork it, contribute to it.</p>
           </article>
         </div>
       </section>
 
       <!-- ============ PLUGINS ============ -->
       <section class="section" id="plugins">
-        <p class="section-eyebrow reveal">Community plugins</p>
-        <h2 class="section-title reveal">A growing set of plugins,<br>built in the open.</h2>
+        <p class="section-eyebrow reveal" data-i18n="plugins_eyebrow">Community plugins</p>
+        <h2 class="section-title reveal" data-i18n-html="plugins_title">A growing set of plugins,<br>built in the open.</h2>
         <div class="plugin-grid">
           <article class="card plugin-card reveal">
             <img class="plugin-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_ticktick/main/com.narlei.ticktickfocus.ulanziPlugin/resources/icon.png" alt="" loading="lazy" width="52" height="52">
             <div class="plugin-head">
               <h3>TickTick Focus</h3>
-              <span class="chip">Productivity</span>
+              <span class="chip" data-i18n="chip_productivity">Productivity</span>
             </div>
-            <p>Start, pause, and mirror your TickTick focus/pomodoro sessions from a single smart button, with live remaining time on your deck.</p>
-            <a class="card-link" href="https://github.com/narlei/ulanzideck_ticktick" target="_blank" rel="noopener noreferrer">View source <span aria-hidden="true">→</span></a>
+            <p data-i18n="plugin_ticktick_desc">Start, pause, and mirror your TickTick focus/pomodoro sessions from a single smart button, with live remaining time on your deck.</p>
+            <a class="card-link" href="https://github.com/narlei/ulanzideck_ticktick" target="_blank" rel="noopener noreferrer"><span data-i18n="plugin_view_source">View source</span> <span aria-hidden="true">→</span></a>
           </article>
           <article class="card plugin-card reveal">
             <img class="plugin-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck-ai-cost/main/com.narlei.aicost.ulanziPlugin/resources/icon.png" alt="" loading="lazy" width="52" height="52">
             <div class="plugin-head">
               <h3>AI Cost Monitor</h3>
-              <span class="chip">Dev tools</span>
+              <span class="chip" data-i18n="chip_devtools">Dev tools</span>
             </div>
-            <p>Track spend on Claude, Codex, Cursor, Gemini, Copilot and more, right on your deck. Data is read locally — no API keys needed.</p>
-            <a class="card-link" href="https://github.com/narlei/ulanzideck-ai-cost" target="_blank" rel="noopener noreferrer">View source <span aria-hidden="true">→</span></a>
+            <p data-i18n="plugin_aicost_desc">Track spend on Claude, Codex, Cursor, Gemini, Copilot and more, right on your deck. Data is read locally — no API keys needed.</p>
+            <a class="card-link" href="https://github.com/narlei/ulanzideck-ai-cost" target="_blank" rel="noopener noreferrer"><span data-i18n="plugin_view_source">View source</span> <span aria-hidden="true">→</span></a>
           </article>
           <article class="card plugin-card reveal">
             <img class="plugin-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_claude/main/com.claude.usage.ulanziPlugin/resources/icon.png" alt="" loading="lazy" width="52" height="52">
             <div class="plugin-head">
               <h3>Claude Code Usage</h3>
-              <span class="chip">Dev tools</span>
+              <span class="chip" data-i18n="chip_devtools">Dev tools</span>
             </div>
-            <p>Monitor your 5-hour and weekly Claude Code limits in real time, with color-coded thresholds and a reset countdown.</p>
-            <a class="card-link" href="https://github.com/narlei/ulanzideck_claude" target="_blank" rel="noopener noreferrer">View source <span aria-hidden="true">→</span></a>
+            <p data-i18n="plugin_claude_desc">Monitor your 5-hour and weekly Claude Code limits in real time, with color-coded thresholds and a reset countdown.</p>
+            <a class="card-link" href="https://github.com/narlei/ulanzideck_claude" target="_blank" rel="noopener noreferrer"><span data-i18n="plugin_view_source">View source</span> <span aria-hidden="true">→</span></a>
           </article>
         </div>
         <div class="center reveal">
-          <a class="button secondary" href="https://github.com/narlei/ulanzicommunitystore/tree/main/registry/plugins" target="_blank" rel="noopener noreferrer">Browse the community registry</a>
+          <a class="button secondary" href="plugins/" data-i18n="plugin_browse">Browse all community plugins</a>
         </div>
       </section>
 
       <!-- ============ HOW IT WORKS ============ -->
       <section class="section" id="how-it-works">
-        <p class="section-eyebrow reveal">How it works</p>
-        <h2 class="section-title reveal">Download, browse,<br>install.</h2>
+        <p class="section-eyebrow reveal" data-i18n="how_eyebrow">How it works</p>
+        <h2 class="section-title reveal" data-i18n-html="how_title">Download, browse,<br>install.</h2>
         <ol class="steps">
           <li class="card reveal">
             <span class="step-index">1</span>
-            <h3>Download the app</h3>
-            <p>Grab the latest release for macOS or Windows straight from GitHub. Free, no account required.</p>
+            <h3 data-i18n="how_1_title">Download the app</h3>
+            <p data-i18n="how_1_body">Grab the latest release for macOS or Windows straight from GitHub. Free, no account required.</p>
           </li>
           <li class="card reveal">
             <span class="step-index">2</span>
-            <h3>Browse the catalog</h3>
-            <p>See every approved plugin with its description, version, screenshots, and source repository.</p>
+            <h3 data-i18n="how_2_title">Browse the catalog</h3>
+            <p data-i18n="how_2_body">See every approved plugin with its description, version, screenshots, and source repository.</p>
           </li>
           <li class="card reveal">
             <span class="step-index">3</span>
-            <h3>Click install</h3>
-            <p>The plugin lands in your Ulanzi plugins folder, ready to drag onto a key. Updates are one click too.</p>
+            <h3 data-i18n="how_3_title">Click install</h3>
+            <p data-i18n="how_3_body">The plugin lands in your Ulanzi plugins folder, ready to drag onto a key. Updates are one click too.</p>
           </li>
         </ol>
       </section>
 
       <!-- ============ CREATE ============ -->
       <section class="section" id="starter-kit">
-        <p class="section-eyebrow reveal">For developers</p>
-        <h2 class="section-title reveal" style="margin-bottom: 3rem;">Scaffold a new plugin<br>with one command.</h2>
-        
+        <p class="section-eyebrow reveal" data-i18n="starter_eyebrow">For developers</p>
+        <h2 class="section-title reveal" style="margin-bottom: 3rem;" data-i18n-html="starter_title">Scaffold a new plugin<br>with one command.</h2>
+
         <ol class="steps" style="grid-template-columns: 1fr;">
           <li class="card reveal">
             <span class="step-index">1</span>
-            <h3>Install Node.js</h3>
-            <p>The CLI tool requires Node.js. Install it via Terminal on macOS:</p>
+            <h3 data-i18n="starter_1_title">Install Node.js</h3>
+            <p data-i18n="starter_1_body">The CLI tool requires Node.js. Install it via Terminal on macOS:</p>
             <div class="modal-code" style="margin-top: 1rem; margin-bottom: 1rem;">
               <code>brew install node</code>
-              <button class="modal-copy" type="button" onclick="navigator.clipboard.writeText('brew install node'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy', 2000);">Copy</button>
+              <button class="modal-copy js-copy-btn" type="button" data-copy="brew install node" data-i18n="copy">Copy</button>
             </div>
-            <p>For Windows or Linux, download the installer directly from <a href="https://nodejs.org" target="_blank" rel="noopener noreferrer">nodejs.org</a>.</p>
+            <p data-i18n-html="starter_1_win">For Windows or Linux, download the installer directly from <a href="https://nodejs.org" target="_blank" rel="noopener noreferrer">nodejs.org</a>.</p>
           </li>
           <li class="card reveal">
             <span class="step-index">2</span>
-            <h3>Run the scaffolding tool</h3>
-            <p>Open your Terminal in an empty folder (or an existing plugin repository) and run the command below. It will ask you a few questions and instantly generate a complete plugin structure, including a <code>Makefile</code> for local testing, a GitHub Actions pipeline, and a built-in AI skill to make vibe-coding a breeze.</p>
+            <h3 data-i18n="starter_2_title">Run the scaffolding tool</h3>
+            <p data-i18n-html="starter_2_body">Open your Terminal in an empty folder (or an existing plugin repository) and run the command below. It will ask you a few questions and instantly generate a complete plugin structure, including a <code>Makefile</code> for local testing, a GitHub Actions pipeline, and a built-in AI skill to make vibe-coding a breeze.</p>
             <div class="modal-code" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
               <code style="display: block; padding-right: 4.5rem; word-break: break-word;">npx ulanzi-plugin-starter@latest init</code>
-              <button class="modal-copy" type="button" onclick="navigator.clipboard.writeText('npx ulanzi-plugin-starter@latest init'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy', 2000);">Copy</button>
+              <button class="modal-copy js-copy-btn" type="button" data-copy="npx ulanzi-plugin-starter@latest init" data-i18n="copy">Copy</button>
             </div>
             <div style="margin-top: 1.5rem;">
-              <a class="button secondary button-sm" href="https://github.com/narlei/ulanzicommunitystore/tree/main/plugin-starter" target="_blank" rel="noopener noreferrer">Read the full documentation</a>
+              <a class="button secondary button-sm" href="https://github.com/narlei/ulanzicommunitystore/tree/main/plugin-starter" target="_blank" rel="noopener noreferrer" data-i18n="starter_docs">Read the full documentation</a>
             </div>
           </li>
         </ol>
@@ -324,32 +335,32 @@
 
       <!-- ============ PUBLISH ============ -->
       <section class="section" id="publish">
-        <p class="section-eyebrow reveal">For developers</p>
-        <h2 class="section-title reveal">Publish your plugin<br>in three steps.</h2>
+        <p class="section-eyebrow reveal" data-i18n="publish_eyebrow">For developers</p>
+        <h2 class="section-title reveal" data-i18n-html="publish_title">Publish your plugin<br>in three steps.</h2>
         <ol class="steps">
           <li class="card reveal">
             <span class="step-index">1</span>
-            <h3>Build your plugin</h3>
-            <p>Create it with the <a href="https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK" target="_blank" rel="noopener noreferrer">official Ulanzi SDK</a>: a <code>com.you.plugin.ulanziPlugin/</code> folder containing a <code>manifest.json</code>.</p>
+            <h3 data-i18n="publish_1_title">Build your plugin</h3>
+            <p data-i18n-html="publish_1_body">Create it with the <a href="https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK" target="_blank" rel="noopener noreferrer">official Ulanzi SDK</a>: a <code>com.you.plugin.ulanziPlugin/</code> folder containing a <code>manifest.json</code>.</p>
           </li>
           <li class="card reveal">
             <span class="step-index">2</span>
-            <h3>Publish a GitHub Release</h3>
-            <p>Zip the plugin folder and attach it to a release as <code>com.you.plugin.ulanziPlugin.zip</code>. Every new release becomes an update in the store.</p>
+            <h3 data-i18n="publish_2_title">Publish a GitHub Release</h3>
+            <p data-i18n-html="publish_2_body">Zip the plugin folder and attach it to a release as <code>com.you.plugin.ulanziPlugin.zip</code>. Every new release becomes an update in the store.</p>
           </li>
           <li class="card reveal">
             <span class="step-index">3</span>
-            <h3>Submit your repository</h3>
-            <p>Paste your repo URL below — or in the app's <strong>Send plugin</strong> tab. We validate it and open the Pull Request for you.</p>
+            <h3 data-i18n="publish_3_title">Submit your repository</h3>
+            <p data-i18n-html="publish_3_body">Paste your repo URL below — or in the app's <strong>Send plugin</strong> tab. We validate it and open the Pull Request for you.</p>
           </li>
         </ol>
 
         <div class="card publish-tool reveal">
-          <h3>Check your repo &amp; generate the submission</h3>
-          <p class="publish-sub">Runs entirely in your browser against the public GitHub API. Nothing is uploaded anywhere.</p>
+          <h3 data-i18n="publish_tool_title">Check your repo &amp; generate the submission</h3>
+          <p class="publish-sub" data-i18n="publish_tool_sub">Runs entirely in your browser against the public GitHub API. Nothing is uploaded anywhere.</p>
           <form class="publish-row" id="publishForm">
-            <input id="publishInput" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://github.com/you/your-plugin" aria-label="Your plugin's GitHub repository URL">
-            <button class="button" type="submit" id="publishBtn">Validate</button>
+            <input id="publishInput" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" data-i18n-placeholder="publish_placeholder" data-i18n-aria="publish_input_aria" placeholder="https://github.com/you/your-plugin" aria-label="Your plugin's GitHub repository URL">
+            <button class="button" type="submit" id="publishBtn" data-i18n="publish_validate">Validate</button>
           </form>
           <ul class="publish-checks" id="publishChecks" hidden></ul>
           <p class="publish-error" id="publishError" hidden></p>
@@ -357,81 +368,88 @@
             <p class="publish-file">registry/plugins/<code id="publishFileName"></code></p>
             <pre id="publishJson"></pre>
             <div class="publish-actions">
-              <a class="button" id="publishPrLink" href="#" target="_blank" rel="noopener noreferrer">Open the Pull Request on GitHub</a>
-              <button class="button secondary" type="button" id="publishCopy">Copy JSON</button>
+              <a class="button" id="publishPrLink" href="#" target="_blank" rel="noopener noreferrer" data-i18n="publish_pr">Open the Pull Request on GitHub</a>
+              <button class="button secondary" type="button" id="publishCopy" data-i18n="publish_copy_json">Copy JSON</button>
             </div>
-            <p class="publish-hint">GitHub forks the store repository and creates the file for you — just confirm with “Propose changes”. Once the PR is merged, your plugin goes live automatically.</p>
+            <p class="publish-hint" data-i18n="publish_hint">GitHub forks the store repository and creates the file for you — just confirm with “Propose changes”. Once the PR is merged, your plugin goes live automatically.</p>
           </div>
         </div>
 
-        <p class="publish-doc reveal">Want a cover image, screenshots and tags? Add a <code>store.json</code> to your repo — see the <a href="https://github.com/narlei/ulanzicommunitystore/tree/main/registry" target="_blank" rel="noopener noreferrer">full submission guide</a>.</p>
+        <p class="publish-doc reveal" data-i18n-html="publish_doc">Want a cover image, screenshots and tags? Add a <code>store.json</code> to your repo — see the <a href="https://github.com/narlei/ulanzicommunitystore/tree/main/registry" target="_blank" rel="noopener noreferrer">full submission guide</a>.</p>
       </section>
 
       <!-- ============ FINAL CTA ============ -->
       <section class="cta reveal">
         <div class="cta-inner">
           <img class="cta-icon" src="assets/logo-512.png" alt="" width="72" height="72">
-          <h2>All community plugins in a single app.</h2>
-          <p>Free, open source, and ready in seconds.</p>
+          <h2 data-i18n="cta_title">All community plugins in a single app.</h2>
+          <p data-i18n="cta_sub">Free, open source, and ready in seconds.</p>
           <a class="button button-lg js-download-trigger" href="https://github.com/narlei/ulanzicommunitystore/releases/latest" target="_blank" rel="noopener noreferrer">
             <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v7.19l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0L3.72 7.53a.75.75 0 0 1 1.06-1.06l2.47 2.47V1.75A.75.75 0 0 1 8 1ZM2 12.25a.75.75 0 0 1 1.5 0v1.25h9v-1.25a.75.75 0 0 1 1.5 0v1.5c0 .69-.56 1.25-1.25 1.25H3.25C2.56 15 2 14.44 2 13.75v-1.5Z"/></svg>
-            Download the latest release
+            <span data-i18n="cta_download">Download the latest release</span>
           </a>
         </div>
       </section>
 
       <section class="note reveal" id="about">
-        <p><strong>Independent project.</strong> The Ulanzi Community Store is an unofficial project made by fans of Ulanzi hardware. It is not affiliated with, endorsed by, or maintained by Ulanzi. For officially reviewed plugins, use the Ulanzi Studio Marketplace — the two stores complement each other.</p>
+        <p data-i18n-html="about_html"><strong>Independent project.</strong> The Ulanzi Community Store is an unofficial project made by fans of Ulanzi hardware. It is not affiliated with, endorsed by, or maintained by Ulanzi. For officially reviewed plugins, use the Ulanzi Studio Marketplace — the two stores complement each other.</p>
       </section>
     </main>
 
     <footer>
       <div class="footer-links">
-        <a href="https://github.com/narlei/ulanzicommunitystore" target="_blank" rel="noopener noreferrer">GitHub</a>
-        <a href="https://github.com/narlei/ulanzicommunitystore/releases/latest" target="_blank" rel="noopener noreferrer">Releases</a>
-        <a href="#publish">Publish a plugin</a>
-        <a href="https://github.com/narlei/ulanzicommunitystore/issues" target="_blank" rel="noopener noreferrer">Report an issue</a>
+        <a href="https://github.com/narlei/ulanzicommunitystore" target="_blank" rel="noopener noreferrer" data-i18n="nav_github">GitHub</a>
+        <a href="https://github.com/narlei/ulanzicommunitystore/releases/latest" target="_blank" rel="noopener noreferrer" data-i18n="footer_releases">Releases</a>
+        <a href="#publish" data-i18n="footer_publish">Publish a plugin</a>
+        <a href="https://github.com/narlei/ulanzicommunitystore/issues" target="_blank" rel="noopener noreferrer" data-i18n="footer_issue">Report an issue</a>
       </div>
-      <p class="copyright">Ulanzi Community Store — made with 💚 by the community, for the community. Unofficial project, not affiliated with Ulanzi.</p>
+      <p class="copyright" data-i18n="footer_copy">Ulanzi Community Store — made with 💚 by the community, for the community. Unofficial project, not affiliated with Ulanzi.</p>
     </footer>
 
     <div class="modal-overlay" id="downloadModal" hidden>
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="downloadModalTitle">
-        <button class="modal-close" type="button" id="downloadModalClose" aria-label="Close">
+        <button class="modal-close" type="button" id="downloadModalClose" data-i18n-aria="modal_close" aria-label="Close">
           <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
         </button>
-        <h3 id="downloadModalTitle">Download Ulanzi Community Store</h3>
-        <p class="modal-sub">
+        <h3 id="downloadModalTitle" data-i18n="modal_title">Download Ulanzi Community Store</h3>
+        <p class="modal-sub" data-i18n-html="modal_sub">
           <span class="modal-trust">🔓 100% open source · MIT licensed</span> — inspect every line, including the script below, on
           <a href="https://github.com/narlei/ulanzicommunitystore" target="_blank" rel="noopener noreferrer">GitHub</a> before you run anything.
         </p>
 
         <div class="modal-option">
           <div class="modal-option-head">
-            <span class="modal-option-badge">Recommended</span>
-            <h4>Install via Terminal</h4>
+            <span class="modal-option-badge" data-i18n="modal_recommended">Recommended</span>
+            <h4 data-i18n="modal_terminal_title">Install via Terminal</h4>
             <span class="modal-option-os">macOS</span>
           </div>
-          <p>Skips the Gatekeeper security prompt entirely — files fetched with <code>curl</code> aren't quarantined the way browser downloads are, so the app opens right away.</p>
+          <p data-i18n-html="modal_terminal_body">Skips the Gatekeeper security prompt entirely — files fetched with <code>curl</code> aren't quarantined the way browser downloads are, so the app opens right away.</p>
           <div class="modal-code">
             <code id="downloadModalCmd">curl -fsSL https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/install.sh | bash</code>
-            <button class="modal-copy" type="button" id="downloadModalCopy">Copy</button>
+            <button class="modal-copy" type="button" id="downloadModalCopy" data-i18n="copy">Copy</button>
           </div>
-          <a class="modal-link" href="https://github.com/narlei/ulanzicommunitystore/blob/main/install.sh" target="_blank" rel="noopener noreferrer">View install.sh source →</a>
+          <a class="modal-link" href="https://github.com/narlei/ulanzicommunitystore/blob/main/install.sh" target="_blank" rel="noopener noreferrer" data-i18n="modal_view_script">View install.sh source →</a>
         </div>
 
-        <div class="modal-divider"><span>or download directly</span></div>
+        <div class="modal-divider"><span data-i18n="modal_or">or download directly</span></div>
 
         <div class="modal-direct">
           <a class="button secondary button-sm" href="https://github.com/narlei/ulanzicommunitystore/releases/latest/download/UlanziPluginStore.dmg">🍎 macOS .dmg</a>
           <a class="button secondary button-sm" href="https://github.com/narlei/ulanzicommunitystore/releases/latest/download/UlanziPluginStore.exe">🪟 Windows .exe</a>
-          <a class="modal-link" href="https://github.com/narlei/ulanzicommunitystore/releases/latest" target="_blank" rel="noopener noreferrer">All releases →</a>
+          <a class="modal-link" href="https://github.com/narlei/ulanzicommunitystore/releases/latest" target="_blank" rel="noopener noreferrer" data-i18n="modal_all_releases">All releases →</a>
         </div>
-        <p class="modal-note">The <code>.dmg</code> triggers a normal macOS "unidentified developer" warning on first launch, since the app isn't Apple-notarized (no paid developer account). That's expected — see the <a href="https://github.com/narlei/ulanzicommunitystore#-releases" target="_blank" rel="noopener noreferrer">README</a> for how to open it, or just use the Terminal install above instead.</p>
+        <p class="modal-note" data-i18n-html="modal_note">The <code>.dmg</code> triggers a normal macOS "unidentified developer" warning on first launch, since the app isn't Apple-notarized (no paid developer account). That's expected — see the <a href="https://github.com/narlei/ulanzicommunitystore#-releases" target="_blank" rel="noopener noreferrer">README</a> for how to open it, or just use the Terminal install above instead.</p>
       </div>
     </div>
 
     <script>
+      function t(key) {
+        var i18n = window.MarketingI18n;
+        if (!i18n) return key;
+        var args = Array.prototype.slice.call(arguments, 1);
+        return i18n.t.apply(i18n, [key].concat(args));
+      }
+
       (function () {
         var header = document.getElementById('siteHeader');
         var onScroll = function () {
@@ -455,6 +473,45 @@
           });
         }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
         items.forEach(function (el) { io.observe(el); });
+      })();
+
+      // ---- Shared copy helper ----
+      (function () {
+        function fallbackCopy(text) {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          var ok = false;
+          try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+          document.body.removeChild(ta);
+          return ok;
+        }
+
+        function copyText(text) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text).then(function () {
+              return true;
+            }).catch(function () {
+              return fallbackCopy(text);
+            });
+          }
+          return Promise.resolve(fallbackCopy(text));
+        }
+
+        document.addEventListener('click', function (event) {
+          var btn = event.target.closest('.js-copy-btn');
+          if (!btn) return;
+          var text = btn.getAttribute('data-copy') || '';
+          copyText(text).then(function (ok) {
+            btn.textContent = ok ? t('copied') : t('modal_select_text');
+            setTimeout(function () { btn.textContent = t('copy'); }, 1800);
+          });
+        });
+
+        window.__marketingCopyText = copyText;
       })();
 
       // ---- Download modal ----
@@ -494,36 +551,12 @@
           if (event.key === 'Escape' && !overlay.hidden) closeModal();
         });
 
-        function fallbackCopy(text) {
-          var ta = document.createElement('textarea');
-          ta.value = text;
-          ta.style.position = 'fixed';
-          ta.style.opacity = '0';
-          document.body.appendChild(ta);
-          ta.select();
-          var ok = false;
-          try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
-          document.body.removeChild(ta);
-          return ok;
-        }
-
         copyBtn.addEventListener('click', function () {
           var text = cmdEl.textContent.trim();
-
-          function onCopied(ok) {
-            copyBtn.textContent = ok ? 'Copied!' : 'Select the text';
-            setTimeout(function () { copyBtn.textContent = 'Copy'; }, 1800);
-          }
-
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(function () {
-              onCopied(true);
-            }).catch(function () {
-              onCopied(fallbackCopy(text));
-            });
-          } else {
-            onCopied(fallbackCopy(text));
-          }
+          window.__marketingCopyText(text).then(function (ok) {
+            copyBtn.textContent = ok ? t('copied') : t('modal_select_text');
+            setTimeout(function () { copyBtn.textContent = t('copy'); }, 1800);
+          });
         });
       })();
 
@@ -586,57 +619,57 @@
 
           var repoRes = await gh('/repos/' + repo);
           if (!repoRes.ok) {
-            addCheck('fail', 'Repository not found. Use a public GitHub URL like https://github.com/you/your-plugin.');
+            addCheck('fail', t('publish_repo_fail'));
             return false;
           }
           var repoInfo = await repoRes.json();
           var ref = repoInfo.default_branch || 'main';
-          addCheck('ok', 'Repository found: ' + repo);
+          addCheck('ok', t('publish_repo_ok', repo));
 
           var relRes = await gh('/repos/' + repo + '/releases/latest');
           if (!relRes.ok) {
-            addCheck('fail', 'No GitHub Release found. Publish a release before submitting.');
+            addCheck('fail', t('publish_release_fail'));
             return false;
           }
           var release = await relRes.json();
-          addCheck('ok', 'Latest release: ' + release.tag_name);
+          addCheck('ok', t('publish_release_ok', release.tag_name));
 
           var asset = (release.assets || []).find(function (a) { return a.name.endsWith('.ulanziPlugin.zip'); });
           if (!asset) {
-            addCheck('fail', 'The latest release has no *.ulanziPlugin.zip asset. Zip the plugin folder and attach it to the release.');
+            addCheck('fail', t('publish_asset_fail'));
             return false;
           }
-          addCheck('ok', 'Release asset: ' + asset.name);
+          addCheck('ok', t('publish_asset_ok', asset.name));
           var pluginId = asset.name.replace(/\.zip$/, '');
 
           try {
             var manifestText = await raw(repo, ref, pluginId + '/manifest.json');
             if (!manifestText) {
-              addCheck('fail', 'manifest.json missing in ' + pluginId + '/.');
+              addCheck('fail', t('publish_manifest_fail', pluginId));
               failed = true;
             } else {
               var manifest = JSON.parse(manifestText);
               if (manifest.Name && manifest.Version) {
-                addCheck('ok', 'manifest.json is valid: ' + manifest.Name + ' v' + manifest.Version);
+                addCheck('ok', t('publish_manifest_ok', manifest.Name + ' v' + manifest.Version));
               } else {
-                addCheck('warn', 'manifest.json found in ' + pluginId + '/ but Name or Version is missing.');
+                addCheck('warn', t('publish_manifest_warn', pluginId));
               }
             }
           } catch (err) {
-            addCheck('fail', 'manifest.json missing or invalid in ' + pluginId + '/.');
+            addCheck('fail', t('publish_manifest_fail', pluginId));
             failed = true;
           }
 
           try {
             var storeText = await raw(repo, ref, 'store.json');
             if (storeText === null) {
-              addCheck('warn', 'No store.json (optional). Add one for cover image, screenshots and tags.');
+              addCheck('warn', t('publish_store_warn'));
             } else {
               JSON.parse(storeText);
-              addCheck('ok', 'store.json found — cover, screenshots and tags will show in the store.');
+              addCheck('ok', t('publish_store_ok'));
             }
           } catch (err) {
-            addCheck('warn', 'store.json exists but is not valid JSON, so it will be ignored.');
+            addCheck('warn', t('publish_store_warn_invalid'));
           }
 
           return !failed;
@@ -648,16 +681,16 @@
           list.hidden = true;
           errorEl.hidden = true;
           ready.hidden = true;
-          copyBtn.textContent = 'Copy JSON';
+          copyBtn.textContent = t('publish_copy_json');
 
           var repo = parseRepo(input.value);
           if (!repo) {
-            showError('Enter a GitHub repository URL like https://github.com/you/your-plugin (or just you/your-plugin).');
+            showError(t('publish_error_url'));
             return;
           }
 
           button.disabled = true;
-          button.textContent = 'Checking…';
+          button.textContent = t('publish_checking');
 
           validate(repo).then(function (ok) {
             if (!ok) return;
@@ -669,10 +702,10 @@
               encodeURIComponent(fileName) + '&value=' + encodeURIComponent(json);
             ready.hidden = false;
           }).catch(function () {
-            showError('Could not reach GitHub. Check your connection (or API rate limit) and try again.');
+            showError(t('publish_error_network'));
           }).finally(function () {
             button.disabled = false;
-            button.textContent = 'Validate';
+            button.textContent = t('publish_validate');
           });
         });
 
@@ -680,7 +713,8 @@
           var repo = parseRepo(input.value);
           if (!repo) return;
           navigator.clipboard.writeText('{\n  "repo": "' + repo + '"\n}\n').then(function () {
-            copyBtn.textContent = 'Copied!';
+            copyBtn.textContent = t('copied');
+            setTimeout(function () { copyBtn.textContent = t('publish_copy_json'); }, 1800);
           });
         });
       })();
