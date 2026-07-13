@@ -1,16 +1,16 @@
 #!/usr/bin/env node
-// Valida as entradas de registry ADICIONADAS/ALTERADAS em um Pull Request.
-// Diferente de validate-registry.mjs (checagem estrutural rasa de todo o registry),
-// este script bate na API do GitHub e confirma que o repositório submetido segue os
-// padrões da loja: nome de arquivo correto, sem duplicata, release com asset
-// .ulanziPlugin.zip, manifest.json válido e store.json (opcional) bem-formado.
+// Validates registry entries ADDED/CHANGED in a Pull Request.
+// Unlike validate-registry.mjs (shallow structural check of the entire registry),
+// this script hits the GitHub API and confirms that the submitted repository follows
+// store standards: correct filename, no duplicates, release with a .ulanziPlugin.zip
+// asset, valid manifest.json, and well-formed store.json (optional).
 //
-// Acumula TODOS os problemas (não para no primeiro) e escreve um resumo em markdown
-// para o workflow comentar no PR.
+// Accumulates ALL problems (does not stop at the first) and writes a markdown summary
+// for the workflow to comment on the PR.
 //
-// Entrada: env CHANGED_FILES (uma lista separada por espaço/nova-linha de caminhos
-//          relativos à raiz do repo). Sem ela, valida tudo em registry/plugins/.
-// Saída:   stdout humano + markdown em $PR_VALIDATION_MD (se definido). Exit 1 se houver erro.
+// Input: env CHANGED_FILES (a space/newline-separated list of paths relative to the
+//        repo root). Without it, validates everything in registry/plugins/.
+// Output: human-readable stdout + markdown in $PR_VALIDATION_MD (if set). Exit 1 on error.
 
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, basename } from 'node:path';
@@ -25,8 +25,8 @@ const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
 const API = 'https://api.github.com';
 
 const REPO_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
-// Aceita o asset com nome fixo `com.<...>.ulanziPlugin.zip` e o versionado
-// `com.<...>.ulanziPlugin-1.5.0.zip` (sufixo após `-` ou `_`).
+// Accepts the asset with fixed name `com.<...>.ulanziPlugin.zip` and the versioned
+// `com.<...>.ulanziPlugin-1.5.0.zip` (suffix after `-` or `_`).
 const ASSET_RE = /\.ulanziPlugin(?:[-_][^/]*)?\.zip$/;
 const ALLOWED_KEYS = new Set(['repo']);
 const VALID_DEVICE_TYPES = new Set(['deck', 'dial']);
@@ -44,9 +44,9 @@ function ghHeaders(extra = {}) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// Retorna { ok, status, json } sem lançar, pra podermos acumular erros com mensagem clara.
-// Faz retry em erros transitórios (5xx / falha de rede) pra um soluço da API do GitHub
-// não reprovar um PR legítimo.
+// Returns { ok, status, json } without throwing, so we can accumulate errors with clear messages.
+// Retries on transient errors (5xx / network failure) so a GitHub API hiccup
+// does not reject a legitimate PR.
 async function ghGet(path, accept) {
   const url = `${API}${path}`;
   const headers = ghHeaders(accept ? { Accept: accept } : {});
@@ -59,7 +59,7 @@ async function ghGet(path, accept) {
         await sleep(1000 * (attempt + 1));
         continue;
       }
-      return { ok: false, status: 0 }; // falha de rede após retries
+      return { ok: false, status: 0 }; // network failure after retries
     }
     if (res.status >= 500 && attempt < 2) {
       await sleep(1000 * (attempt + 1));
@@ -74,14 +74,14 @@ async function ghGet(path, accept) {
       try {
         out.json = JSON.parse(out.text);
       } catch {
-        /* deixa json indefinido */
+        /* leave json undefined */
       }
     }
   }
   return out;
 }
 
-// Existe o arquivo `path` no repo/ref? (contents API, funciona em repo privado)
+// Does the file `path` exist in the repo/ref? (contents API, works in private repos)
 async function repoFileText(repo, path, ref) {
   const res = await ghGet(
     `/repos/${repo}/contents/${encodeURI(path)}${ref ? `?ref=${ref}` : ''}`,
@@ -92,12 +92,12 @@ async function repoFileText(repo, path, ref) {
   return { text: res.text };
 }
 
-// Nome de arquivo esperado a partir do repo: owner/name -> owner__name.json
+// Expected filename derived from the repo: owner/name -> owner__name.json
 function expectedFilename(repo) {
   return `${repo.replace(/\//g, '__')}.json`;
 }
 
-// Valida a estrutura local do arquivo e devolve { repo, problems }.
+// Validates the local structure of the file and returns { repo, problems }.
 async function validateLocal(fileRel, existingByRepo) {
   const problems = [];
   const name = basename(fileRel);
@@ -106,132 +106,132 @@ async function validateLocal(fileRel, existingByRepo) {
   try {
     entry = JSON.parse(await readFile(join(ROOT, fileRel), 'utf8'));
   } catch (err) {
-    return { repo: null, problems: [`JSON inválido: ${err.message}`] };
+    return { repo: null, problems: [`Invalid JSON: ${err.message}`] };
   }
 
   if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
-    return { repo: null, problems: ['o arquivo deve ser um objeto JSON `{ "repo": "owner/repo" }`'] };
+    return { repo: null, problems: ['file must be a JSON object `{ "repo": "owner/repo" }`'] };
   }
 
   const repo = entry.repo;
   if (!repo || typeof repo !== 'string' || !REPO_RE.test(repo)) {
-    problems.push('campo `repo` ausente ou inválido (esperado `owner/repo`)');
+    problems.push('missing or invalid `repo` field (expected `owner/repo`)');
   }
 
   const extraKeys = Object.keys(entry).filter((k) => !ALLOWED_KEYS.has(k));
   if (extraKeys.length) {
-    problems.push(`chaves não suportadas no JSON: ${extraKeys.map((k) => `\`${k}\``).join(', ')} (use apenas \`repo\`)`);
+    problems.push(`unsupported keys in JSON: ${extraKeys.map((k) => `\`${k}\``).join(', ')} (use only \`repo\`)`);
   }
 
   if (repo && REPO_RE.test(repo)) {
     const expected = expectedFilename(repo);
     if (name !== expected) {
-      problems.push(`nome do arquivo deve ser \`${expected}\` (para o repo \`${repo}\`), mas é \`${name}\``);
+      problems.push(`filename must be \`${expected}\` (for repo \`${repo}\`), but got \`${name}\``);
     }
-    // Duplicata: mesmo repo (case-insensitive) já registrado em outro arquivo.
+    // Duplicate: same repo (case-insensitive) already registered in another file.
     const dup = existingByRepo.get(repo.toLowerCase());
     if (dup && dup !== name) {
-      problems.push(`repo \`${repo}\` já está registrado em \`${dup}\` (entrada duplicada)`);
+      problems.push(`repo \`${repo}\` is already registered in \`${dup}\` (duplicate entry)`);
     }
   }
 
   return { repo: repo && REPO_RE.test(repo) ? repo : null, problems };
 }
 
-// Valida que o repositório remoto segue os padrões da loja. Acumula problemas.
+// Validates that the remote repository follows store standards. Accumulates problems.
 async function validateRepo(repo) {
   const problems = [];
 
-  // 1) repo existe e é acessível
+  // 1) repo exists and is accessible
   const repoRes = await ghGet(`/repos/${repo}`);
   if (repoRes.status === 404) {
-    problems.push(`repositório \`${repo}\` não encontrado (privado ou inexistente)`);
+    problems.push(`repository \`${repo}\` not found (private or does not exist)`);
     return problems;
   }
   if (!repoRes.ok) {
-    problems.push(`falha ao consultar \`${repo}\`: HTTP ${repoRes.status}`);
+    problems.push(`failed to query \`${repo}\`: HTTP ${repoRes.status}`);
     return problems;
   }
   const ref = repoRes.json?.default_branch || 'main';
 
-  // 2) release mais recente com asset .ulanziPlugin.zip
+  // 2) latest release with a .ulanziPlugin.zip asset
   const relRes = await ghGet(`/repos/${repo}/releases/latest`);
   if (relRes.status === 404) {
-    problems.push('não há nenhuma GitHub Release publicada (a loja precisa da release mais recente)');
+    problems.push('no GitHub Release published yet (the store requires the latest release)');
     return problems;
   }
   if (!relRes.ok) {
-    problems.push(`falha ao ler a release mais recente: HTTP ${relRes.status}`);
+    problems.push(`failed to read the latest release: HTTP ${relRes.status}`);
     return problems;
   }
   const zipAsset = (relRes.json?.assets || []).find((a) => ASSET_RE.test(a.name));
   if (!zipAsset) {
     problems.push(
       'a release mais recente não tem o asset `com.<...>.ulanziPlugin.zip` ' +
-        '(o nome pode incluir a versão, ex.: `com.<...>.ulanziPlugin-1.5.0.zip`)',
+      '(o nome pode incluir a versão, ex.: `com.<...>.ulanziPlugin-1.5.0.zip`)',
     );
     return problems;
   }
-  // com.<...>.ulanziPlugin — corta em `.ulanziPlugin`, descartando versão e `.zip`
+  // com.<...>.ulanziPlugin — cuts at `.ulanziPlugin`, discarding version and `.zip`
   const pluginId = zipAsset.name.replace(/(\.ulanziPlugin)(?:[-_][^/]*)?\.zip$/, '$1');
 
-  // 3) manifest.json na pasta do plugin
+  // 3) manifest.json in the plugin folder
   const manifestFile = await repoFileText(repo, `${pluginId}/manifest.json`, ref);
   if (manifestFile.missing) {
-    problems.push(`\`${pluginId}/manifest.json\` não encontrado (deve existir na branch \`${ref}\`)`);
+    problems.push(`\`${pluginId}/manifest.json\` not found (must exist on branch \`${ref}\`)`);
   } else if (manifestFile.error) {
-    problems.push(`falha ao ler \`${pluginId}/manifest.json\`: ${manifestFile.error}`);
+    problems.push(`failed to read \`${pluginId}/manifest.json\`: ${manifestFile.error}`);
   } else {
     try {
       const manifest = JSON.parse(manifestFile.text);
       if (!manifest.Name || typeof manifest.Name !== 'string') {
-        problems.push('`manifest.json` sem o campo `Name`');
+        problems.push('`manifest.json` missing `Name` field');
       }
       if (!Array.isArray(manifest.Actions) || manifest.Actions.length === 0) {
-        problems.push('`manifest.json` sem `Actions` (o plugin precisa de ao menos uma action)');
+        problems.push('`manifest.json` has no `Actions` (plugin must have at least one action)');
       }
     } catch (err) {
-      problems.push(`\`manifest.json\` não é um JSON válido: ${err.message}`);
+      problems.push(`\`manifest.json\` is not valid JSON: ${err.message}`);
     }
   }
 
-  // 4) store.json opcional — se existir, precisa estar bem-formado
+  // 4) optional store.json — if present, must be well-formed
   const storeFile = await repoFileText(repo, 'store.json', ref);
   if (!storeFile.missing && !storeFile.error) {
     let store;
     try {
       store = JSON.parse(storeFile.text);
     } catch (err) {
-      problems.push(`\`store.json\` presente mas inválido: ${err.message}`);
+      problems.push(`\`store.json\` present but invalid: ${err.message}`);
     }
     if (store && typeof store === 'object') {
       const imgs = [];
       if ('cover' in store) {
-        if (typeof store.cover !== 'string') problems.push('`store.json`: `cover` deve ser uma string (caminho da imagem)');
+        if (typeof store.cover !== 'string') problems.push('`store.json`: `cover` must be a string (image path)');
         else imgs.push(store.cover);
       }
       if ('screenshots' in store) {
         if (!Array.isArray(store.screenshots) || store.screenshots.some((s) => typeof s !== 'string')) {
-          problems.push('`store.json`: `screenshots` deve ser um array de strings');
+          problems.push('`store.json`: `screenshots` must be an array of strings');
         } else {
           imgs.push(...store.screenshots);
         }
       }
       if ('deviceTypes' in store) {
         if (!Array.isArray(store.deviceTypes) || store.deviceTypes.some((d) => !VALID_DEVICE_TYPES.has(d))) {
-          problems.push('`store.json`: `deviceTypes` deve conter apenas `"deck"` e/ou `"dial"`');
+          problems.push('`store.json`: `deviceTypes` must contain only `"deck"` and/or `"dial"`');
         }
       }
       if ('tags' in store && (!Array.isArray(store.tags) || store.tags.some((t) => typeof t !== 'string'))) {
-        problems.push('`store.json`: `tags` deve ser um array de strings');
+        problems.push('`store.json`: `tags` must be an array of strings');
       }
       if ('longDescription' in store && typeof store.longDescription !== 'string') {
-        problems.push('`store.json`: `longDescription` deve ser uma string');
+        problems.push('`store.json`: `longDescription` must be a string');
       }
-      // Imagens referenciadas precisam existir no repo (evita link quebrado na vitrine).
+      // Referenced images must exist in the repo (prevents broken links in the store listing).
       for (const img of imgs) {
         const f = await repoFileText(repo, img, ref);
-        if (f.missing) problems.push(`\`store.json\`: imagem \`${img}\` não existe no repositório`);
+        if (f.missing) problems.push(`\`store.json\`: image \`${img}\` does not exist in the repository`);
       }
     }
   }
@@ -240,7 +240,7 @@ async function validateRepo(repo) {
 }
 
 async function loadExistingRegistry() {
-  // Mapa repo(lowercase) -> nome de arquivo, de tudo que já está no registry.
+  // Map repo(lowercase) -> filename, for everything already in the registry.
   const map = new Map();
   let files = [];
   try {
@@ -253,7 +253,7 @@ async function loadExistingRegistry() {
       const entry = JSON.parse(await readFile(join(REGISTRY_DIR, file), 'utf8'));
       if (entry?.repo && typeof entry.repo === 'string') map.set(entry.repo.toLowerCase(), file);
     } catch {
-      /* arquivos quebrados serão pegos na validação local se estiverem no PR */
+      /* broken files will be caught in local validation if they are in the PR */
     }
   }
   return map;
@@ -270,13 +270,13 @@ function parseChangedFiles() {
 
 async function main() {
   const changed = parseChangedFiles();
-  // No CI a env CHANGED_FILES vem sempre definida (mesmo vazia) → modo "só o que mudou".
-  // Rodando local sem a env e sem args → valida todo o registry.
+  // In CI the CHANGED_FILES env is always set (even if empty) → "only what changed" mode.
+  // Running locally without the env and without args → validates the entire registry.
   const usingChangedList = 'CHANGED_FILES' in process.env || process.argv.length > 2;
 
   let targets = changed;
   if (!usingChangedList) {
-    // Sem lista de mudanças: valida todo o registry (útil rodando local).
+    // No change list: validate the entire registry (useful when running locally).
     try {
       targets = (await readdir(REGISTRY_DIR))
         .filter((f) => f.endsWith('.json'))
@@ -287,7 +287,7 @@ async function main() {
   }
 
   if (targets.length === 0) {
-    const msg = 'Nenhuma entrada de registry adicionada/alterada neste PR — nada a validar.';
+    const msg = 'No registry entries added/changed in this PR — nothing to validate.';
     console.log(msg);
     await writeSummary(`✅ ${msg}`);
     return;
@@ -305,7 +305,7 @@ async function main() {
       problems.push(...repoProblems);
     }
     results.push({ name, repo, problems });
-    console.log(problems.length ? `${problems.length} problema(s)` : 'ok');
+    console.log(problems.length ? `${problems.length} problem(s)` : 'ok');
   }
 
   const failed = results.filter((r) => r.problems.length > 0);
@@ -317,21 +317,21 @@ async function main() {
       console.error(`✗ ${r.name}${r.repo ? ` (${r.repo})` : ''}`);
       for (const p of r.problems) console.error(`    - ${p}`);
     }
-    console.error(`\n${failed.length} de ${results.length} entrada(s) com problema.`);
+    console.error(`\n${failed.length} of ${results.length} entry/entries with problems.`);
     process.exit(1);
   }
-  console.log(`✅ ${results.length} entrada(s) validada(s) com sucesso.`);
+  console.log(`✅ ${results.length} entry/entries validated successfully.`);
 }
 
 function renderMarkdown(results, failed) {
-  const lines = ['<!-- registry-validation -->', '## 🔎 Validação do registry', ''];
+  const lines = ['<!-- registry-validation -->', '## 🔎 Registry validation', ''];
   if (failed.length === 0) {
-    lines.push(`✅ **Tudo certo!** ${results.length} entrada(s) seguem os padrões da loja.`);
+    lines.push(`✅ **All good!** ${results.length} entry/entries follow the store standards.`);
     lines.push('');
     for (const r of results) lines.push(`- \`${r.name}\`${r.repo ? ` → \`${r.repo}\`` : ''} — ok`);
     return lines.join('\n');
   }
-  lines.push(`❌ **${failed.length} entrada(s) precisam de ajuste** antes do merge:`);
+  lines.push(`❌ **${failed.length} entry/entries need adjustment** before merging:`);
   lines.push('');
   for (const r of failed) {
     lines.push(`### \`${r.name}\`${r.repo ? ` → \`${r.repo}\`` : ''}`);
@@ -340,12 +340,12 @@ function renderMarkdown(results, failed) {
   }
   const okOnes = results.filter((r) => r.problems.length === 0);
   if (okOnes.length) {
-    lines.push('<details><summary>Entradas OK</summary>', '');
+    lines.push('<details><summary>OK entries</summary>', '');
     for (const r of okOnes) lines.push(`- \`${r.name}\` → \`${r.repo}\``);
     lines.push('</details>');
   }
   lines.push('');
-  lines.push('Veja os requisitos em [`registry/README.md`](../blob/main/registry/README.md).');
+  lines.push('See the requirements at [`registry/README.md`](../blob/main/registry/README.md).');
   return lines.join('\n');
 }
 
@@ -355,12 +355,12 @@ async function writeSummary(md) {
     try {
       await writeFile(out, md + '\n');
     } catch (err) {
-      console.warn(`aviso: não consegui escrever ${out}: ${err.message}`);
+      console.warn(`warning: could not write ${out}: ${err.message}`);
     }
   }
 }
 
 main().catch((err) => {
-  console.error('Erro fatal no validador:', err);
+  console.error('Fatal error in validator:', err);
   process.exit(1);
 });

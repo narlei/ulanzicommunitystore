@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Gera dist/catalog/catalog.json a partir das entradas em registry/plugins/*.json.
-// Para cada { repo }, lê a release mais nova + manifest.json + store.json (opcional) via
-// API do GitHub e monta a entrada do catálogo. Um repo com erro é ignorado (com aviso),
-// nunca derruba o catálogo inteiro.
+// Generates dist/catalog/catalog.json from the entries in registry/plugins/*.json.
+// For each { repo }, reads the latest release + manifest.json + store.json (optional) via
+// the GitHub API and builds the catalog entry. A repo with an error is skipped (with a warning),
+// never taking down the entire catalog.
 //
-// Uso:  GH_TOKEN=$(gh auth token) npm run catalog:build
-// Na Action, GITHUB_TOKEN é injetado automaticamente.
+// Usage:  GH_TOKEN=$(gh auth token) npm run catalog:build
+// In the Action, GITHUB_TOKEN is injected automatically.
 
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -19,20 +19,20 @@ const OUT_FILE = process.env.CATALOG_OUT_FILE || join(ROOT, 'dist', 'catalog', '
 const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
 const API = 'https://api.github.com';
 
-// Match do asset da release. Aceita o nome fixo `com.<...>.ulanziPlugin.zip`
-// e também o versionado `com.<...>.ulanziPlugin-1.5.0.zip` (sufixo após `-` ou `_`).
+// Match for the release asset. Accepts the fixed name `com.<...>.ulanziPlugin.zip`
+// and also the versioned `com.<...>.ulanziPlugin-1.5.0.zip` (suffix after `-` or `_`).
 const ASSET_RE = /\.ulanziPlugin(?:[-_][^/]*)?\.zip$/;
 
-// Deriva o pluginId (= nome da pasta do plugin) cortando em `.ulanziPlugin`,
-// descartando qualquer sufixo de versão e o `.zip`.
+// Derives the pluginId (= plugin folder name) by cutting at `.ulanziPlugin`,
+// discarding any version suffix and the `.zip`.
 function pluginIdFromAsset(name) {
   return name.replace(/(\.ulanziPlugin)(?:[-_][^/]*)?\.zip$/, '$1');
 }
 
-// Locales suportados pelo SDK oficial. Usados para detectar os arquivos de idioma.
+// Locales supported by the official SDK. Used to detect language files.
 const KNOWN_LOCALES = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'pt_BR', 'zh_CN', 'zh_HK', 'zh_TW'];
 
-// Locales que o site usa (EN/PT/ZH + fallbacks) — puxamos Name/Description destes.
+// Locales used by the site (EN/PT/ZH + fallbacks) — we pull Name/Description from these.
 const SITE_LOCALES = ['en', 'pt_BR', 'pt', 'zh_CN', 'zh_HK', 'zh_TW'];
 
 function ghHeaders(extra = {}) {
@@ -46,15 +46,15 @@ function ghHeaders(extra = {}) {
   return h;
 }
 
-// Status HTTP transitórios da API do GitHub que valem retry (5xx + rate limit).
+// Transient HTTP statuses from the GitHub API that are worth retrying (5xx + rate limit).
 const RETRY_STATUS = new Set([429, 500, 502, 503, 504]);
 const MAX_RETRIES = Number(process.env.CATALOG_FETCH_RETRIES || 4);
 const RETRY_BASE_MS = Number(process.env.CATALOG_FETCH_RETRY_MS || 500);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// fetch com retry exponencial para erros transitórios (5xx/429) e falhas de rede.
-// Erros definitivos (4xx que não 429) retornam na hora, sem retry.
+// fetch with exponential retry for transient errors (5xx/429) and network failures.
+// Definitive errors (4xx except 429) return immediately, without retry.
 async function ghFetch(url, init) {
   let lastErr;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -63,12 +63,12 @@ async function ghFetch(url, init) {
       if (res.ok || !RETRY_STATUS.has(res.status) || attempt === MAX_RETRIES) return res;
       lastErr = new Error(`${res.status} ${res.statusText}`);
     } catch (err) {
-      // Falha de rede (DNS/conexão/timeout) — também é transitória.
+      // Network failure (DNS/connection/timeout) — also transient.
       lastErr = err;
       if (attempt === MAX_RETRIES) throw err;
     }
     const delay = RETRY_BASE_MS * 2 ** attempt;
-    console.warn(`  ! ${url} falhou (${lastErr.message}); retry ${attempt + 1}/${MAX_RETRIES} em ${delay}ms`);
+    console.warn(`  ! ${url} failed (${lastErr.message}); retry ${attempt + 1}/${MAX_RETRIES} in ${delay}ms`);
     await sleep(delay);
   }
   throw lastErr;
@@ -80,8 +80,8 @@ async function ghJson(path) {
   return res.json();
 }
 
-// Busca um arquivo de texto do repo via contents API (funciona em repo privado também).
-// Retorna null se 404.
+// Fetches a text file from the repo via the contents API (also works in private repos).
+// Returns null if 404.
 async function ghRawFile(repo, path, ref) {
   const url = `${API}/repos/${repo}/contents/${path}${ref ? `?ref=${ref}` : ''}`;
   const res = await ghFetch(url, { headers: ghHeaders({ Accept: 'application/vnd.github.raw' }) });
@@ -94,7 +94,7 @@ function rawUrl(repo, ref, path) {
   return `https://raw.githubusercontent.com/${repo}/${ref}/${path}`;
 }
 
-// Deriva os tipos de device a partir dos Controllers das actions do manifest.
+// Derives device types from the Controllers of the manifest actions.
 function deviceTypesFromManifest(manifest) {
   const set = new Set();
   for (const action of manifest.Actions || []) {
@@ -121,7 +121,7 @@ async function detectLanguages(repo, pluginId, ref) {
   }
 }
 
-// Lê Name/Description dos arquivos de idioma do plugin para localizar a vitrine.
+// Reads Name/Description from the plugin's language files to localize the store listing.
 async function fetchI18n(repo, pluginId, ref, languages) {
     const out = {};
     for (const loc of languages) {
@@ -135,14 +135,14 @@ async function fetchI18n(repo, pluginId, ref, languages) {
             if (j.Description) entry.description = j.Description;
             if (Object.keys(entry).length) out[loc] = entry;
         } catch {
-            /* ignora arquivo de idioma inválido */
+            /* ignore invalid language file */
         }
     }
     return out;
 }
 
-// Soma os download_count dos assets *.ulanziPlugin.zip de todas as releases do repo.
-// Falha vira 0 — popularidade nunca derruba a entrada do catálogo.
+// Sums the download_count of *.ulanziPlugin.zip assets across all repo releases.
+// Failures return 0 — popularity never takes down a catalog entry.
 async function countDownloads(repo) {
   try {
     const releases = await ghJson(`/repos/${repo}/releases?per_page=100`);
@@ -159,52 +159,52 @@ async function countDownloads(repo) {
 }
 
 async function buildEntry(repo) {
-  // 1) release mais nova
+  // 1) latest release
   const release = await ghJson(`/repos/${repo}/releases/latest`);
   const zipAsset = (release.assets || []).find((a) => ASSET_RE.test(a.name));
   if (!zipAsset) {
-    throw new Error('release sem asset *.ulanziPlugin.zip');
+    throw new Error('release has no *.ulanziPlugin.zip asset');
   }
   const pluginId = pluginIdFromAsset(zipAsset.name); // com.<...>.ulanziPlugin
-  // Nome versionado (ex.: ...ulanziPlugin-1.5.0.zip) não bate com o permalink
-  // `latest/download/<pluginId>.zip`, então usamos a URL do asset da release.
+  // Versioned asset name (e.g. ...ulanziPlugin-1.5.0.zip) does not match the permalink
+  // `latest/download/<pluginId>.zip`, so we use the release asset URL directly.
   const isVersionedAsset = zipAsset.name !== `${pluginId}.zip`;
 
-  // 2) branch padrão
+  // 2) default branch
   const repoInfo = await ghJson(`/repos/${repo}`);
   const ref = repoInfo.default_branch || 'main';
 
   // 3) manifest.json
   const manifestText = await ghRawFile(repo, `${pluginId}/manifest.json`, ref);
-  if (!manifestText) throw new Error(`manifest.json não encontrado em ${pluginId}/`);
+  if (!manifestText) throw new Error(`manifest.json not found in ${pluginId}/`);
   const manifest = JSON.parse(manifestText);
 
-  // 4) store.json opcional (raiz do repo)
+  // 4) optional store.json (repo root)
   let store = {};
   const storeText = await ghRawFile(repo, 'store.json', ref);
   if (storeText) {
     try {
       store = JSON.parse(storeText);
     } catch {
-      console.warn(`  ! store.json inválido em ${repo}, ignorando`);
+      console.warn(`  ! invalid store.json in ${repo}, skipping`);
     }
   }
 
-  // 5) idiomas + textos localizados (name/description por locale)
+  // 5) languages + localized text (name/description per locale)
   const languages = await detectLanguages(repo, pluginId, ref);
   const i18n = await fetchI18n(repo, pluginId, ref, languages);
   const downloads = await countDownloads(repo);
 
-  // 6) device types (store.json sobrescreve o derivado do manifest)
+  // 6) device types (store.json overrides the one derived from the manifest)
   const deviceTypes =
     Array.isArray(store.deviceTypes) && store.deviceTypes.length
       ? store.deviceTypes
       : deviceTypesFromManifest(manifest);
 
-  // 7) plataformas do manifest
+  // 7) platforms from the manifest
   const platforms = (manifest.OS || []).map((o) => o.Platform);
 
-  // 8) resolver imagens para URLs raw
+  // 8) resolve images to raw URLs
   const iconUrl = manifest.Icon ? rawUrl(repo, ref, `${pluginId}/${manifest.Icon}`) : null;
   const cover = store.cover ? rawUrl(repo, ref, store.cover) : iconUrl;
   const screenshots = Array.isArray(store.screenshots)
@@ -233,8 +233,8 @@ async function buildEntry(repo) {
     changelog: release.body || '',
     publishedAt: release.published_at,
     downloads,
-    // Nome fixo: permalink estável que sempre aponta pra release mais recente.
-    // Nome versionado: URL do asset específico (atualiza a cada rebuild do catálogo).
+    // Fixed name: stable permalink that always points to the latest release.
+    // Versioned name: specific asset URL (updates on every catalog rebuild).
     downloadUrl: isVersionedAsset
       ? zipAsset.browser_download_url
       : `https://github.com/${repo}/releases/latest/download/${pluginId}.zip`,
@@ -247,7 +247,7 @@ async function main() {
   try {
     files = (await readdir(REGISTRY_DIR)).filter((f) => f.endsWith('.json'));
   } catch {
-    console.error(`Sem diretório de registry em ${REGISTRY_DIR}`);
+    console.error(`No registry directory at ${REGISTRY_DIR}`);
     process.exit(1);
   }
 
@@ -257,7 +257,7 @@ async function main() {
     const entry = JSON.parse(await readFile(join(REGISTRY_DIR, file), 'utf8'));
     const repo = entry.repo;
     if (!repo || !/^[^/]+\/[^/]+$/.test(repo)) {
-      errors.push({ file, error: 'campo "repo" ausente ou inválido (esperado owner/repo)' });
+      errors.push({ file, error: 'missing or invalid "repo" field (expected owner/repo)' });
       continue;
     }
     process.stdout.write(`→ ${repo} ... `);
@@ -266,7 +266,7 @@ async function main() {
       plugins.push(built);
       console.log(`ok (v${built.version}, ${built.deviceTypes.join('+') || '?'})`);
     } catch (err) {
-      console.log(`FALHOU: ${err.message}`);
+      console.log(`FAILED: ${err.message}`);
       errors.push({ file, repo, error: err.message });
     }
   }
@@ -281,9 +281,9 @@ async function main() {
 
   await mkdir(dirname(OUT_FILE), { recursive: true });
   await writeFile(OUT_FILE, JSON.stringify(catalog, null, 2) + '\n');
-  console.log(`\nCatálogo: ${plugins.length} plugin(s) → ${OUT_FILE}`);
+  console.log(`\nCatalog: ${plugins.length} plugin(s) → ${OUT_FILE}`);
   if (errors.length) {
-    console.log(`Avisos (${errors.length}):`);
+    console.log(`Warnings (${errors.length}):`);
     for (const e of errors) console.log(`  - ${e.file}${e.repo ? ` (${e.repo})` : ''}: ${e.error}`);
     if (process.env.CATALOG_STRICT === '1') {
       process.exit(1);
@@ -292,6 +292,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('Erro fatal:', err);
+  console.error('Fatal error:', err);
   process.exit(1);
 });

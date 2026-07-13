@@ -22,4 +22,9 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('installed:refresh', listener);
     return () => ipcRenderer.off('installed:refresh', listener);
   },
+  onUpdatesChanged: (callback: (pluginIds: string[]) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, pluginIds: string[]) => callback(pluginIds);
+    ipcRenderer.on('updates:changed', listener);
+    return () => ipcRenderer.off('updates:changed', listener);
+  },
 });

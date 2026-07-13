@@ -13,7 +13,7 @@ for (const file of files) {
   try {
     const entry = JSON.parse(await readFile(join(registryDir, file), 'utf8'));
     if (!entry.repo || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(entry.repo)) {
-      console.error(`${file}: campo "repo" ausente ou invalido`);
+      console.error(`${file}: missing or invalid "repo" field`);
       errors += 1;
     }
   } catch (error) {
@@ -23,4 +23,4 @@ for (const file of files) {
 }
 
 if (errors) process.exit(1);
-console.log(`Registry valido: ${files.length} plugin(s)`);
+console.log(`Valid registry: ${files.length} plugin(s)`);

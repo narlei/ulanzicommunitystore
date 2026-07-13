@@ -10,6 +10,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROTOCOL = 'ulanzicommunitystore';
 
 let win: BrowserWindow | null = null;
+let updateCheckInFlight: Promise<string[]> | null = null;
+let lastUpdateIds: string[] = [];
 
 function appIconPath(): string {
   return path.join(__dirname, '..', '..', 'build', 'icon.png');
@@ -54,6 +56,14 @@ function createWindow(): void {
     void shell.openExternal(url);
     return { action: 'deny' };
   });
+
+  win.on('closed', () => {
+    win = null;
+  });
+
+  win.webContents.once('did-finish-load', () => {
+    scheduleUpdateCheck();
+  });
 }
 
 if (process.defaultApp && process.argv.length >= 2) {
@@ -76,6 +86,7 @@ async function handleDeepLink(url: string): Promise<void> {
 
     await installPlugin(plugin, (progress) => win?.webContents.send('plugin:progress', progress));
     win?.webContents.send('installed:refresh');
+    scheduleUpdateCheck();
   } catch {
     // Ignore malformed external links.
   }
@@ -85,6 +96,77 @@ function focusWindow(): void {
   if (!win) return;
   if (win.isMinimized()) win.restore();
   win.focus();
+}
+
+function sameUpdateIds(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((id, index) => id === b[index]);
+}
+
+function badgeOverlay(count: number): Electron.NativeImage {
+  const label = count > 99 ? '99+' : String(count);
+  const fontSize = label.length > 2 ? 34 : label.length > 1 ? 40 : 46;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+      <circle cx="84" cy="44" r="40" fill="#ff3b30"/>
+      <circle cx="84" cy="44" r="36" fill="#ff3b30" stroke="white" stroke-width="6"/>
+      <text x="84" y="58" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="700" fill="white">${label}</text>
+    </svg>
+  `;
+  return nativeImage.createFromDataURL(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
+}
+
+function updateAppBadge(count: number): void {
+  app.setBadgeCount(count);
+  if (process.platform === 'darwin') {
+    app.dock?.setBadge(count > 0 ? String(count) : '');
+  } else if (process.platform === 'win32') {
+    if (win && !win.isDestroyed()) {
+      win.setOverlayIcon(count > 0 ? badgeOverlay(count) : null, count > 0 ? `${count} updates available` : '');
+    }
+  }
+}
+
+function notifyUpdates(updates: CatalogPlugin[]): void {
+  if (!updates.length || !Notification.isSupported()) return;
+  new Notification({
+    title: 'Ulanzi Community Store',
+    body:
+      updates.length === 1
+        ? `Update available: ${updates[0].name}`
+        : `${updates.length} plugins have updates available`,
+  }).show();
+}
+
+async function checkForUpdates({ notify = false } = {}): Promise<string[]> {
+  if (updateCheckInFlight) return updateCheckInFlight;
+  updateCheckInFlight = (async () => {
+    const [catalog, installed] = await Promise.all([fetchCatalog(), listInstalled()]);
+    const byId = new Map(installed.map((item) => [item.pluginId, item.version]));
+    const updates = catalog.plugins.filter((plugin) => {
+      const current = byId.get(plugin.id);
+      return current && compareVersions(plugin.version, current) > 0;
+    });
+    const updateIds = updates.map((plugin) => plugin.id).sort();
+    const changed = !sameUpdateIds(updateIds, lastUpdateIds);
+
+    lastUpdateIds = updateIds;
+    updateAppBadge(updateIds.length);
+    if (changed) win?.webContents.send('updates:changed', updateIds);
+    if (notify) notifyUpdates(updates);
+
+    return updateIds;
+  })();
+  try {
+    return await updateCheckInFlight;
+  } finally {
+    updateCheckInFlight = null;
+  }
+}
+
+function scheduleUpdateCheck(): void {
+  void checkForUpdates().catch(() => {
+    // Keep focus/activation checks silent when the remote catalog is unavailable.
+  });
 }
 
 const gotLock = app.requestSingleInstanceLock();
@@ -114,9 +196,14 @@ if (!gotLock) {
     createWindow();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      scheduleUpdateCheck();
     });
     const url = process.argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
     if (url) win?.webContents.once('did-finish-load', () => void handleDeepLink(url));
+  });
+
+  app.on('browser-window-focus', () => {
+    scheduleUpdateCheck();
   });
 
   app.on('window-all-closed', () => {
@@ -132,34 +219,19 @@ ipcMain.handle('settings:developerMode', (_event, enabled: unknown) =>
 );
 
 ipcMain.handle('plugin:install', (event, plugin: CatalogPlugin) =>
-  installPlugin(plugin, (progress) => event.sender.send('plugin:progress', progress)),
+  installPlugin(plugin, (progress) => event.sender.send('plugin:progress', progress)).finally(() => {
+    scheduleUpdateCheck();
+  }),
 );
 
 ipcMain.handle('plugin:uninstall', async (_event, pluginId: unknown) => {
   if (typeof pluginId !== 'string' || !isPluginId(pluginId)) throw new Error('Invalid pluginId');
   await uninstallPlugin(pluginId);
+  scheduleUpdateCheck();
   return { ok: true };
 });
 
-ipcMain.handle('updates:check', async () => {
-  const [catalog, installed] = await Promise.all([fetchCatalog(), listInstalled()]);
-  const byId = new Map(installed.map((item) => [item.pluginId, item.version]));
-  const updates = catalog.plugins.filter((plugin) => {
-    const current = byId.get(plugin.id);
-    return current && compareVersions(plugin.version, current) > 0;
-  });
-
-  if (updates.length && Notification.isSupported()) {
-    new Notification({
-      title: 'Ulanzi Community Store',
-      body:
-        updates.length === 1
-          ? `Update available: ${updates[0].name}`
-          : `${updates.length} plugins have updates available`,
-    }).show();
-  }
-  return updates.map((plugin) => plugin.id);
-});
+ipcMain.handle('updates:check', () => checkForUpdates({ notify: true }));
 
 ipcMain.handle('submit:check', (_event, repoInput: unknown) =>
   checkSubmission(typeof repoInput === 'string' ? repoInput : ''),

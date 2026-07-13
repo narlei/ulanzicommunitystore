@@ -5,6 +5,9 @@ name: security-scan
 # rolling GitHub issue (created when there are findings, closed when everything is clean).
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '0 6 * * *' # every day at 06:00 UTC
   workflow_dispatch: # allow manual runs from the Actions tab
@@ -28,9 +31,8 @@ jobs:
           node-version: '22'
 
       - name: Install Trivy
-        uses: aquasecurity/setup-trivy@v0.2.3
-        with:
-          version: v0.58.0
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.58.0
 
       - name: Run security scan
         id: scan

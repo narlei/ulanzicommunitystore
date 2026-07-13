@@ -93,9 +93,13 @@ export function App() {
     const offRefresh = window.api.onInstalledRefresh(() => {
       void window.api.listInstalled().then((items) => setInstalled(toInstalledMap(items)));
     });
+    const offUpdates = window.api.onUpdatesChanged(() => {
+      void load();
+    });
     return () => {
       offProgress();
       offRefresh();
+      offUpdates();
     };
   }, [load]);
 

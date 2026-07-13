@@ -17,6 +17,7 @@ declare global {
       openExternal: (url: string) => Promise<void>;
       onProgress: (callback: (progress: InstallProgress) => void) => () => void;
       onInstalledRefresh: (callback: () => void) => () => void;
+      onUpdatesChanged: (callback: (pluginIds: string[]) => void) => () => void;
     };
   }
 }
