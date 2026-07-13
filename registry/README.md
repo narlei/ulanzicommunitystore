@@ -9,6 +9,8 @@ with a Pull Request, and every new GitHub Release ships to users automatically.
 > validates your repository, generates this file, and opens the Pull Request for you in one click.
 > The steps below are the equivalent manual process.
 
+> **Starting from scratch?** Check out the [Plugin Starter Kit](../plugin-starter/README.md) to bootstrap your repository with everything needed.
+
 To submit yours:
 
 1. Fork this repository.

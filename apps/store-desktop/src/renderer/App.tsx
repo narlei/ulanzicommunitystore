@@ -632,6 +632,7 @@ function SubmitView({ lang }: { lang: Lang }) {
   const [result, setResult] = useState<SubmitCheckResult | null>(null);
   const [networkError, setNetworkError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [cmdCopied, setCmdCopied] = useState(false);
 
   async function validate() {
     if (!repoInput.trim() || checking) return;
@@ -681,6 +682,25 @@ function SubmitView({ lang }: { lang: Lang }) {
               {t(lang, 'submitRegistry')}
             </button>
           </div>
+        </section>
+
+        <section className="card p-5">
+          <h3 className="text-[16px] font-semibold">{t(lang, 'submitStarterKitTitle')}</h3>
+          <p className="mt-1 text-ink2">{t(lang, 'submitStarterKitHelp')}</p>
+          <div className="mt-4 rounded-lg border border-stroke bg-raised p-4 flex items-center justify-between gap-4">
+            <code className="font-mono text-[13px] text-accent select-all overflow-x-auto whitespace-nowrap">npx github:narlei/ulanzicommunitystore/plugin-starter init</code>
+            <button
+              className="btn-ghost shrink-0 !min-h-0 !py-1.5 !px-3 !text-[12px]"
+              onClick={async () => {
+                await navigator.clipboard.writeText('npx github:narlei/ulanzicommunitystore/plugin-starter init');
+                setCmdCopied(true);
+                setTimeout(() => setCmdCopied(false), 2000);
+              }}
+            >
+              {cmdCopied ? t(lang, 'submitCopied') : t(lang, 'submitCopyCmd')}
+            </button>
+          </div>
+          <p className="mt-3 text-[12px] text-ink3">{t(lang, 'submitStarterKitNote')}</p>
         </section>
 
         <section className="card p-5">
