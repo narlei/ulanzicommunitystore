@@ -1,9 +1,35 @@
 {
   "name": "ulanzi-plugin-starter",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Scaffolding for Ulanzi Deck & Dial Plugins",
   "bin": {
     "ulanzi-plugin": "bin/cli.mjs"
   },
-  "type": "module"
+  "type": "module",
+  "files": [
+    "bin",
+    "templates",
+    "README.md"
+  ],
+  "keywords": [
+    "ulanzi",
+    "ulanzi-deck",
+    "ulanzi-dial",
+    "plugin",
+    "scaffolding",
+    "starter"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/narlei/ulanzicommunitystore.git",
+    "directory": "plugin-starter"
+  },
+  "homepage": "https://github.com/narlei/ulanzicommunitystore/tree/main/plugin-starter#readme",
+  "bugs": {
+    "url": "https://github.com/narlei/ulanzicommunitystore/issues"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
 }

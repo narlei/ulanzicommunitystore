@@ -19,6 +19,16 @@ const OUT_FILE = process.env.CATALOG_OUT_FILE || join(ROOT, 'dist', 'catalog', '
 const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
 const API = 'https://api.github.com';
 
+// Match do asset da release. Aceita o nome fixo `com.<...>.ulanziPlugin.zip`
+// e também o versionado `com.<...>.ulanziPlugin-1.5.0.zip` (sufixo após `-` ou `_`).
+const ASSET_RE = /\.ulanziPlugin(?:[-_][^/]*)?\.zip$/;
+
+// Deriva o pluginId (= nome da pasta do plugin) cortando em `.ulanziPlugin`,
+// descartando qualquer sufixo de versão e o `.zip`.
+function pluginIdFromAsset(name) {
+  return name.replace(/(\.ulanziPlugin)(?:[-_][^/]*)?\.zip$/, '$1');
+}
+
 // Locales suportados pelo SDK oficial. Usados para detectar os arquivos de idioma.
 const KNOWN_LOCALES = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'pt_BR', 'zh_CN', 'zh_HK', 'zh_TW'];
 
@@ -36,8 +46,36 @@ function ghHeaders(extra = {}) {
   return h;
 }
 
+// Status HTTP transitórios da API do GitHub que valem retry (5xx + rate limit).
+const RETRY_STATUS = new Set([429, 500, 502, 503, 504]);
+const MAX_RETRIES = Number(process.env.CATALOG_FETCH_RETRIES || 4);
+const RETRY_BASE_MS = Number(process.env.CATALOG_FETCH_RETRY_MS || 500);
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// fetch com retry exponencial para erros transitórios (5xx/429) e falhas de rede.
+// Erros definitivos (4xx que não 429) retornam na hora, sem retry.
+async function ghFetch(url, init) {
+  let lastErr;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(url, init);
+      if (res.ok || !RETRY_STATUS.has(res.status) || attempt === MAX_RETRIES) return res;
+      lastErr = new Error(`${res.status} ${res.statusText}`);
+    } catch (err) {
+      // Falha de rede (DNS/conexão/timeout) — também é transitória.
+      lastErr = err;
+      if (attempt === MAX_RETRIES) throw err;
+    }
+    const delay = RETRY_BASE_MS * 2 ** attempt;
+    console.warn(`  ! ${url} falhou (${lastErr.message}); retry ${attempt + 1}/${MAX_RETRIES} em ${delay}ms`);
+    await sleep(delay);
+  }
+  throw lastErr;
+}
+
 async function ghJson(path) {
-  const res = await fetch(`${API}${path}`, { headers: ghHeaders() });
+  const res = await ghFetch(`${API}${path}`, { headers: ghHeaders() });
   if (!res.ok) throw new Error(`GET ${path} → ${res.status} ${res.statusText}`);
   return res.json();
 }
@@ -46,7 +84,7 @@ async function ghJson(path) {
 // Retorna null se 404.
 async function ghRawFile(repo, path, ref) {
   const url = `${API}/repos/${repo}/contents/${path}${ref ? `?ref=${ref}` : ''}`;
-  const res = await fetch(url, { headers: ghHeaders({ Accept: 'application/vnd.github.raw' }) });
+  const res = await ghFetch(url, { headers: ghHeaders({ Accept: 'application/vnd.github.raw' }) });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`GET contents ${path} → ${res.status}`);
   return res.text();
@@ -111,7 +149,7 @@ async function countDownloads(repo) {
     let total = 0;
     for (const release of releases) {
       for (const asset of release.assets || []) {
-        if (asset.name.endsWith('.ulanziPlugin.zip')) total += asset.download_count || 0;
+        if (ASSET_RE.test(asset.name)) total += asset.download_count || 0;
       }
     }
     return total;
@@ -123,11 +161,14 @@ async function countDownloads(repo) {
 async function buildEntry(repo) {
   // 1) release mais nova
   const release = await ghJson(`/repos/${repo}/releases/latest`);
-  const zipAsset = (release.assets || []).find((a) => a.name.endsWith('.ulanziPlugin.zip'));
+  const zipAsset = (release.assets || []).find((a) => ASSET_RE.test(a.name));
   if (!zipAsset) {
     throw new Error('release sem asset *.ulanziPlugin.zip');
   }
-  const pluginId = zipAsset.name.replace(/\.zip$/, ''); // com.<...>.ulanziPlugin
+  const pluginId = pluginIdFromAsset(zipAsset.name); // com.<...>.ulanziPlugin
+  // Nome versionado (ex.: ...ulanziPlugin-1.5.0.zip) não bate com o permalink
+  // `latest/download/<pluginId>.zip`, então usamos a URL do asset da release.
+  const isVersionedAsset = zipAsset.name !== `${pluginId}.zip`;
 
   // 2) branch padrão
   const repoInfo = await ghJson(`/repos/${repo}`);
@@ -192,8 +233,11 @@ async function buildEntry(repo) {
     changelog: release.body || '',
     publishedAt: release.published_at,
     downloads,
-    // URL estável que sempre aponta pra release mais recente
-    downloadUrl: `https://github.com/${repo}/releases/latest/download/${pluginId}.zip`,
+    // Nome fixo: permalink estável que sempre aponta pra release mais recente.
+    // Nome versionado: URL do asset específico (atualiza a cada rebuild do catálogo).
+    downloadUrl: isVersionedAsset
+      ? zipAsset.browser_download_url
+      : `https://github.com/${repo}/releases/latest/download/${pluginId}.zip`,
     sourceUrl: `https://github.com/${repo}`,
   };
 }

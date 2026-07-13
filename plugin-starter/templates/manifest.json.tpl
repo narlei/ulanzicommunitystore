@@ -5,7 +5,7 @@
   "Description": "{{DESCRIPTION}}",
   "Category": "{{CATEGORY}}",
   "Icon": "icon",
-  "URL": "https://github.com/{{AUTHOR}}/{{REPO_NAME}}",
+  "URL": "https://github.com/{{OWNER}}/{{REPO_NAME}}",
   "Actions": [
     {
       "Name": "{{PLUGIN_NAME}} Action",

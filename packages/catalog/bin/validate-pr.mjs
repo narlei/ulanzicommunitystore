@@ -25,6 +25,9 @@ const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
 const API = 'https://api.github.com';
 
 const REPO_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+// Aceita o asset com nome fixo `com.<...>.ulanziPlugin.zip` e o versionado
+// `com.<...>.ulanziPlugin-1.5.0.zip` (sufixo após `-` ou `_`).
+const ASSET_RE = /\.ulanziPlugin(?:[-_][^/]*)?\.zip$/;
 const ALLOWED_KEYS = new Set(['repo']);
 const VALID_DEVICE_TYPES = new Set(['deck', 'dial']);
 
@@ -161,12 +164,16 @@ async function validateRepo(repo) {
     problems.push(`falha ao ler a release mais recente: HTTP ${relRes.status}`);
     return problems;
   }
-  const zipAsset = (relRes.json?.assets || []).find((a) => a.name.endsWith('.ulanziPlugin.zip'));
+  const zipAsset = (relRes.json?.assets || []).find((a) => ASSET_RE.test(a.name));
   if (!zipAsset) {
-    problems.push('a release mais recente não tem o asset `com.<...>.ulanziPlugin.zip`');
+    problems.push(
+      'a release mais recente não tem o asset `com.<...>.ulanziPlugin.zip` ' +
+        '(o nome pode incluir a versão, ex.: `com.<...>.ulanziPlugin-1.5.0.zip`)',
+    );
     return problems;
   }
-  const pluginId = zipAsset.name.replace(/\.zip$/, ''); // com.<...>.ulanziPlugin
+  // com.<...>.ulanziPlugin — corta em `.ulanziPlugin`, descartando versão e `.zip`
+  const pluginId = zipAsset.name.replace(/(\.ulanziPlugin)(?:[-_][^/]*)?\.zip$/, '$1');
 
   // 3) manifest.json na pasta do plugin
   const manifestFile = await repoFileText(repo, `${pluginId}/manifest.json`, ref);

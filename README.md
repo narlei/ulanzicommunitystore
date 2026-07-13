@@ -83,7 +83,7 @@ Publishing here doesn't lock you in — the same plugin can (and should!) also g
 Don't want to build the folder structure from scratch? We provide an official scaffolding tool that generates the manifest, a `Makefile` for local testing, and the GitHub Actions workflow for automatic releases.
 
 ```bash
-npx github:narlei/ulanzicommunitystore/plugin-starter init
+npx ulanzi-plugin-starter@latest init
 ```
 
 *(Requires [Node.js](https://nodejs.org) installed on your machine)*
