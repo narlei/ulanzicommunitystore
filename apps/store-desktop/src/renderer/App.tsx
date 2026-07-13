@@ -234,6 +234,9 @@ export function App() {
                 <span className={view === item ? '' : 'text-accent'}>{NAV_ICONS[item]}</span>
                 <span className="truncate">{t(lang, item)}</span>
               </span>
+              {item === 'store' && plugins.length > 0 && (
+                <span className="nav-badge">{plugins.length}</span>
+              )}
               {item === 'installed' && installedCount > 0 && (
                 <span className="nav-badge">{installedCount}</span>
               )}
@@ -688,11 +691,11 @@ function SubmitView({ lang }: { lang: Lang }) {
           <h3 className="text-[16px] font-semibold">{t(lang, 'submitStarterKitTitle')}</h3>
           <p className="mt-1 text-ink2">{t(lang, 'submitStarterKitHelp')}</p>
           <div className="mt-4 rounded-lg border border-stroke bg-raised p-4 flex items-center justify-between gap-4">
-            <code className="font-mono text-[13px] text-accent select-all overflow-x-auto whitespace-nowrap">npx github:narlei/ulanzicommunitystore/plugin-starter init</code>
+            <code className="font-mono text-[13px] text-accent select-all overflow-x-auto whitespace-nowrap">npx ulanzi-plugin-starter@latest init</code>
             <button
               className="btn-ghost shrink-0 !min-h-0 !py-1.5 !px-3 !text-[12px]"
               onClick={async () => {
-                await navigator.clipboard.writeText('npx github:narlei/ulanzicommunitystore/plugin-starter init');
+                await navigator.clipboard.writeText('npx ulanzi-plugin-starter@latest init');
                 setCmdCopied(true);
                 setTimeout(() => setCmdCopied(false), 2000);
               }}

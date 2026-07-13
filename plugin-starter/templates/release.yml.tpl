@@ -13,14 +13,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build plugin zip
+      - name: Build plugin zip(s)
         run: |
-          PLUGIN_DIR=$(ls -d *.ulanziPlugin | head -1)
-          if [ -z "$PLUGIN_DIR" ]; then
-            echo "No .ulanziPlugin directory found" >&2
+          found=0
+          for dir in *.ulanziPlugin; do
+            [ -d "$dir" ] || continue
+            echo "Packaging $dir"
+            zip -r "${dir}.zip" "$dir" -x "*.DS_Store"
+            found=1
+          done
+          if [ "$found" = "0" ]; then
+            echo "No .ulanziPlugin directory found at the repository root" >&2
             exit 1
           fi
-          zip -r "${PLUGIN_DIR}.zip" "$PLUGIN_DIR" -x "*.DS_Store"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

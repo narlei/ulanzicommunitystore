@@ -7,6 +7,10 @@ import type { SubmitCheck, SubmitCheckResult } from '../shared.js';
 const API = 'https://api.github.com';
 const STORE_REPO = 'narlei/ulanzicommunitystore';
 
+// Aceita o asset com nome fixo `com.<...>.ulanziPlugin.zip` e o versionado
+// `com.<...>.ulanziPlugin-1.5.0.zip` (sufixo após `-` ou `_`).
+const ASSET_RE = /\.ulanziPlugin(?:[-_][^/]*)?\.zip$/;
+
 const HEADERS = {
   Accept: 'application/vnd.github+json',
   'X-GitHub-Api-Version': '2022-11-28',
@@ -93,14 +97,15 @@ export async function checkSubmission(input: string): Promise<SubmitCheckResult>
   };
   checks.push({ id: 'release', status: 'ok', value: release.tag_name || '' });
 
-  // 3) asset com.<voce>.<plugin>.ulanziPlugin.zip
-  const asset = (release.assets || []).find((item) => item.name.endsWith('.ulanziPlugin.zip'));
+  // 3) asset com.<voce>.<plugin>.ulanziPlugin.zip (nome fixo ou versionado)
+  const asset = (release.assets || []).find((item) => ASSET_RE.test(item.name));
   if (!asset) {
     checks.push({ id: 'asset', status: 'fail' });
     return result();
   }
   checks.push({ id: 'asset', status: 'ok', value: asset.name });
-  const pluginId = asset.name.replace(/\.zip$/, '');
+  // com.<...>.ulanziPlugin — corta em `.ulanziPlugin`, descartando versão e `.zip`
+  const pluginId = asset.name.replace(/(\.ulanziPlugin)(?:[-_][^/]*)?\.zip$/, '$1');
 
   // 4) manifest.json dentro da pasta do plugin
   try {

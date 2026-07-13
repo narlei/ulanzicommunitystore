@@ -9,14 +9,22 @@ This kit scaffolds a complete, working plugin structure in seconds, including a 
 To create a new plugin, run the following command in the directory where you want your project to live:
 
 ```bash
-npx github:narlei/ulanzicommunitystore/plugin-starter init
+npx ulanzi-plugin-starter@latest init
 ```
 
-> **Requirements:** You must have [Node.js](https://nodejs.org) installed on your machine to use `npx`. If you get a "command not found" error, download and install Node.js first.
+> **Requirements:** [Node.js](https://nodejs.org) is required to run `npx`. The [GitHub CLI](https://cli.github.com) (`gh`) is optional but recommended — when it's installed and authenticated the kit can create your GitHub repository and push the first commit for you.
+
+### Context-aware
+
+The CLI inspects the folder before asking anything and adapts:
+
+- **Already inside a git repo with a GitHub remote?** It reuses that `owner/repo` for the manifest URL — no repo questions asked.
+- **Already have a `*.ulanziPlugin/` folder?** It switches to *adapt mode*: it adds the Store files (Makefile, workflow, `store.json`, AI skill) **without touching your existing source code**.
+- **GitHub identity** comes from your authenticated `gh` session, never from your machine's local git config.
 
 ### What it generates
 
-The CLI will ask you a few questions (Name, Description, Device Type) and instantly generate:
+The CLI asks a few questions (Name, Description, Device Type) and instantly generates:
 
 - 📂 `com.<you>.<plugin>.ulanziPlugin/`: The actual plugin folder with `manifest.json`, `app.js` and `pi/`.
 - ⚙️ `Makefile`: Comes with `make install` (installs to Ulanzi Studio), `make restart` and `make package`.
@@ -24,6 +32,26 @@ The CLI will ask you a few questions (Name, Description, Device Type) and instan
 - 🛍️ `store.json`: Ready to be submitted to the Community Store.
 - 📚 `ulanzi_plugin_example/`: A clone of the official Ulanzi SDK for you to use as reference.
 - 🧠 `.claude/`: An AI Skill folder. If you use AI assistants like Claude, Cursor or Gemini, they will automatically read this skill to understand how Ulanzi plugins work.
+
+Optionally, it will `git init` the project, create the GitHub repository via `gh`, and push the initial commit — so you're ready to tag a release immediately.
+
+## ♻️ Adapting an existing plugin
+
+Already have a plugin repo? Run the same command **inside it** and the CLI adapts it for the
+Community Store instead of scaffolding from scratch — it detects your setup and does the right thing:
+
+- **Plugin folder already at the repo root** (`com.<you>.<plugin>.ulanziPlugin/`) → adds the
+  store files (`store.json`, `Makefile`, release workflow) **without touching your source**.
+- **Plugin folder nested** in a subfolder (e.g. `plugin/…`, `plugins/…`) → offers to **hoist** it
+  to the repo root, where the store expects it.
+- **A loose `manifest.json` at the root** (no plugin folder) → offers to **wrap** your plugin files
+  into a `com.<you>.<plugin>.ulanziPlugin/` folder, keeping repo files (`README`, `LICENSE`,
+  `.git`, `.github`, `store.json`, `resources/`) at the root. It shows the exact move plan and asks
+  before touching anything — review `git diff` afterwards.
+
+The bundled release workflow packages **every** `*.ulanziPlugin/` folder at the root, so
+multi-plugin repos are supported too. After adapting, publish with a version tag:
+`git tag v1.0.0 && git push origin v1.0.0`.
 
 ## 🛠️ Development Workflow
 

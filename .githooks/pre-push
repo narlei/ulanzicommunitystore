@@ -1,0 +1,32 @@
+#!/bin/sh
+# Auto-publish plugin-starter to npm — ONLY when the push updates the `main`
+# branch on the remote. Pushes to any other branch are a no-op.
+#
+# git passes the refs being pushed on stdin, one per line:
+#   <local ref> <local sha> <remote ref> <remote sha>
+# We must consume that list BEFORE reconnecting stdin to the terminal, which we
+# do so npm's 2FA/OTP prompt can read input during publish.
+
+root="$(git rev-parse --show-toplevel)"
+script="$root/scripts/maybe-publish-starter.mjs"
+[ -f "$script" ] || exit 0
+
+pushing_main=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # Skip branch deletions (local sha is all zeros — works for SHA-1 and SHA-256).
+  case "$local_sha" in
+    *[!0]*) ;;
+    *) continue ;;
+  esac
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    pushing_main=1
+  fi
+done
+
+[ "$pushing_main" = "1" ] || exit 0
+
+if [ -e /dev/tty ] && [ -t 1 ]; then
+  node "$script" </dev/tty
+else
+  node "$script"
+fi
