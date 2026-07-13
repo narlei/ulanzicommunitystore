@@ -39,6 +39,7 @@
           <a href="#features">Features</a>
           <a href="#plugins">Plugins</a>
           <a href="#how-it-works">How it works</a>
+          <a href="#starter-kit">Create a plugin</a>
           <a href="#publish">Publish</a>
           <a href="https://github.com/narlei/ulanzicommunitystore" target="_blank" rel="noopener noreferrer">GitHub</a>
         </div>
@@ -287,6 +288,37 @@
             <span class="step-index">3</span>
             <h3>Click install</h3>
             <p>The plugin lands in your Ulanzi plugins folder, ready to drag onto a key. Updates are one click too.</p>
+          </li>
+        </ol>
+      </section>
+
+      <!-- ============ CREATE ============ -->
+      <section class="section" id="starter-kit">
+        <p class="section-eyebrow reveal">For developers</p>
+        <h2 class="section-title reveal" style="margin-bottom: 3rem;">Start creating your plugin<br>in seconds.</h2>
+        
+        <ol class="steps" style="grid-template-columns: 1fr;">
+          <li class="card reveal">
+            <span class="step-index">1</span>
+            <h3>Install Node.js</h3>
+            <p>The CLI tool requires Node.js. Install it via Terminal on macOS:</p>
+            <div class="modal-code" style="margin-top: 1rem; margin-bottom: 1rem;">
+              <code>brew install node</code>
+              <button class="modal-copy" type="button" onclick="navigator.clipboard.writeText('brew install node'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy', 2000);">Copy</button>
+            </div>
+            <p>For Windows or Linux, download the installer directly from <a href="https://nodejs.org" target="_blank" rel="noopener noreferrer">nodejs.org</a>.</p>
+          </li>
+          <li class="card reveal">
+            <span class="step-index">2</span>
+            <h3>Run the scaffolding tool</h3>
+            <p>Open your Terminal in an empty folder (or an existing plugin repository) and run the command below. It will ask you a few questions and instantly generate a complete plugin structure, including a <code>Makefile</code> for local testing, a GitHub Actions pipeline, and a built-in AI skill to make vibe-coding a breeze.</p>
+            <div class="modal-code" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+              <code style="display: block; padding-right: 4.5rem; word-break: break-word;">npx github:narlei/ulanzicommunitystore/plugin-starter init</code>
+              <button class="modal-copy" type="button" onclick="navigator.clipboard.writeText('npx github:narlei/ulanzicommunitystore/plugin-starter init'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy', 2000);">Copy</button>
+            </div>
+            <div style="margin-top: 1.5rem;">
+              <a class="button secondary button-sm" href="https://github.com/narlei/ulanzicommunitystore/tree/main/plugin-starter" target="_blank" rel="noopener noreferrer">Read the full documentation</a>
+            </div>
           </li>
         </ol>
       </section>

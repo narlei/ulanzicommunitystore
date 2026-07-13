@@ -78,6 +78,18 @@ Once your PR is merged, a GitHub Action reads your manifest and latest release a
 
 Publishing here doesn't lock you in — the same plugin can (and should!) also go to the official Ulanzi Studio Marketplace. The Community Store is simply where it can live and evolve while you iterate.
 
+## 🧰 Plugin Starter Kit
+
+Don't want to build the folder structure from scratch? We provide an official scaffolding tool that generates the manifest, a `Makefile` for local testing, and the GitHub Actions workflow for automatic releases.
+
+```bash
+npx github:narlei/ulanzicommunitystore/plugin-starter init
+```
+
+*(Requires [Node.js](https://nodejs.org) installed on your machine)*
+
+Full documentation for the starter kit is available [here](plugin-starter/README.md).
+
 ## 🏗️ Project Structure
 
 | Path | Purpose |
