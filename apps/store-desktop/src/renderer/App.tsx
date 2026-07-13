@@ -1,7 +1,7 @@
 import { createElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { CatalogPlugin, InstalledPlugin } from '@ulanzideck/catalog';
 import { compareVersions } from '@ulanzideck/catalog';
-import type { InstallProgress, Settings, SubmitCheck, SubmitCheckResult } from '../shared';
+import type { AppUpdateInfo, InstallProgress, Settings, SubmitCheck, SubmitCheckResult } from '../shared';
 import { LANG_NAMES, LANGS, detectLang, pluginText, t, type Lang } from './i18n';
 
 type View = 'store' | 'installed' | 'updates' | 'submit' | 'settings';
@@ -9,9 +9,21 @@ type Sort = 'recent' | 'popular';
 
 const REPO_URL = 'https://github.com/narlei/ulanzicommunitystore';
 const SDK_URL = 'https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK';
+/** Prompt for a GitHub star after the user has installed this many plugins. */
+const GITHUB_STAR_PROMPT_THRESHOLD = 3;
+const GITHUB_STAR_DISMISSED_KEY = 'githubStarDismissed';
+
 type BusyState = Record<string, { pct: number; msg: string }>;
 
 const defaultSettings: Settings = { developerMode: false };
+
+function isGithubStarDismissed(): boolean {
+  return localStorage.getItem(GITHUB_STAR_DISMISSED_KEY) === '1';
+}
+
+function dismissGithubStarPrompt(): void {
+  localStorage.setItem(GITHUB_STAR_DISMISSED_KEY, '1');
+}
 
 const NAV_VIEWS: View[] = ['store', 'installed', 'updates', 'submit', 'settings'];
 
@@ -64,6 +76,10 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | null>(null);
+  const [appUpdateDismissed, setAppUpdateDismissed] = useState<string | null>(null);
+  const [appUpdateBusy, setAppUpdateBusy] = useState(false);
+  const [githubStarDismissed, setGithubStarDismissed] = useState(() => isGithubStarDismissed());
   const searchRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -87,6 +103,9 @@ export function App() {
 
   useEffect(() => {
     void load();
+    void window.api.checkAppUpdate().then(setAppUpdate).catch(() => {
+      // Keep UI quiet if the releases API is unreachable.
+    });
     const offProgress = window.api.onProgress((progress: InstallProgress) => {
       setBusy((current) => ({ ...current, [progress.id]: { pct: progress.pct, msg: progress.msg } }));
     });
@@ -96,10 +115,14 @@ export function App() {
     const offUpdates = window.api.onUpdatesChanged(() => {
       void load();
     });
+    const offAppUpdate = window.api.onAppUpdateChanged((info) => {
+      setAppUpdate(info);
+    });
     return () => {
       offProgress();
       offRefresh();
       offUpdates();
+      offAppUpdate();
     };
   }, [load]);
 
@@ -202,6 +225,48 @@ export function App() {
     setSettings(await window.api.setDeveloperMode(enabled));
   }
 
+  async function refreshAppUpdate() {
+    setAppUpdateBusy(true);
+    try {
+      setAppUpdate(await window.api.checkAppUpdate(true));
+    } catch {
+      setAppUpdate((current) =>
+        current
+          ? { ...current, updateAvailable: false, latestVersion: null }
+          : null,
+      );
+    } finally {
+      setAppUpdateBusy(false);
+    }
+  }
+
+  async function applyAppUpdate() {
+    setAppUpdateBusy(true);
+    try {
+      await window.api.applyAppUpdate();
+    } finally {
+      // macOS quits; Windows stays open after launching the browser.
+      setAppUpdateBusy(false);
+    }
+  }
+
+  const showAppUpdateBanner =
+    Boolean(appUpdate?.updateAvailable && appUpdate.latestVersion) &&
+    appUpdateDismissed !== appUpdate?.latestVersion;
+
+  const showGithubStarBanner =
+    !githubStarDismissed && installedCount >= GITHUB_STAR_PROMPT_THRESHOLD;
+
+  function dismissGithubStar() {
+    dismissGithubStarPrompt();
+    setGithubStarDismissed(true);
+  }
+
+  async function openGithubStar() {
+    dismissGithubStar();
+    await window.api.openExternal(REPO_URL);
+  }
+
   const isListView = view === 'store' || view === 'installed' || view === 'updates';
 
   return (
@@ -252,8 +317,20 @@ export function App() {
             </button>
           ))}
         </nav>
-        <footer className="no-drag px-5 pb-4 text-[11px] leading-relaxed text-ink3">
-          {t(lang, 'unofficial')}
+        <footer className="no-drag space-y-3 px-3 pb-4">
+          <button
+            type="button"
+            className="group w-full rounded-xl border border-stroke/70 bg-surface/60 px-3 py-2.5 text-left transition-colors hover:border-accent/40 hover:bg-surface"
+            onClick={() => void window.api.openExternal(REPO_URL)}
+          >
+            <div className="text-[12px] font-semibold text-ink group-hover:text-accent">
+              {t(lang, 'githubStarSidebar')}
+            </div>
+            <p className="mt-0.5 text-[10px] leading-snug text-ink3">
+              {t(lang, 'githubStarSidebarHelp')}
+            </p>
+          </button>
+          <p className="px-2 text-[11px] leading-relaxed text-ink3">{t(lang, 'unofficial')}</p>
         </footer>
       </aside>
 
@@ -289,11 +366,37 @@ export function App() {
         </header>
 
         {view === 'settings' ? (
-          <SettingsView lang={lang} settings={settings} setLang={setLang} setDeveloperMode={setDeveloperMode} />
+          <SettingsView
+            lang={lang}
+            settings={settings}
+            setLang={setLang}
+            setDeveloperMode={setDeveloperMode}
+            appUpdate={appUpdate}
+            appUpdateBusy={appUpdateBusy}
+            onCheckAppUpdate={() => void refreshAppUpdate()}
+            onApplyAppUpdate={() => void applyAppUpdate()}
+          />
         ) : view === 'submit' ? (
           <SubmitView lang={lang} />
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
+            {showAppUpdateBanner && appUpdate?.latestVersion && (
+              <AppUpdateBanner
+                lang={lang}
+                latestVersion={appUpdate.latestVersion}
+                applyMode={appUpdate.applyMode}
+                busy={appUpdateBusy}
+                onUpdate={() => void applyAppUpdate()}
+                onLater={() => setAppUpdateDismissed(appUpdate.latestVersion)}
+              />
+            )}
+            {showGithubStarBanner && (
+              <GithubStarBanner
+                lang={lang}
+                onStar={() => void openGithubStar()}
+                onLater={dismissGithubStar}
+              />
+            )}
             <div className="mb-6">
               <h2 className="text-[26px] font-bold tracking-tight">
                 {view === 'store' ? t(lang, 'title') : t(lang, view)}
@@ -585,22 +688,96 @@ function PluginDetail({
   );
 }
 
+function AppUpdateBanner({
+  lang,
+  latestVersion,
+  applyMode,
+  busy,
+  onUpdate,
+  onLater,
+}: {
+  lang: Lang;
+  latestVersion: string;
+  applyMode: AppUpdateInfo['applyMode'];
+  busy: boolean;
+  onUpdate: () => void;
+  onLater: () => void;
+}) {
+  return (
+    <div className="card mb-5 flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div className="min-w-0">
+        <div className="font-semibold">{t(lang, 'appUpdateAvailable', latestVersion)}</div>
+        <p className="mt-0.5 text-[12px] text-ink2">
+          {t(lang, applyMode === 'install-script' ? 'appUpdateMacHelp' : 'appUpdateWinHelp')}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <button className="btn-ghost" disabled={busy} onClick={onLater}>
+          {t(lang, 'appUpdateLater')}
+        </button>
+        <button className="btn-primary" disabled={busy} onClick={onUpdate}>
+          {t(lang, 'appUpdateNow')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GithubStarBanner({
+  lang,
+  onStar,
+  onLater,
+}: {
+  lang: Lang;
+  onStar: () => void;
+  onLater: () => void;
+}) {
+  return (
+    <div className="card mb-5 flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div className="min-w-0">
+        <div className="font-semibold">{t(lang, 'githubStarPromptTitle')}</div>
+        <p className="mt-0.5 text-[12px] text-ink2">{t(lang, 'githubStarPromptHelp')}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <button className="btn-ghost" onClick={onLater}>
+          {t(lang, 'githubStarPromptLater')}
+        </button>
+        <button className="btn-primary" onClick={onStar}>
+          {t(lang, 'githubStarPromptStar')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SettingsView({
   lang,
   settings,
   setLang,
   setDeveloperMode,
+  appUpdate,
+  appUpdateBusy,
+  onCheckAppUpdate,
+  onApplyAppUpdate,
 }: {
   lang: Lang;
   settings: Settings;
   setLang: (lang: Lang) => void;
   setDeveloperMode: (enabled: boolean) => void;
+  appUpdate: AppUpdateInfo | null;
+  appUpdateBusy: boolean;
+  onCheckAppUpdate: () => void;
+  onApplyAppUpdate: () => void;
 }) {
+  const version = appUpdate?.currentVersion || '—';
+  const hasUpdate = Boolean(appUpdate?.updateAvailable && appUpdate.latestVersion);
+
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
       <div className="max-w-2xl">
         <h2 className="mb-6 text-[26px] font-bold tracking-tight">{t(lang, 'settings')}</h2>
-        <section className="card divide-y divide-stroke/60 px-5">
+
+        <SettingsSection title={t(lang, 'settingsSectionPreferences')}>
           <div className="flex items-center justify-between gap-6 py-4">
             <div>
               <h3 className="font-semibold">{t(lang, 'language')}</h3>
@@ -626,10 +803,77 @@ function SettingsView({
               <span />
             </button>
           </div>
-        </section>
+        </SettingsSection>
+
+        <SettingsSection title={t(lang, 'settingsSectionSupport')}>
+          <div className="flex items-center justify-between gap-6 py-4">
+            <div>
+              <h3 className="font-semibold">{t(lang, 'githubStar')}</h3>
+              <p className="mt-0.5 text-[12px] text-ink2">{t(lang, 'githubStarHelp')}</p>
+            </div>
+            <button
+              className="btn-ghost shrink-0"
+              onClick={() => void window.api.openExternal(REPO_URL)}
+            >
+              {t(lang, 'githubStarButton')}
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-6 py-4">
+            <div>
+              <h3 className="font-semibold">{t(lang, 'reportProblem')}</h3>
+              <p className="mt-0.5 text-[12px] text-ink2">{t(lang, 'reportProblemHelp')}</p>
+            </div>
+            <button
+              className="btn-ghost shrink-0"
+              onClick={() => void window.api.openExternal(`${REPO_URL}/issues/new`)}
+            >
+              {t(lang, 'reportProblemButton')}
+            </button>
+          </div>
+        </SettingsSection>
+
+        <SettingsSection title={t(lang, 'settingsSectionAbout')}>
+          <div className="flex items-center justify-between gap-6 py-4">
+            <div className="min-w-0">
+              <h3 className="font-semibold">{t(lang, 'appAbout')}</h3>
+              <p className="mt-0.5 text-[12px] text-ink2">{t(lang, 'appVersion', version)}</p>
+              {hasUpdate && appUpdate?.latestVersion ? (
+                <p className="mt-1 text-[12px] text-accent">
+                  {t(lang, 'appUpdateAvailable', appUpdate.latestVersion)}
+                  {' · '}
+                  {t(lang, appUpdate.applyMode === 'install-script' ? 'appUpdateMacHelp' : 'appUpdateWinHelp')}
+                </p>
+              ) : (
+                appUpdate && (
+                  <p className="mt-1 text-[12px] text-ink3">{t(lang, 'appUpdateUpToDate')}</p>
+                )
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button className="btn-ghost" disabled={appUpdateBusy} onClick={onCheckAppUpdate}>
+                {appUpdateBusy ? t(lang, 'appUpdateChecking') : t(lang, 'appUpdateCheck')}
+              </button>
+              {hasUpdate && (
+                <button className="btn-primary" disabled={appUpdateBusy} onClick={onApplyAppUpdate}>
+                  {t(lang, 'appUpdateNow')}
+                </button>
+              )}
+            </div>
+          </div>
+        </SettingsSection>
+
         <p className="mt-4 px-1 text-[11px] text-ink3">{t(lang, 'unofficial')}</p>
       </div>
     </div>
+  );
+}
+
+function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="mb-6">
+      <h3 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-ink3">{title}</h3>
+      <div className="card divide-y divide-stroke/60 px-5">{children}</div>
+    </section>
   );
 }
 

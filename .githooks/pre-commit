@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# When VERSION is staged for commit, keep package.json versions in sync and
+# stage those files so the commit never ships a desynced app version.
+set -euo pipefail
+
+if ! git diff --cached --name-only --diff-filter=ACM | grep -qx 'VERSION'; then
+  exit 0
+fi
+
+echo "VERSION changed — running npm run sync:version"
+npm run sync:version
+
+git add package.json apps/store-desktop/package.json

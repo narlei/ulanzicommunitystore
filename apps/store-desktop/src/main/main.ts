@@ -2,9 +2,11 @@ import { app, BrowserWindow, ipcMain, nativeImage, Notification, shell } from 'e
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compareVersions, isPluginId, isRepoSlug, type CatalogPlugin } from '@ulanzideck/catalog';
+import { applyAppUpdate, checkAppUpdate } from './app-update.js';
 import { fetchCatalog, installPlugin, listInstalled, uninstallPlugin } from './install.js';
 import { getSettings, updateSettings } from './settings.js';
 import { checkSubmission } from './submit.js';
+import type { AppUpdateInfo } from '../shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROTOCOL = 'ulanzicommunitystore';
@@ -63,6 +65,7 @@ function createWindow(): void {
 
   win.webContents.once('did-finish-load', () => {
     scheduleUpdateCheck();
+    scheduleAppUpdateCheck();
   });
 }
 
@@ -169,6 +172,18 @@ function scheduleUpdateCheck(): void {
   });
 }
 
+async function pushAppUpdate(force = false): Promise<AppUpdateInfo> {
+  const info = await checkAppUpdate({ force });
+  win?.webContents.send('appUpdate:changed', info);
+  return info;
+}
+
+function scheduleAppUpdateCheck(force = false): void {
+  void pushAppUpdate(force).catch(() => {
+    // Silent when GitHub is unreachable.
+  });
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -197,6 +212,7 @@ if (!gotLock) {
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
       scheduleUpdateCheck();
+      scheduleAppUpdateCheck();
     });
     const url = process.argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
     if (url) win?.webContents.once('did-finish-load', () => void handleDeepLink(url));
@@ -204,6 +220,7 @@ if (!gotLock) {
 
   app.on('browser-window-focus', () => {
     scheduleUpdateCheck();
+    scheduleAppUpdateCheck();
   });
 
   app.on('window-all-closed', () => {
@@ -232,6 +249,9 @@ ipcMain.handle('plugin:uninstall', async (_event, pluginId: unknown) => {
 });
 
 ipcMain.handle('updates:check', () => checkForUpdates({ notify: true }));
+
+ipcMain.handle('appUpdate:check', async (_event, force: unknown) => pushAppUpdate(force === true));
+ipcMain.handle('appUpdate:apply', () => applyAppUpdate());
 
 ipcMain.handle('submit:check', (_event, repoInput: unknown) =>
   checkSubmission(typeof repoInput === 'string' ? repoInput : ''),

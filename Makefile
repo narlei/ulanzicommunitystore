@@ -5,6 +5,7 @@ PORT ?= 8123
 
 run:
 	npm install
+	npm run sync:version
 	node scripts/ensure-electron.mjs
 	@test -n "$$(gh auth token 2>/dev/null)" || (echo "GitHub token nao encontrado. Rode: gh auth login" && exit 1)
 	GH_TOKEN=$$(gh auth token) CATALOG_STRICT=1 npm run catalog:build
@@ -16,6 +17,7 @@ install:
 	npm install
 
 app:
+	npm run sync:version
 	npm run app
 
 build:

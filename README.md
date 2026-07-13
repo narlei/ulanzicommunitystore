@@ -39,13 +39,20 @@ The Ulanzi Deck and Dial are great hardware, and the community keeps building gr
 
 ## ⬇️ Download
 
-**macOS — install via Terminal (recommended, no Gatekeeper prompts):**
+**One-line install** (detects your OS and installs the right build):
 
 ```bash
+# macOS (Terminal) · Windows (Git Bash / WSL)
 curl -fsSL https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/install.sh | bash
 ```
 
-[`install.sh`](install.sh) is a small, readable script — check it before running it if you want. It downloads the latest `.zip` straight from GitHub Releases and installs it to `/Applications`.
+```powershell
+# Windows (PowerShell) — native path, no bash required
+irm https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/install.ps1 | iex
+```
+
+- macOS: [`install.sh`](install.sh) downloads the latest `.zip` into `/Applications`. Files fetched with `curl` aren't tagged with `com.apple.quarantine`, so Gatekeeper never blocks the app.
+- Windows: the same script (or [`install.ps1`](install.ps1) on PowerShell) downloads `UlanziPluginStore.exe` and launches the NSIS installer.
 
 Or grab the installer manually from the [**releases page**](https://github.com/narlei/ulanzicommunitystore/releases/latest):
 
@@ -131,13 +138,19 @@ STORE_CATALOG_URL=https://example.com/catalog.json make app
 
 [`VERSION`](VERSION) is the single source of truth. When it changes on `main`, GitHub Actions builds and publishes a release with the macOS `.dmg` + `.zip` and the Windows `.exe`. Artifacts are ad-hoc signed (no Apple Developer account, not notarized).
 
-**macOS — recommended install:**
+**Recommended install** (auto-detects macOS vs Windows):
 
 ```bash
+# macOS · Windows (Git Bash / WSL)
 curl -fsSL https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/install.sh | bash
 ```
 
-[`install.sh`](install.sh) fetches the latest `.zip` from GitHub Releases and installs it to `/Applications`. Files downloaded via `curl` aren't tagged with the `com.apple.quarantine` attribute the way browser downloads are, so Gatekeeper never blocks the app — it opens right away, no security prompts.
+```powershell
+# Windows PowerShell
+irm https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/install.ps1 | iex
+```
+
+On macOS, [`install.sh`](install.sh) fetches the latest `.zip` into `/Applications`. Files downloaded via `curl` aren't tagged with `com.apple.quarantine`, so Gatekeeper never blocks the app. On Windows it downloads the `.exe` and launches the installer (see also [`install.ps1`](install.ps1)).
 
 **macOS — manual `.dmg` download:** since the DMG is downloaded through a browser, it does get quarantined and Gatekeeper will block the first launch. To open it:
 

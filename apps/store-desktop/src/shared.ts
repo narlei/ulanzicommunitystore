@@ -2,6 +2,16 @@ export type Settings = {
   developerMode: boolean;
 };
 
+/** Result of checking whether a newer desktop app build is on GitHub Releases. */
+export type AppUpdateInfo = {
+  currentVersion: string;
+  latestVersion: string | null;
+  updateAvailable: boolean;
+  releaseUrl: string;
+  /** How the "Update" action behaves on this platform. */
+  applyMode: 'install-script' | 'open-releases';
+};
+
 export type InstallProgress = {
   id: string;
   pct: number;

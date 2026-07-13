@@ -1498,6 +1498,40 @@ footer {
   background: rgba(65, 230, 195, 0.05);
 }
 
+.modal-os-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 16px;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.modal-os-btn {
+  margin: 0;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modal-os-btn:hover {
+  color: var(--text);
+}
+
+.modal-os-btn.is-active {
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+
 .modal-option-head {
   display: flex;
   align-items: center;

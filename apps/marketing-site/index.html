@@ -418,27 +418,57 @@
         </p>
 
         <div class="modal-option">
-          <div class="modal-option-head">
-            <span class="modal-option-badge" data-i18n="modal_recommended">Recommended</span>
-            <h4 data-i18n="modal_terminal_title">Install via Terminal</h4>
-            <span class="modal-option-os">macOS</span>
+          <div class="modal-os-toggle" role="tablist" aria-label="Platform">
+            <button type="button" class="modal-os-btn is-active" role="tab" data-os="macos" aria-selected="true" data-i18n="modal_os_macos">macOS</button>
+            <button type="button" class="modal-os-btn" role="tab" data-os="windows" aria-selected="false" data-i18n="modal_os_windows">Windows</button>
           </div>
-          <p data-i18n-html="modal_terminal_body">Skips the Gatekeeper security prompt entirely — files fetched with <code>curl</code> aren't quarantined the way browser downloads are, so the app opens right away.</p>
-          <div class="modal-code">
-            <code id="downloadModalCmd">curl -fsSL https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/install.sh | bash</code>
-            <button class="modal-copy" type="button" id="downloadModalCopy" data-i18n="copy">Copy</button>
+
+          <div class="modal-os-panel" data-os-panel="macos">
+            <div class="modal-option-head">
+              <span class="modal-option-badge" data-i18n="modal_recommended">Recommended</span>
+              <h4 data-i18n="modal_terminal_title">Install via Terminal</h4>
+            </div>
+            <p data-i18n-html="modal_terminal_body">Detects your OS and installs the right build. On macOS, files fetched with <code>curl</code> aren't quarantined the way browser downloads are, so Gatekeeper never blocks the app.</p>
+            <div class="modal-code">
+              <code>curl -fsSL https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/install.sh | bash</code>
+              <button
+                class="modal-copy"
+                type="button"
+                data-copy="curl -fsSL https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/install.sh | bash"
+                data-i18n="copy"
+              >Copy</button>
+            </div>
+            <a class="modal-link" href="https://github.com/narlei/ulanzicommunitystore/blob/main/install.sh" target="_blank" rel="noopener noreferrer" data-i18n="modal_view_script">View install.sh source →</a>
           </div>
-          <a class="modal-link" href="https://github.com/narlei/ulanzicommunitystore/blob/main/install.sh" target="_blank" rel="noopener noreferrer" data-i18n="modal_view_script">View install.sh source →</a>
+
+          <div class="modal-os-panel" data-os-panel="windows" hidden>
+            <div class="modal-option-head">
+              <span class="modal-option-badge" data-i18n="modal_recommended">Recommended</span>
+              <h4 data-i18n="modal_powershell_title">Install via PowerShell</h4>
+            </div>
+            <p data-i18n-html="modal_powershell_body">Native Windows path — no bash required. Downloads the latest <code>.exe</code> and launches the installer.</p>
+            <div class="modal-code">
+              <code>irm https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/install.ps1 | iex</code>
+              <button
+                class="modal-copy"
+                type="button"
+                data-copy="irm https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/install.ps1 | iex"
+                data-i18n="copy"
+              >Copy</button>
+            </div>
+            <a class="modal-link" href="https://github.com/narlei/ulanzicommunitystore/blob/main/install.ps1" target="_blank" rel="noopener noreferrer" data-i18n="modal_view_ps1">View install.ps1 source →</a>
+          </div>
         </div>
 
         <div class="modal-divider"><span data-i18n="modal_or">or download directly</span></div>
 
         <div class="modal-direct">
-          <a class="button secondary button-sm" href="https://github.com/narlei/ulanzicommunitystore/releases/latest/download/UlanziPluginStore.dmg">🍎 macOS .dmg</a>
-          <a class="button secondary button-sm" href="https://github.com/narlei/ulanzicommunitystore/releases/latest/download/UlanziPluginStore.exe">🪟 Windows .exe</a>
+          <a class="button secondary button-sm" data-os-panel="macos" href="https://github.com/narlei/ulanzicommunitystore/releases/latest/download/UlanziPluginStore.dmg">🍎 macOS .dmg</a>
+          <a class="button secondary button-sm" data-os-panel="windows" href="https://github.com/narlei/ulanzicommunitystore/releases/latest/download/UlanziPluginStore.exe" hidden>🪟 Windows .exe</a>
           <a class="modal-link" href="https://github.com/narlei/ulanzicommunitystore/releases/latest" target="_blank" rel="noopener noreferrer" data-i18n="modal_all_releases">All releases →</a>
         </div>
-        <p class="modal-note" data-i18n-html="modal_note">The <code>.dmg</code> triggers a normal macOS "unidentified developer" warning on first launch, since the app isn't Apple-notarized (no paid developer account). That's expected — see the <a href="https://github.com/narlei/ulanzicommunitystore#-releases" target="_blank" rel="noopener noreferrer">README</a> for how to open it, or just use the Terminal install above instead.</p>
+        <p class="modal-note" data-os-panel="macos" data-i18n-html="modal_note">The <code>.dmg</code> triggers a normal macOS "unidentified developer" warning on first launch, since the app isn't Apple-notarized (no paid developer account). That's expected — see the <a href="https://github.com/narlei/ulanzicommunitystore#-releases" target="_blank" rel="noopener noreferrer">README</a> for how to open it, or use the Terminal install above instead.</p>
+        <p class="modal-note" data-os-panel="windows" data-i18n-html="modal_note_windows" hidden>Run the downloaded <code>.exe</code> and complete the installer wizard. Prefer the PowerShell one-liner above if you want a one-step setup.</p>
       </div>
     </div>
 
@@ -518,14 +548,36 @@
       (function () {
         var overlay = document.getElementById('downloadModal');
         var closeBtn = document.getElementById('downloadModalClose');
-        var copyBtn = document.getElementById('downloadModalCopy');
-        var cmdEl = document.getElementById('downloadModalCmd');
         var triggers = document.querySelectorAll('.js-download-trigger');
         var lastFocused = null;
+
+        function detectOs() {
+          var ua = (navigator.userAgent || '').toLowerCase();
+          var platform = (navigator.userAgentData && navigator.userAgentData.platform
+            ? navigator.userAgentData.platform
+            : navigator.platform || '').toLowerCase();
+          if (platform.indexOf('win') !== -1 || ua.indexOf('windows') !== -1) return 'windows';
+          if (platform.indexOf('mac') !== -1 || ua.indexOf('mac os') !== -1 || ua.indexOf('macintosh') !== -1) return 'macos';
+          // Linux / unknown: default to macOS one-liner (works with bash); user can switch.
+          return 'macos';
+        }
+
+        function setOs(os) {
+          if (os !== 'macos' && os !== 'windows') os = 'macos';
+          overlay.querySelectorAll('.modal-os-btn').forEach(function (btn) {
+            var active = btn.getAttribute('data-os') === os;
+            btn.classList.toggle('is-active', active);
+            btn.setAttribute('aria-selected', active ? 'true' : 'false');
+          });
+          overlay.querySelectorAll('[data-os-panel]').forEach(function (panel) {
+            panel.hidden = panel.getAttribute('data-os-panel') !== os;
+          });
+        }
 
         function openModal(event) {
           if (event) event.preventDefault();
           lastFocused = document.activeElement;
+          setOs(detectOs());
           overlay.hidden = false;
           document.body.style.overflow = 'hidden';
           closeBtn.focus();
@@ -551,13 +603,25 @@
           if (event.key === 'Escape' && !overlay.hidden) closeModal();
         });
 
-        copyBtn.addEventListener('click', function () {
-          var text = cmdEl.textContent.trim();
+        overlay.addEventListener('click', function (event) {
+          var osBtn = event.target.closest('.modal-os-btn');
+          if (osBtn && overlay.contains(osBtn)) {
+            setOs(osBtn.getAttribute('data-os'));
+            return;
+          }
+          var btn = event.target.closest('.modal-copy');
+          if (!btn || !overlay.contains(btn)) return;
+          var code = btn.closest('.modal-code') && btn.closest('.modal-code').querySelector('code');
+          var text = (btn.getAttribute('data-copy') || (code && code.textContent) || '').trim();
+          if (!text) return;
           window.__marketingCopyText(text).then(function (ok) {
-            copyBtn.textContent = ok ? t('copied') : t('modal_select_text');
-            setTimeout(function () { copyBtn.textContent = t('copy'); }, 1800);
+            btn.textContent = ok ? t('copied') : t('modal_select_text');
+            setTimeout(function () { btn.textContent = t('copy'); }, 1800);
           });
         });
+
+        // Pre-select before first open so markup matches UA if inspected.
+        setOs(detectOs());
       })();
 
       // ---- Publish tool: validate a plugin repo and generate the registry PR ----
