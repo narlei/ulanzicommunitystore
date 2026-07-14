@@ -267,6 +267,44 @@
     return APP_PROTOCOL + '://plugin?repo=' + encodeURIComponent(plugin.repo);
   }
 
+  // There's no way to ask the OS whether the app is installed, so we try the deep
+  // link and watch for the tab losing focus (the app taking over). If nothing
+  // happens within the grace period, assume it's not installed and fall back to
+  // the download instructions.
+  var APP_LAUNCH_FALLBACK_MS = 1800;
+
+  function attemptOpenApp(url) {
+    // A hidden iframe (instead of window.location.href) avoids Safari's native
+    // "address is invalid" alert when no app is registered for the scheme —
+    // Safari treats a top-level navigation failure as a real page-load error,
+    // but silently drops a failed iframe navigation.
+    var iframe = document.createElement('iframe');
+    iframe.hidden = true;
+    iframe.src = url;
+
+    var fallbackTimer = setTimeout(function () {
+      cleanup();
+      if (typeof global.__marketingOpenDownloadModal === 'function') {
+        global.__marketingOpenDownloadModal();
+      }
+    }, APP_LAUNCH_FALLBACK_MS);
+
+    function onAppLikelyOpened() {
+      cleanup();
+    }
+
+    function cleanup() {
+      clearTimeout(fallbackTimer);
+      document.removeEventListener('visibilitychange', onAppLikelyOpened);
+      window.removeEventListener('blur', onAppLikelyOpened);
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    }
+
+    document.addEventListener('visibilitychange', onAppLikelyOpened);
+    window.addEventListener('blur', onAppLikelyOpened);
+    document.body.appendChild(iframe);
+  }
+
   function requestedPluginRepo() {
     try {
       return new URLSearchParams(location.search).get(PLUGIN_QUERY_KEY) || '';
@@ -604,31 +642,12 @@
       escapeHtml(plugin.version || '') +
       '</p>' +
       '<div class="catalog-detail-actions">' +
-      '<button type="button" class="button button-sm js-download-trigger">' +
-      escapeHtml(t('catalog_get_app')) +
-      '</button>' +
-      '<button type="button" class="button secondary button-sm catalog-btn-share" data-share-url="' +
-      escapeHtml(pluginShareUrl(plugin)) +
-      '">' +
-      '<svg class="catalog-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-3.9M8.6 13.4l6.8 3.9"/></svg>' +
-      '<span class="catalog-share-label">' +
-      escapeHtml(t('catalog_share')) +
-      '</span>' +
-      '</button>' +
-      '<a class="button secondary button-sm catalog-btn-openapp" href="' +
+      '<a class="button button-sm catalog-btn-openapp" href="' +
       escapeHtml(pluginAppUrl(plugin)) +
       '">' +
       '<svg class="catalog-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3l-9 9"/><path d="M15 3h6v6"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>' +
       escapeHtml(t('catalog_open_app')) +
       '</a>' +
-      (plugin.sourceUrl
-        ? '<a class="button secondary button-sm catalog-btn-source" href="' +
-          escapeHtml(plugin.sourceUrl) +
-          '" target="_blank" rel="noopener noreferrer">' +
-          '<svg class="catalog-btn-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>' +
-          escapeHtml(t('catalog_source')) +
-          '</a>'
-        : '') +
       (plugin.sourceUrl
         ? '<a class="button secondary button-sm catalog-btn-star" href="' +
           escapeHtml(plugin.sourceUrl) +
@@ -638,14 +657,38 @@
           (typeof plugin.stars === 'number' ? ' · ' + escapeHtml(formatDownloads(plugin.stars)) : '') +
           '</a>'
         : '') +
+      '<div class="catalog-menu">' +
+      '<button type="button" class="catalog-btn-menu" aria-haspopup="menu" aria-expanded="false" aria-label="' +
+      escapeHtml(t('catalog_more_actions')) +
+      '">' +
+      '<svg class="catalog-btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>' +
+      '</button>' +
+      '<div class="catalog-menu-panel" role="menu" hidden>' +
+      '<button type="button" role="menuitem" class="catalog-menu-item catalog-btn-share" data-share-url="' +
+      escapeHtml(pluginShareUrl(plugin)) +
+      '">' +
+      '<svg class="catalog-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-3.9M8.6 13.4l6.8 3.9"/></svg>' +
+      '<span class="catalog-share-label">' +
+      escapeHtml(t('catalog_share')) +
+      '</span>' +
+      '</button>' +
       (plugin.sourceUrl
-        ? '<a class="button secondary button-sm catalog-btn-danger" href="' +
+        ? '<div class="catalog-menu-divider" role="separator"></div>' +
+          '<a role="menuitem" class="catalog-menu-item" href="' +
+          escapeHtml(plugin.sourceUrl) +
+          '" target="_blank" rel="noopener noreferrer">' +
+          '<svg class="catalog-btn-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>' +
+          escapeHtml(t('catalog_source')) +
+          '</a>' +
+          '<a role="menuitem" class="catalog-menu-item catalog-menu-item-danger" href="' +
           escapeHtml(plugin.sourceUrl + '/issues/new') +
           '" target="_blank" rel="noopener noreferrer">' +
           '<svg class="catalog-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>' +
           escapeHtml(t('catalog_report_problem')) +
           '</a>'
         : '') +
+      '</div>' +
+      '</div>' +
       '</div>' +
       '</div>' +
       '</header>' +
@@ -823,24 +866,67 @@
       });
     }
 
-    // Copy the shareable plugin link (delegated — the button is re-rendered per open).
+    // The "..." overflow menu on the detail sheet (Share / Source / Report a Problem).
+    function closeOverflowMenu() {
+      var panel = document.querySelector('.catalog-menu-panel:not([hidden])');
+      if (!panel) return;
+      panel.hidden = true;
+      var trigger = panel.previousElementSibling;
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    }
+
     var detailBody = document.getElementById('pluginDetailBody');
     if (detailBody) {
       detailBody.addEventListener('click', function (event) {
+        var openAppBtn = event.target.closest('.catalog-btn-openapp');
+        if (openAppBtn && detailBody.contains(openAppBtn)) {
+          // Let modified clicks (new tab / new window) behave normally.
+          if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+            event.preventDefault();
+            attemptOpenApp(openAppBtn.getAttribute('href'));
+          }
+          return;
+        }
+
+        var menuTrigger = event.target.closest('.catalog-btn-menu');
+        if (menuTrigger) {
+          var panel = menuTrigger.nextElementSibling;
+          var willOpen = panel.hidden;
+          closeOverflowMenu();
+          if (willOpen) {
+            panel.hidden = false;
+            menuTrigger.setAttribute('aria-expanded', 'true');
+          }
+          return;
+        }
+
+        // Copy the shareable plugin link (delegated — the button is re-rendered per open).
         var shareBtn = event.target.closest('[data-share-url]');
-        if (!shareBtn || !detailBody.contains(shareBtn)) return;
-        var url = shareBtn.getAttribute('data-share-url');
-        if (!url) return;
-        var label = shareBtn.querySelector('.catalog-share-label');
-        window.__marketingCopyText(url).then(function (ok) {
-          if (!label) return;
-          label.textContent = ok ? t('catalog_share_copied') : t('catalog_share');
-          setTimeout(function () {
-            label.textContent = t('catalog_share');
-          }, 1800);
-        });
+        if (shareBtn && detailBody.contains(shareBtn)) {
+          var url = shareBtn.getAttribute('data-share-url');
+          if (!url) return;
+          var label = shareBtn.querySelector('.catalog-share-label');
+          window.__marketingCopyText(url).then(function (ok) {
+            if (!label) return;
+            label.textContent = ok ? t('catalog_share_copied') : t('catalog_share');
+            setTimeout(function () {
+              label.textContent = t('catalog_share');
+              closeOverflowMenu();
+            }, 1800);
+          });
+          return;
+        }
+
+        if (event.target.closest('.catalog-menu-item')) {
+          closeOverflowMenu();
+        }
       });
     }
+
+    document.addEventListener('click', function (event) {
+      if (event.target.closest('.catalog-menu')) return;
+      closeOverflowMenu();
+    });
 
     // Keep the sheet in sync with Back/Forward and deep links pasted into the address bar.
     window.addEventListener('popstate', function () {
@@ -856,7 +942,12 @@
     });
 
     document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && detailOverlay && !detailOverlay.hidden) {
+      if (event.key !== 'Escape') return;
+      if (document.querySelector('.catalog-menu-panel:not([hidden])')) {
+        closeOverflowMenu();
+        return;
+      }
+      if (detailOverlay && !detailOverlay.hidden) {
         var downloadModal = document.getElementById('downloadModal');
         if (downloadModal && !downloadModal.hidden) return;
         closeDetail();

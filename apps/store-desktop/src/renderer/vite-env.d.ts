@@ -16,6 +16,7 @@ declare global {
       applyAppUpdate: () => Promise<{ ok: true; mode: AppUpdateInfo['applyMode'] }>;
       getSettings: () => Promise<Settings>;
       setDeveloperMode: (enabled: boolean) => Promise<Settings>;
+      setOfficialCatalog: (enabled: boolean) => Promise<Settings>;
       checkSubmission: (repoInput: string) => Promise<SubmitCheckResult>;
       openExternal: (url: string) => Promise<void>;
       getPendingOpen: () => Promise<string | null>;

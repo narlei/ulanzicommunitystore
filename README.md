@@ -30,6 +30,7 @@ A **community-run, open-source catalog** for Ulanzi Deck & Dial plugins. Anyone 
 - 🔄 **Instant updates** — every new GitHub Release becomes an update in the store.
 - 🛍️ **One-click install** — straight into your Ulanzi plugins folder.
 - 🌍 **Multilingual** — English, Português, and 中文 out of the box.
+- 🏬 **See the whole ecosystem** — an opt-in setting shows Ulanzi Studio's official plugins right alongside community ones, so you don't have to check two places.
 - 🔐 **Safe by default** — only reviewed registry plugins are installable; ZIPs are validated before touching your disk.
 - 🔓 **100% open source** — the app, the registry, and the pipeline.
 

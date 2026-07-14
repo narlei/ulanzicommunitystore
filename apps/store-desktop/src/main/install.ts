@@ -154,9 +154,12 @@ export async function uninstallPlugin(
   progress(100, 'done');
 }
 
+// GitHub for community plugins; Ulanzi's own CDN/static hosts for official-catalog plugins.
+const TRUSTED_DOWNLOAD_HOSTS = [/^https:\/\/github\.com\//, /^https:\/\/([a-z0-9-]+\.)*ulanzistudio\.com\//];
+
 function assertCatalogPlugin(plugin: CatalogPlugin): void {
   if (!plugin || !isPluginId(plugin.id)) throw new Error('Invalid plugin id');
-  if (!plugin.downloadUrl || !/^https:\/\/github\.com\//.test(plugin.downloadUrl)) {
+  if (!plugin.downloadUrl || !TRUSTED_DOWNLOAD_HOSTS.some((host) => host.test(plugin.downloadUrl))) {
     throw new Error('Invalid download URL');
   }
 }

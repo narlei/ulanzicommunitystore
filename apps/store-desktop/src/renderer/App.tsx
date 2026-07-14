@@ -31,7 +31,7 @@ type BusyState = Record<string, { pct: number; msg: string }>;
 
 type Toast = { id: number; kind: 'error' | 'success' | 'info'; text: string };
 
-const defaultSettings: Settings = { developerMode: false };
+const defaultSettings: Settings = { developerMode: false, officialCatalog: false };
 
 function detectHostPlatform(): PlatformFilter {
   const platform = (navigator.platform || navigator.userAgent || '').toLowerCase();
@@ -575,6 +575,12 @@ export function App() {
     setSettings(await window.api.setDeveloperMode(enabled));
   }
 
+  async function setOfficialCatalog(enabled: boolean) {
+    setSettings(await window.api.setOfficialCatalog(enabled));
+    // Refetch so official plugins appear/disappear immediately instead of on next reload.
+    void load();
+  }
+
   async function refreshAppUpdate() {
     setAppUpdateBusy(true);
     try {
@@ -679,6 +685,7 @@ export function App() {
             settings={settings}
             setLang={setLang}
             setDeveloperMode={setDeveloperMode}
+            setOfficialCatalog={setOfficialCatalog}
             appUpdate={appUpdate}
             appUpdateBusy={appUpdateBusy}
             onCheckAppUpdate={() => void refreshAppUpdate()}
@@ -1196,6 +1203,8 @@ function DetailOverflowMenu({
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  // Nothing this menu could show (no repo to share, no source, not installed) → don't render the trigger.
+  const hasItems = Boolean(plugin.repo || plugin.sourceUrl || installedVersion);
 
   useEffect(() => {
     if (!open) return;
@@ -1217,6 +1226,8 @@ function DetailOverflowMenu({
     };
   }, [open]);
 
+  if (!hasItems) return null;
+
   const itemClass =
     'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition-colors';
 
@@ -1236,17 +1247,19 @@ function DetailOverflowMenu({
           role="menu"
           className="absolute right-0 top-[calc(100%+6px)] z-30 min-w-[210px] rounded-xl border border-stroke bg-bg p-1.5 shadow-sheet"
         >
-          <button
-            role="menuitem"
-            className={`${itemClass} text-ink hover:bg-raised`}
-            onClick={() => {
-              setOpen(false);
-              onShare();
-            }}
-          >
-            <IconShare />
-            {t(lang, 'share')}
-          </button>
+          {plugin.repo && (
+            <button
+              role="menuitem"
+              className={`${itemClass} text-ink hover:bg-raised`}
+              onClick={() => {
+                setOpen(false);
+                onShare();
+              }}
+            >
+              <IconShare />
+              {t(lang, 'share')}
+            </button>
+          )}
           {plugin.sourceUrl && (
             <>
               <div className="mx-2 my-1 border-t border-stroke/70" />
@@ -1668,6 +1681,7 @@ function SettingsView({
   settings,
   setLang,
   setDeveloperMode,
+  setOfficialCatalog,
   appUpdate,
   appUpdateBusy,
   onCheckAppUpdate,
@@ -1677,6 +1691,7 @@ function SettingsView({
   settings: Settings;
   setLang: (lang: Lang) => void;
   setDeveloperMode: (enabled: boolean) => void;
+  setOfficialCatalog: (enabled: boolean) => void;
   appUpdate: AppUpdateInfo | null;
   appUpdateBusy: boolean;
   onCheckAppUpdate: () => void;
@@ -1712,6 +1727,18 @@ function SettingsView({
             <button
               className={`toggle shrink-0 ${settings.developerMode ? 'toggle-on' : ''}`}
               onClick={() => setDeveloperMode(!settings.developerMode)}
+            >
+              <span />
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-6 py-4">
+            <div>
+              <h3 className="font-semibold">{t(lang, 'officialCatalogToggle')}</h3>
+              <p className="mt-0.5 text-[12px] text-ink2">{t(lang, 'officialCatalogToggleHelp')}</p>
+            </div>
+            <button
+              className={`toggle shrink-0 ${settings.officialCatalog ? 'toggle-on' : ''}`}
+              onClick={() => setOfficialCatalog(!settings.officialCatalog)}
             >
               <span />
             </button>
@@ -2175,6 +2202,7 @@ function Meta({ plugin, showUpdate, lang }: { plugin: CatalogPlugin; showUpdate?
   return (
     <div className="flex min-w-0 flex-wrap gap-1.5">
       {showUpdate && lang && <span className="chip bg-accent text-accent-ink">{t(lang, 'updateBadge')}</span>}
+      {plugin.source === 'official' && lang && <span className="chip">{t(lang, 'officialBadge')}</span>}
       {(plugin.deviceTypes || []).map((item) => (
         <span className="chip chip-brand" key={item}>
           {deviceLabel(item)}

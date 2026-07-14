@@ -302,6 +302,11 @@
           openModal(event);
         });
 
+        // Fallback shown by catalog.js when "Open in app" doesn't find an installed app.
+        window.__marketingOpenDownloadModal = function () {
+          openModal();
+        };
+
         closeBtn.addEventListener('click', closeModal);
 
         overlay.addEventListener('click', function (event) {

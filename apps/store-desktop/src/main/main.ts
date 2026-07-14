@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { compareVersions, isPluginId, isRepoSlug, type CatalogPlugin } from '@ulanzideck/catalog';
 import { applyAppUpdate, checkAppUpdate } from './app-update.js';
 import { fetchCatalog, installPlugin, listInstalled, restartUlanzi, uninstallPlugin, type InstallOptions } from './install.js';
+import { fetchStoreCatalog } from './official-catalog.js';
 import { getSettings, updateSettings } from './settings.js';
 import { checkSubmission } from './submit.js';
 import type { AppUpdateInfo } from '../shared.js';
@@ -156,7 +157,7 @@ function notifyUpdates(updates: CatalogPlugin[]): void {
 async function checkForUpdates({ notify = false } = {}): Promise<string[]> {
   if (updateCheckInFlight) return updateCheckInFlight;
   updateCheckInFlight = (async () => {
-    const [catalog, installed] = await Promise.all([fetchCatalog(), listInstalled()]);
+    const [catalog, installed] = await Promise.all([fetchStoreCatalog(), listInstalled()]);
     const byId = new Map(installed.map((item) => [item.pluginId, item.version]));
     const updates = catalog.plugins.filter((plugin) => {
       const current = byId.get(plugin.id);
@@ -247,11 +248,14 @@ ipcMain.handle('plugin:pendingOpen', () => {
   return repo;
 });
 
-ipcMain.handle('catalog:get', () => fetchCatalog());
+ipcMain.handle('catalog:get', () => fetchStoreCatalog());
 ipcMain.handle('installed:list', () => listInstalled());
 ipcMain.handle('settings:get', () => getSettings());
 ipcMain.handle('settings:developerMode', (_event, enabled: unknown) =>
   updateSettings({ developerMode: enabled === true }),
+);
+ipcMain.handle('settings:officialCatalog', (_event, enabled: unknown) =>
+  updateSettings({ officialCatalog: enabled === true }),
 );
 
 ipcMain.handle('plugin:install', (event, plugin: CatalogPlugin, options?: InstallOptions) =>

@@ -32,6 +32,8 @@ export type CatalogPlugin = {
   stars?: number;
   downloadUrl: string;
   sourceUrl: string;
+  /** Present and set to 'official' for plugins pulled from the Ulanzi Studio Marketplace. Absent = community. */
+  source?: 'official';
 };
 
 /** Days a plugin stays marked as NEW after the latest catalog release date (`publishedAt`). */

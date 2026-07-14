@@ -5,6 +5,7 @@ import type { Settings } from '../shared.js';
 
 const DEFAULT_SETTINGS: Settings = {
   developerMode: false,
+  officialCatalog: false,
 };
 
 function settingsPath(): string {
@@ -16,6 +17,7 @@ export async function getSettings(): Promise<Settings> {
     const parsed = JSON.parse(await readFile(settingsPath(), 'utf8')) as Partial<Settings>;
     return {
       developerMode: parsed.developerMode === true,
+      officialCatalog: parsed.officialCatalog === true,
     };
   } catch {
     return DEFAULT_SETTINGS;

@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('api', {
   applyAppUpdate: () => ipcRenderer.invoke('appUpdate:apply'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setDeveloperMode: (enabled: boolean) => ipcRenderer.invoke('settings:developerMode', enabled),
+  setOfficialCatalog: (enabled: boolean) => ipcRenderer.invoke('settings:officialCatalog', enabled),
   checkSubmission: (repoInput: string) => ipcRenderer.invoke('submit:check', repoInput),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
   getPendingOpen: (): Promise<string | null> => ipcRenderer.invoke('plugin:pendingOpen'),
