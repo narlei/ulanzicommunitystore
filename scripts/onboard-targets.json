@@ -1,0 +1,42 @@
+{
+  "_comment": "Group B from new_plugins.md — repos that one `npx ulanzi-plugin-starter init` makes store-ready. `case` is informational (adapt=folder already at root, wrap=loose manifest, hoist=nested folder); the CLI auto-detects the real action. `device` feeds store.json deviceTypes. `pilot: true` = the end-to-end pilot pair.",
+  "targets": [
+    { "repo": "prostonik94/ulanzi-n8n-workflow-monitor", "device": "deck", "case": "adapt", "pilot": true },
+    { "repo": "jacobsalzberg/ulanzi-usd-brl-plugin", "device": "deck", "case": "adapt" },
+    { "repo": "jinny76/ulanzi-pacman", "device": "deck", "case": "adapt" },
+    { "repo": "jschwefel-CBB/ulanzi-d850-plugin", "device": "deck", "case": "adapt", "manual": true, "manualReason": "HAND-FIXED (PR #1 valid): upstream manifest had no Version; added Version 1.0.0 by hand. Keep manual — a script re-prepare would reset from upstream and drop the fix" },
+    { "repo": "jschwefel-CBB/ulanzi-obs-plugin", "device": "deck", "case": "adapt" },
+    { "repo": "eudesrodrigo/ulanzi-toolbox-plugins", "device": "deck", "case": "adapt" },
+    { "repo": "Walfrosch92/DevicePilot-by-Walfrosch92", "device": "both", "case": "adapt" },
+    { "repo": "dodopok/ulanzi-litugical-background", "device": "deck", "case": "adapt" },
+    { "repo": "oldbugo/ulanzi-monitor-toggle", "device": "deck", "case": "adapt" },
+    { "repo": "BaconSgobbi/Plugins-ulanzi", "device": "deck", "case": "adapt" },
+    { "repo": "doitian/ulanzi-plugins", "device": "deck", "case": "adapt" },
+    { "repo": "FelipeNobreC/ulanzi-soundpad-plugin", "device": "deck", "case": "adapt" },
+    { "repo": "nigelfenton/aethersdr-ulanzi-plugin", "device": "both", "case": "adapt", "note": "author only publishes pre-releases; PR is valid but a stable release is needed for the store" },
+
+    { "repo": "lsby/ulanzi-deck-smart-volume", "device": "deck", "case": "wrap", "pilot": true },
+    { "repo": "lsby/ulanzi-deck-web-video-controller", "device": "deck", "case": "wrap" },
+    { "repo": "iperelekhov/ulanzi-spruthub-plugin", "device": "deck", "case": "wrap" },
+    { "repo": "ukinora/ulanzi-crypto-ticker", "device": "deck", "case": "wrap" },
+    { "repo": "qianjin8595/UlanziStudio-OSCPlayer", "device": "deck", "case": "wrap" },
+    { "repo": "ragibs/ulanzideck-spotify-applescript", "device": "deck", "case": "wrap", "manual": true, "manualReason": "HAND-FIXED (PR #2 valid): removed the empty stub folder, wrapped the loose runtime, bumped to 2.0.1. Keep manual — a script re-prepare would reset from upstream and re-break it" },
+    { "repo": "rodrigocuri/ulanzi-teams-plugin", "device": "deck", "case": "wrap", "forceWrap": true, "note": "flat plugin (empty package.json, runtime under plugin/) — wrap verified safe" },
+    { "repo": "reis-business/ulanzideck-claude-usage", "device": "deck", "case": "wrap", "forceWrap": true, "note": "flat plugin (package.json only a runtime dep, CodePath plugin/app.js) — wrap verified safe" },
+    { "repo": "weemaba999/ha-hub-ulanzi", "device": "deck", "case": "wrap" },
+    { "repo": "Kacper-Pohl/ulanzi-dcs-interface", "device": "both", "case": "wrap" },
+    { "repo": "zza199910/Hardware-Monitor-Ulanzi-Deck-", "device": "deck", "case": "wrap" },
+    { "repo": "SergioSJS/com.ulanzi.ulanzideck.terminalrunner.ulanziPlugin", "device": "deck", "case": "wrap", "forceWrap": true, "note": "flat plugin (CodePath index.js at root, only a lint script) — wrap verified safe" },
+    { "repo": "shin-sforzando/com.ulanzi.ElgatoKeyLight.ulanziPlugin", "device": "deck", "case": "wrap", "manual": true, "manualReason": "dev-tooling at root (package.json) — auto-detector skips wrap, needs hand review" },
+    { "repo": "RobotHunt/com.ulanzi.whacamole.ulanziPlugin", "device": "deck", "case": "wrap" },
+    { "repo": "white-hf/com.ulanzi.httptool.ulanziPlugin", "device": "deck", "case": "wrap" },
+    { "repo": "Laoziz/com.ulanzi.timershow.ulanziPlugin", "device": "deck", "case": "wrap" },
+    { "repo": "Anla3421/com.ulanzi.stock.ulanziPlugin-fork", "device": "deck", "case": "wrap", "note": "fork of an official plugin — confirm license/attribution before opening a PR" },
+    { "repo": "sonyddr666/Deckdeckdeco", "device": "deck", "case": "wrap" },
+
+    { "repo": "brendanwelsh/ulanzi-window-control", "device": "dial", "case": "hoist" },
+    { "repo": "Eric124120/ulanzi-plugin", "device": "deck", "case": "hoist" },
+
+    { "repo": "JEAN-ALMEIDA-CZO/GitHub-Repo-Stats-Plugin", "device": "deck", "case": "adapt" }
+  ]
+}

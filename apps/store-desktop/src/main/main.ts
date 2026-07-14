@@ -14,6 +14,9 @@ const PROTOCOL = 'ulanzicommunitystore';
 let win: BrowserWindow | null = null;
 let updateCheckInFlight: Promise<string[]> | null = null;
 let lastUpdateIds: string[] = [];
+// Repo slug from a `plugin` deep link that arrived before the renderer was
+// ready to receive it. The renderer drains this on startup via `plugin:pendingOpen`.
+let pendingOpenRepo: string | null = null;
 
 function appIconPath(): string {
   return path.join(__dirname, '..', '..', 'build', 'icon.png');
@@ -78,9 +81,19 @@ if (process.defaultApp && process.argv.length >= 2) {
 async function handleDeepLink(url: string): Promise<void> {
   try {
     const parsed = new URL(url);
-    if (parsed.host !== 'install') return;
     const repo = parsed.searchParams.get('repo') || '';
     if (!isRepoSlug(repo)) return;
+
+    // ulanzicommunitystore://plugin?repo=owner/name — surface the plugin's detail
+    // in the app (shared from the website). No install; the user decides in-app.
+    if (parsed.host === 'plugin') {
+      focusWindow();
+      pendingOpenRepo = repo;
+      win?.webContents.send('plugin:open', repo);
+      return;
+    }
+
+    if (parsed.host !== 'install') return;
 
     focusWindow();
     const catalog = await fetchCatalog();
@@ -227,6 +240,12 @@ if (!gotLock) {
     if (process.platform !== 'darwin') app.quit();
   });
 }
+
+ipcMain.handle('plugin:pendingOpen', () => {
+  const repo = pendingOpenRepo;
+  pendingOpenRepo = null;
+  return repo;
+});
 
 ipcMain.handle('catalog:get', () => fetchCatalog());
 ipcMain.handle('installed:list', () => listInstalled());

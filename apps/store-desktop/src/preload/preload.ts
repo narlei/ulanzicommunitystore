@@ -16,6 +16,12 @@ contextBridge.exposeInMainWorld('api', {
   setDeveloperMode: (enabled: boolean) => ipcRenderer.invoke('settings:developerMode', enabled),
   checkSubmission: (repoInput: string) => ipcRenderer.invoke('submit:check', repoInput),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
+  getPendingOpen: (): Promise<string | null> => ipcRenderer.invoke('plugin:pendingOpen'),
+  onOpenPlugin: (callback: (repo: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, repo: string) => callback(repo);
+    ipcRenderer.on('plugin:open', listener);
+    return () => ipcRenderer.off('plugin:open', listener);
+  },
   onProgress: (callback: (progress: InstallProgress) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, progress: InstallProgress) => callback(progress);
     ipcRenderer.on('plugin:progress', listener);

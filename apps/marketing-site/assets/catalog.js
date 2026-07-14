@@ -241,6 +241,40 @@
     return null;
   }
 
+  var PLUGIN_QUERY_KEY = 'plugin';
+  var APP_PROTOCOL = 'ulanzicommunitystore';
+
+  function findPluginByRepo(repo) {
+    if (!repo) return null;
+    var target = String(repo).toLowerCase();
+    for (var i = 0; i < state.plugins.length; i++) {
+      if (String(state.plugins[i].repo || '').toLowerCase() === target) return state.plugins[i];
+    }
+    return null;
+  }
+
+  function catalogBaseUrl() {
+    return location.origin + location.pathname;
+  }
+
+  // Shareable web URL that opens straight to this plugin's detail (?plugin=owner/name).
+  function pluginShareUrl(plugin) {
+    return catalogBaseUrl() + '?' + PLUGIN_QUERY_KEY + '=' + plugin.repo;
+  }
+
+  // Custom-scheme deep link that surfaces this plugin inside the desktop app.
+  function pluginAppUrl(plugin) {
+    return APP_PROTOCOL + '://plugin?repo=' + encodeURIComponent(plugin.repo);
+  }
+
+  function requestedPluginRepo() {
+    try {
+      return new URLSearchParams(location.search).get(PLUGIN_QUERY_KEY) || '';
+    } catch (err) {
+      return '';
+    }
+  }
+
   function setStatus(kind, message) {
     var el = document.getElementById('catalogStatus');
     var grid = document.getElementById('catalogGrid');
@@ -523,7 +557,8 @@
     );
   }
 
-  function openDetail(plugin) {
+  function openDetail(plugin, options) {
+    options = options || {};
     var overlay = document.getElementById('pluginDetailModal');
     var body = document.getElementById('pluginDetailBody');
     if (!overlay || !body) return;
@@ -572,6 +607,20 @@
       '<button type="button" class="button button-sm js-download-trigger">' +
       escapeHtml(t('catalog_get_app')) +
       '</button>' +
+      '<button type="button" class="button secondary button-sm catalog-btn-share" data-share-url="' +
+      escapeHtml(pluginShareUrl(plugin)) +
+      '">' +
+      '<svg class="catalog-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-3.9M8.6 13.4l6.8 3.9"/></svg>' +
+      '<span class="catalog-share-label">' +
+      escapeHtml(t('catalog_share')) +
+      '</span>' +
+      '</button>' +
+      '<a class="button secondary button-sm catalog-btn-openapp" href="' +
+      escapeHtml(pluginAppUrl(plugin)) +
+      '">' +
+      '<svg class="catalog-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3l-9 9"/><path d="M15 3h6v6"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>' +
+      escapeHtml(t('catalog_open_app')) +
+      '</a>' +
       (plugin.sourceUrl
         ? '<a class="button secondary button-sm catalog-btn-source" href="' +
           escapeHtml(plugin.sourceUrl) +
@@ -639,17 +688,43 @@
     document.body.style.overflow = 'hidden';
     var closeBtn = document.getElementById('pluginDetailClose');
     if (closeBtn) closeBtn.focus();
+
+    // Reflect the open plugin in the URL so it can be shared / deep-linked.
+    // Skipped when opening from an existing history entry (initial load, Back/Forward).
+    if (options.updateHistory !== false) {
+      try {
+        history.pushState({ plugin: plugin.repo }, '', pluginShareUrl(plugin));
+      } catch (err) {
+        // History API blocked (e.g. file://) — sharing still works via the button.
+      }
+    }
   }
 
-  function closeDetail() {
+  // Visually dismiss the detail sheet without touching browser history.
+  function hideDetail() {
     var overlay = document.getElementById('pluginDetailModal');
-    if (!overlay) return;
+    if (!overlay || overlay.hidden) return;
     overlay.hidden = true;
     state.selectedId = null;
     if (document.getElementById('downloadModal') && !document.getElementById('downloadModal').hidden) {
       return;
     }
     document.body.style.overflow = '';
+  }
+
+  function closeDetail() {
+    // If we pushed a history entry when opening, pop it so Back/Forward stay in sync;
+    // popstate then hides the sheet. Otherwise (deep-linked entry) just clear the URL.
+    if (history.state && history.state.plugin) {
+      history.back();
+    } else {
+      hideDetail();
+      try {
+        history.replaceState({}, '', catalogBaseUrl());
+      } catch (err) {
+        // Ignore when the History API is unavailable.
+      }
+    }
   }
 
   function bindEvents() {
@@ -748,6 +823,38 @@
       });
     }
 
+    // Copy the shareable plugin link (delegated — the button is re-rendered per open).
+    var detailBody = document.getElementById('pluginDetailBody');
+    if (detailBody) {
+      detailBody.addEventListener('click', function (event) {
+        var shareBtn = event.target.closest('[data-share-url]');
+        if (!shareBtn || !detailBody.contains(shareBtn)) return;
+        var url = shareBtn.getAttribute('data-share-url');
+        if (!url) return;
+        var label = shareBtn.querySelector('.catalog-share-label');
+        window.__marketingCopyText(url).then(function (ok) {
+          if (!label) return;
+          label.textContent = ok ? t('catalog_share_copied') : t('catalog_share');
+          setTimeout(function () {
+            label.textContent = t('catalog_share');
+          }, 1800);
+        });
+      });
+    }
+
+    // Keep the sheet in sync with Back/Forward and deep links pasted into the address bar.
+    window.addEventListener('popstate', function () {
+      var repo = requestedPluginRepo();
+      if (repo) {
+        var plugin = findPluginByRepo(repo);
+        if (plugin) {
+          openDetail(plugin, { updateHistory: false });
+          return;
+        }
+      }
+      hideDetail();
+    });
+
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape' && detailOverlay && !detailOverlay.hidden) {
         var downloadModal = document.getElementById('downloadModal');
@@ -765,9 +872,17 @@
       renderGrid();
       if (state.selectedId) {
         var selected = findPlugin(state.selectedId);
-        if (selected) openDetail(selected);
+        if (selected) openDetail(selected, { updateHistory: false });
       }
     });
+  }
+
+  // Open the plugin named in the URL (?plugin=owner/name) once the catalog is loaded.
+  function applyDeepLink() {
+    var repo = requestedPluginRepo();
+    if (!repo) return;
+    var plugin = findPluginByRepo(repo);
+    if (plugin) openDetail(plugin, { updateHistory: false });
   }
 
   function loadCatalog() {
@@ -780,6 +895,7 @@
       .then(function (catalog) {
         state.plugins = (catalog && catalog.plugins) || [];
         renderGrid();
+        applyDeepLink();
       })
       .catch(function () {
         setStatus('error', t('catalog_error'));

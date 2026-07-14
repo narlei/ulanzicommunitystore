@@ -18,6 +18,8 @@ declare global {
       setDeveloperMode: (enabled: boolean) => Promise<Settings>;
       checkSubmission: (repoInput: string) => Promise<SubmitCheckResult>;
       openExternal: (url: string) => Promise<void>;
+      getPendingOpen: () => Promise<string | null>;
+      onOpenPlugin: (callback: (repo: string) => void) => () => void;
       onProgress: (callback: (progress: InstallProgress) => void) => () => void;
       onInstalledRefresh: (callback: () => void) => () => void;
       onUpdatesChanged: (callback: (pluginIds: string[]) => void) => () => void;

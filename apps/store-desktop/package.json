@@ -1,7 +1,7 @@
 {
   "name": "@ulanzideck/store-desktop",
   "productName": "Ulanzi Community Store",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "The open-source community store for Ulanzi Deck and Dial plugins",
   "private": true,
   "type": "module",

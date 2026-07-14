@@ -203,9 +203,9 @@ button:disabled {
     @apply text-ink2;
   }
 
-  /* Active pill: solid accent — much clearer than a raised surface. */
+  /* Active pill: solid accent — much clearer than a raised surface. Font weight stays fixed vs. .seg button (same font-medium) so activating a filter doesn't resize the pill and reflow the bar. */
   .seg .seg-active {
-    @apply bg-accent font-semibold text-accent-ink shadow-[0_1px_2px_rgba(0,0,0,0.18)];
+    @apply bg-accent font-medium text-accent-ink shadow-[0_1px_2px_rgba(0,0,0,0.18)];
   }
 
   .seg .seg-active:hover {
@@ -225,7 +225,7 @@ button:disabled {
   }
 
   .filter-select select {
-    @apply max-w-[200px] appearance-none rounded-[9px] border border-transparent bg-black/[0.08] py-1.5 pl-3 pr-8 text-[12px] font-medium text-ink3 outline-none transition-colors dark:bg-white/[0.1];
+    @apply max-w-[200px] appearance-none rounded-[9px] border border-transparent bg-black/[0.08] py-1 pl-3 pr-8 text-[12px] font-medium text-ink3 outline-none transition-colors dark:bg-white/[0.1];
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 10px center;
@@ -236,8 +236,9 @@ button:disabled {
     @apply text-ink2;
   }
 
+  /* Font weight stays fixed vs. the base select (same font-medium) so activating the filter doesn't resize it and push the search bar down. */
   .filter-select select.is-active {
-    @apply border-accent/40 bg-accent font-semibold text-accent-ink;
+    @apply border-accent/40 bg-accent font-medium text-accent-ink;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   }
 

@@ -10,6 +10,12 @@ type Sort = 'recent' | 'popular';
 type PlatformFilter = '' | 'mac' | 'windows';
 
 const REPO_URL = 'https://github.com/narlei/ulanzicommunitystore';
+const SITE_URL = 'https://ulanzicommunitystore.narlei.com';
+
+/** Public website deep link that opens this plugin's detail on the catalog page. */
+function pluginShareUrl(plugin: CatalogPlugin): string {
+  return `${SITE_URL}/plugins/?plugin=${plugin.repo}`;
+}
 const SDK_URL = 'https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK';
 const STARTER_DOCS_URL = `${REPO_URL}/tree/main/plugin-starter`;
 const STARTER_INIT_CMD = 'npx ulanzi-plugin-starter@latest init';
@@ -174,6 +180,27 @@ function IconWarning({ className = ICON_SM }: { className?: string }) {
   );
 }
 
+function IconDots({ className = ICON_SM }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <circle cx="5" cy="12" r="1.9" />
+      <circle cx="12" cy="12" r="1.9" />
+      <circle cx="19" cy="12" r="1.9" />
+    </svg>
+  );
+}
+
+function IconShare({ className = ICON_SM }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="M8.6 10.6l6.8-3.9M8.6 13.4l6.8 3.9" />
+    </svg>
+  );
+}
+
 const NAV_ICONS: Record<View, ReactNode> = {
   store: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0">
@@ -232,6 +259,9 @@ export function App() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [confirmUninstall, setConfirmUninstall] = useState<CatalogPlugin | null>(null);
   const [updatingAll, setUpdatingAll] = useState(false);
+  // Repo slug requested by a `plugin` deep link; resolved to a detail sheet once
+  // the catalog is loaded (the link can arrive before the catalog is ready).
+  const [openRepoRequest, setOpenRepoRequest] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const toastId = useRef(0);
   // Install state frozen at first load, used only by the recent-sort discovery boost.
@@ -277,6 +307,12 @@ export function App() {
     void window.api.checkAppUpdate().then(setAppUpdate).catch(() => {
       // Keep UI quiet if the releases API is unreachable.
     });
+    // Drain a `plugin` deep link that fired before the renderer subscribed (cold start).
+    void window.api.getPendingOpen().then((repo) => {
+      if (repo) setOpenRepoRequest(repo);
+    }).catch(() => {
+      // No pending link — ignore.
+    });
     const offProgress = window.api.onProgress((progress: InstallProgress) => {
       setBusy((current) => ({ ...current, [progress.id]: { pct: progress.pct, msg: progress.msg } }));
     });
@@ -289,13 +325,28 @@ export function App() {
     const offAppUpdate = window.api.onAppUpdateChanged((info) => {
       setAppUpdate(info);
     });
+    const offOpenPlugin = window.api.onOpenPlugin((repo) => {
+      setOpenRepoRequest(repo);
+    });
     return () => {
       offProgress();
       offRefresh();
       offUpdates();
       offAppUpdate();
+      offOpenPlugin();
     };
   }, [load]);
+
+  // Resolve a `plugin` deep link to its detail sheet once the catalog is available.
+  useEffect(() => {
+    if (!openRepoRequest || !plugins.length) return;
+    const plugin = plugins.find((item) => item.repo.toLowerCase() === openRepoRequest.toLowerCase());
+    setOpenRepoRequest(null);
+    if (plugin) {
+      setView('store');
+      setSelected(plugin);
+    }
+  }, [openRepoRequest, plugins]);
 
   // When true, focus the catalog search once it is mounted (e.g. ⌘K from Settings).
   const pendingSearchFocus = useRef(false);
@@ -849,12 +900,20 @@ export function App() {
       {selected && (
         <PluginDetail
           plugin={selected}
+          plugins={plugins}
           lang={lang}
           installedVersion={installed[selected.id]}
           busy={busy[selected.id]}
           onClose={() => setSelected(null)}
           onInstall={() => void install(selected)}
           onUninstall={() => setConfirmUninstall(selected)}
+          onSelectPlugin={setSelected}
+          onShare={() => {
+            void navigator.clipboard
+              .writeText(pluginShareUrl(selected))
+              .then(() => pushToast('success', t(lang, 'shareCopied')))
+              .catch(() => void window.api.openExternal(pluginShareUrl(selected)));
+          }}
         />
       )}
 
@@ -1120,27 +1179,158 @@ function PluginCard({
   );
 }
 
+function DetailOverflowMenu({
+  lang,
+  plugin,
+  installedVersion,
+  busy,
+  onUninstall,
+  onShare,
+}: {
+  lang: Lang;
+  plugin: CatalogPlugin;
+  installedVersion?: string | null;
+  busy?: { pct: number; msg: string };
+  onUninstall: () => void;
+  onShare: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+    }
+    // Capture so Escape closes the menu before the detail sheet underneath.
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown, true);
+    };
+  }, [open]);
+
+  const itemClass =
+    'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition-colors';
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        className="grid h-[30px] w-[30px] place-items-center rounded-full border border-stroke bg-surface text-ink2 transition-colors hover:bg-raised hover:text-ink"
+        aria-label={t(lang, 'moreActions')}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <IconDots className="h-4 w-4" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-[calc(100%+6px)] z-30 min-w-[210px] rounded-xl border border-stroke bg-bg p-1.5 shadow-sheet"
+        >
+          <button
+            role="menuitem"
+            className={`${itemClass} text-ink hover:bg-raised`}
+            onClick={() => {
+              setOpen(false);
+              onShare();
+            }}
+          >
+            <IconShare />
+            {t(lang, 'share')}
+          </button>
+          {plugin.sourceUrl && (
+            <>
+              <div className="mx-2 my-1 border-t border-stroke/70" />
+              <button
+                role="menuitem"
+                className={`${itemClass} text-ink hover:bg-raised`}
+                onClick={() => {
+                  setOpen(false);
+                  void window.api.openExternal(plugin.sourceUrl);
+                }}
+              >
+                <IconGithub />
+                {t(lang, 'source')}
+              </button>
+              <button
+                role="menuitem"
+                className={`${itemClass} text-ink hover:bg-raised`}
+                onClick={() => {
+                  setOpen(false);
+                  void window.api.openExternal(`${plugin.sourceUrl}/issues/new`);
+                }}
+              >
+                <IconWarning />
+                {t(lang, 'reportProblem')}
+              </button>
+            </>
+          )}
+          {installedVersion && (
+            <>
+              {plugin.sourceUrl && <div className="mx-2 my-1 border-t border-stroke/70" />}
+              <button
+                role="menuitem"
+                className={`${itemClass} text-red-500 hover:bg-red-500/10`}
+                disabled={Boolean(busy)}
+                onClick={() => {
+                  setOpen(false);
+                  onUninstall();
+                }}
+              >
+                <IconTrash />
+                {t(lang, 'uninstall')}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PluginDetail({
   plugin,
+  plugins,
   lang,
   installedVersion,
   busy,
   onClose,
   onInstall,
   onUninstall,
+  onSelectPlugin,
+  onShare,
 }: {
   plugin: CatalogPlugin;
+  plugins: CatalogPlugin[];
   lang: Lang;
   installedVersion?: string | null;
   busy?: { pct: number; msg: string };
   onClose: () => void;
   onInstall: () => void;
   onUninstall: () => void;
+  onSelectPlugin: (plugin: CatalogPlugin) => void;
+  onShare: () => void;
 }) {
   const update = Boolean(installedVersion && compareVersions(plugin.version, installedVersion) > 0);
   const [lightbox, setLightbox] = useState<number | null>(null);
   const trapRef = useFocusTrap<HTMLElement>();
   const screenshots = plugin.screenshots || [];
+  const moreFromAuthor = useMemo(
+    () =>
+      plugin.author
+        ? plugins.filter((other) => other.id !== plugin.id && other.author === plugin.author)
+        : [],
+    [plugins, plugin.id, plugin.author],
+  );
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -1179,47 +1369,27 @@ function PluginDetail({
           )}
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-[22px] font-bold tracking-tight">{pluginText(plugin, 'name', lang)}</h2>
-            <p className="mt-0.5 text-ink2">
-              {plugin.author} · v{plugin.version}
-            </p>
+            <p className="mt-0.5 text-ink2">{plugin.author}</p>
             <div className="mt-2.5 flex flex-wrap items-center gap-3">
               <InstallButton lang={lang} installedVersion={installedVersion} update={update} busy={busy} onInstall={onInstall} />
-              {installedVersion && (
+              {plugin.sourceUrl && (
                 <button
-                  className="btn-pill-ghost inline-flex items-center gap-1.5 !text-red-500 hover:!bg-red-500/10"
-                  disabled={Boolean(busy)}
-                  onClick={onUninstall}
+                  className="btn-pill-ghost inline-flex items-center gap-1.5 !text-amber-500 hover:!bg-amber-500/10"
+                  onClick={() => void window.api.openExternal(plugin.sourceUrl)}
                 >
-                  <IconTrash />
-                  {t(lang, 'uninstall')}
+                  <span aria-hidden="true">⭐</span>
+                  {t(lang, 'starOnGithub')}
+                  {typeof plugin.stars === 'number' ? ` · ${formatDownloads(plugin.stars)}` : ''}
                 </button>
               )}
-              {plugin.sourceUrl && (
-                <>
-                  <button
-                    className="btn-pill-ghost inline-flex items-center gap-1.5 !text-ink"
-                    onClick={() => void window.api.openExternal(plugin.sourceUrl)}
-                  >
-                    <IconGithub />
-                    {t(lang, 'source')}
-                  </button>
-                  <button
-                    className="btn-pill-ghost inline-flex items-center gap-1.5 !text-amber-500 hover:!bg-amber-500/10"
-                    onClick={() => void window.api.openExternal(plugin.sourceUrl)}
-                  >
-                    <span aria-hidden="true">⭐</span>
-                    {t(lang, 'starOnGithub')}
-                    {typeof plugin.stars === 'number' ? ` · ${formatDownloads(plugin.stars)}` : ''}
-                  </button>
-                  <button
-                    className="btn-pill-ghost inline-flex items-center gap-1.5 !text-red-500 hover:!bg-red-500/10"
-                    onClick={() => void window.api.openExternal(`${plugin.sourceUrl}/issues/new`)}
-                  >
-                    <IconWarning />
-                    {t(lang, 'reportProblem')}
-                  </button>
-                </>
-              )}
+              <DetailOverflowMenu
+                lang={lang}
+                plugin={plugin}
+                installedVersion={installedVersion}
+                busy={busy}
+                onUninstall={onUninstall}
+                onShare={onShare}
+              />
               {busy && <InstallProgressBar lang={lang} busy={busy} className="min-w-[12rem] max-w-xs flex-1" />}
             </div>
           </div>
@@ -1235,6 +1405,19 @@ function PluginDetail({
         </header>
 
         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-6">
+          <div className="mb-6 flex divide-x divide-stroke/70 rounded-xl bg-surface py-3 shadow-card">
+            <DetailStat label={t(lang, 'version')} value={plugin.version} />
+            {typeof plugin.downloads === 'number' && (
+              <DetailStat label={t(lang, 'downloads')} value={formatDownloads(plugin.downloads)} />
+            )}
+            {typeof plugin.stars === 'number' && (
+              <DetailStat label={t(lang, 'stars')} value={`★ ${formatDownloads(plugin.stars)}`} />
+            )}
+            {(plugin.deviceTypes || []).length > 0 && (
+              <DetailStat label={t(lang, 'devices')} value={(plugin.deviceTypes || []).map(deviceLabel).join(', ')} />
+            )}
+          </div>
+
           {screenshots.length > 0 && (
             <div className="mb-6 flex gap-3 overflow-x-auto pb-1">
               {screenshots.map((shot, index) => (
@@ -1292,6 +1475,32 @@ function PluginDetail({
               )}
             </div>
           </section>
+
+          {moreFromAuthor.length > 0 && (
+            <section className="mt-7 min-w-0">
+              <h3 className="mb-3 text-[16px] font-semibold">{t(lang, 'moreFromAuthor', plugin.author)}</h3>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {moreFromAuthor.map((other) => (
+                  <button
+                    key={other.id}
+                    type="button"
+                    className="card-interactive flex items-center gap-3 rounded-xl bg-surface p-3 text-left shadow-card outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    onClick={() => onSelectPlugin(other)}
+                  >
+                    {other.icon ? (
+                      <img src={other.icon} alt="" className="h-10 w-10 shrink-0 rounded-[10px] object-cover shadow-card" />
+                    ) : (
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-accent/10 text-accent">◆</div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13.5px] font-semibold">{pluginText(other, 'name', lang)}</p>
+                      <p className="truncate text-[12px] text-ink3">{pluginText(other, 'description', lang)}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       </article>
 
@@ -1981,6 +2190,15 @@ function Meta({ plugin, showUpdate, lang }: { plugin: CatalogPlugin; showUpdate?
           {categoryLabel(item)}
         </span>
       ))}
+    </div>
+  );
+}
+
+function DetailStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 flex-1 px-3 text-center">
+      <div className="truncate text-[11px] font-medium uppercase tracking-wide text-ink3">{label}</div>
+      <div className="mt-0.5 truncate text-[15px] font-semibold text-ink">{value}</div>
     </div>
   );
 }
