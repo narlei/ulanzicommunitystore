@@ -1765,9 +1765,21 @@ function SettingsView({
             </div>
             <button
               className="btn-ghost shrink-0"
-              onClick={() => void window.api.openExternal(`${REPO_URL}/issues/new`)}
+              onClick={() => void window.api.openExternal(`${REPO_URL}/issues/new?template=bug_report.yml`)}
             >
               {t(lang, 'reportProblemButton')}
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-6 py-4">
+            <div>
+              <h3 className="font-semibold">{t(lang, 'requestPlugin')}</h3>
+              <p className="mt-0.5 text-[12px] text-ink2">{t(lang, 'requestPluginHelp')}</p>
+            </div>
+            <button
+              className="btn-ghost shrink-0"
+              onClick={() => void window.api.openExternal(`${REPO_URL}/issues/new?template=plugin_request.yml`)}
+            >
+              {t(lang, 'requestPluginButton')}
             </button>
           </div>
         </SettingsSection>

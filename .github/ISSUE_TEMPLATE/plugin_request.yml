@@ -1,0 +1,56 @@
+name: 🧩 Plugin idea
+description: Ask for a plugin you'd like to see built for the Ulanzi Deck or Dial
+title: "[Plugin idea]: "
+labels: ["plugin-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is for **requesting** a plugin that doesn't exist yet — not for submitting one you already built.
+
+        Already built a plugin? Skip this form: run `npx ulanzi-plugin-starter@latest init`, ship a release, and paste your repo URL in the app's or website's "Send plugin" tab. See [Publish Your Plugin](https://github.com/narlei/ulanzicommunitystore#-publish-your-plugin).
+
+  - type: input
+    id: title
+    attributes:
+      label: Plugin idea
+      description: One line describing what it would do.
+      placeholder: e.g. Control OBS scenes from the Deck
+    validations:
+      required: true
+
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options:
+        - Deck
+        - Dial
+        - Both
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What should it do?
+      description: Describe the actions/behavior you'd want the plugin to have.
+    validations:
+      required: true
+
+  - type: textarea
+    id: usecase
+    attributes:
+      label: Why would this be useful?
+      description: What's the use case? Who else might want this?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched the store and existing issues, this plugin doesn't exist yet
+          required: true

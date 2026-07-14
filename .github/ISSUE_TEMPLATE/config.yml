@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📦 Publish your own plugin
+    url: https://ulanzicommunitystore.narlei.com
+    about: Already built a plugin? Submit it through the "Send plugin" flow in the app or website — no issue needed.
+  - name: 🛠️ Contributing guide
+    url: https://github.com/narlei/ulanzicommunitystore/blob/main/CONTRIBUTING.md
+    about: Project structure, dev setup, and how releases work.
