@@ -8,8 +8,7 @@ on:
       - 'packages/catalog/**'
       - '.github/workflows/publish-catalog.yml'
   schedule:
-    # 07:00 America/Sao_Paulo (GitHub Actions cron uses UTC).
-    - cron: '0 10 * * *'
+    - cron: '0 6 * * *'
   workflow_dispatch: {}
   repository_dispatch:
     types: [rebuild-catalog]
