@@ -14,19 +14,21 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="Ulanzi Community Store">
     <meta property="og:description" content="The open-source community store for Ulanzi Deck &amp; Dial plugins — publish in minutes, install in one click, update automatically. macOS and Windows.">
-    <meta property="og:image" content="https://ulanzicommunitystore.narlei.com/assets/logo-512.png">
-    <meta name="twitter:card" content="summary">
+    <meta property="og:image" content="https://ulanzicommunitystore.narlei.com/assets/og-cover.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Ulanzi Community Store">
     <meta name="twitter:description" content="The open-source community store for Ulanzi Deck &amp; Dial plugins — publish in minutes, install in one click, update automatically. macOS and Windows.">
-    <meta name="twitter:image" content="https://ulanzicommunitystore.narlei.com/assets/logo-512.png">
+    <meta name="twitter:image" content="https://ulanzicommunitystore.narlei.com/assets/og-cover.jpg">
 
     <link rel="alternate" hreflang="en" href="https://ulanzicommunitystore.narlei.com/">
     <link rel="alternate" hreflang="pt-BR" href="https://ulanzicommunitystore.narlei.com/">
     <link rel="alternate" hreflang="zh-CN" href="https://ulanzicommunitystore.narlei.com/">
     <link rel="alternate" hreflang="x-default" href="https://ulanzicommunitystore.narlei.com/">
 
-    <link rel="stylesheet" href="/assets/style.css?v=20260713b">
-    <script src="/assets/i18n.js?v=20260713b"></script>
+    <link rel="stylesheet" href="/assets/style.css?v=20260713c">
+    <script src="/assets/i18n.js?v=20260713c"></script>
   </head>
   <body id="top">
     <div class="bg" aria-hidden="true">
@@ -98,43 +100,177 @@
           </p>
         </div>
 
-        <!-- App window mockup -->
+        <!-- App window mockup — mirrors the real Store screen -->
         <div class="hero-visual" aria-hidden="true">
           <div class="window">
             <div class="window-bar">
               <span class="wdot wdot-r"></span>
               <span class="wdot wdot-y"></span>
               <span class="wdot wdot-g"></span>
-              <span class="window-title">Ulanzi Community Store</span>
-              <span class="window-search">
-                <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M11.7 10.3a6 6 0 1 0-1.4 1.4l3 3a1 1 0 0 0 1.4-1.4l-3-3ZM7 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/></svg>
-                <span data-i18n="window_search">Search plugins…</span>
-              </span>
+              <span class="window-title">Community Store</span>
             </div>
-            <div class="window-body">
-              <div class="window-row">
-                <img class="wp-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_ticktick/main/com.narlei.ticktickfocus.ulanziPlugin/resources/icon.png" alt="" loading="lazy">
-                <div class="wp-meta">
-                  <strong>TickTick Focus</strong>
-                  <span data-i18n="window_ticktick_desc">Pomodoro control on a smart button · v1.0.1</span>
-                </div>
-                <span class="wp-btn wp-installed" data-i18n="window_installed">✓ Installed</span>
+            <div class="window-app">
+              <div class="window-side">
+                <span class="ws-eyebrow">Ulanzi Community Store</span>
+                <span class="ws-item is-active">
+                  <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 6 3.7 3h8.6l1.1 3H2.6ZM3.2 6v7h9.6V6M6.4 13V9.6h3.2V13"/></svg>
+                  <span data-i18n="window_nav_store">Store</span>
+                  <b class="ws-count">11</b>
+                </span>
+                <span class="ws-item">
+                  <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v7M5 6.5 8 9.5l3-3M3 13h10"/></svg>
+                  <span data-i18n="window_nav_installed">Installed</span>
+                  <b class="ws-count ws-count-dim">4</b>
+                </span>
+                <span class="ws-item">
+                  <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.4 8A5.4 5.4 0 1 1 11 3.5M13.4 2.6v3h-3"/></svg>
+                  <span data-i18n="window_nav_updates">Updates</span>
+                </span>
+                <span class="ws-item">
+                  <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V4M4.5 7.5 8 4l3.5 3.5"/></svg>
+                  <span data-i18n="window_nav_send">Send plugin</span>
+                </span>
+                <span class="ws-item">
+                  <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.1"/><path d="M8 2v1.8M8 12.2V14M2 8h1.8M12.2 8H14M3.8 3.8l1.3 1.3M10.9 10.9l1.3 1.3M12.2 3.8l-1.3 1.3M5.1 10.9l-1.3 1.3"/></svg>
+                  <span data-i18n="window_nav_settings">Settings</span>
+                </span>
+                <span class="ws-star">
+                  <span class="ws-star-icon">★</span>
+                  <span data-i18n="window_star">Star us on GitHub</span>
+                </span>
               </div>
-              <div class="window-row">
-                <img class="wp-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck-ai-cost/main/com.narlei.aicost.ulanziPlugin/resources/icon.png" alt="" loading="lazy">
-                <div class="wp-meta">
-                  <strong>AI Cost Monitor</strong>
-                  <span data-i18n="window_aicost_desc">Track AI coding spend locally · v1.0.3</span>
+              <div class="window-main">
+                <div class="window-toolbar">
+                  <span class="wt-pill" data-i18n="catalog_sort_recent">Recent</span>
+                  <span class="wt-pill is-active" data-i18n="catalog_sort_popular">Popular</span>
+                  <span class="wt-seg">
+                    <span class="is-active" data-i18n="catalog_all">All</span>
+                    <span>Deck</span>
+                    <span>Dial</span>
+                  </span>
+                  <span class="window-search">
+                    <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M11.7 10.3a6 6 0 1 0-1.4 1.4l3 3a1 1 0 0 0 1.4-1.4l-3-3ZM7 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/></svg>
+                    <span data-i18n="window_search">Search plugins…</span>
+                  </span>
                 </div>
-                <span class="wp-btn wp-installing"><span class="wp-progress"></span><span class="wp-btn-label" data-i18n="window_installing">Installing…</span></span>
-              </div>
-              <div class="window-row">
-                <img class="wp-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_claude/main/com.claude.usage.ulanziPlugin/resources/icon.png" alt="" loading="lazy">
-                <div class="wp-meta">
-                  <strong>Claude Code Usage</strong>
-                  <span data-i18n="window_claude_desc">Live subscription limits · v1.0.6</span>
+                <div class="window-grid">
+                  <div class="wp-card">
+                    <div class="wp-cover">
+                      <svg viewBox="0 0 200 100" preserveAspectRatio="xMidYMid slice">
+                        <defs>
+                          <linearGradient id="cvTick" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#0b2430"/><stop offset="1" stop-color="#07141c"/>
+                          </linearGradient>
+                        </defs>
+                        <rect width="200" height="100" fill="url(#cvTick)"/>
+                        <circle cx="100" cy="50" r="30" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="5"/>
+                        <circle class="cv-ring" cx="100" cy="50" r="30" fill="none" stroke="#41e6c3" stroke-width="5" stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="47" transform="rotate(-90 100 50)"/>
+                        <text x="100" y="55" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="15" font-weight="800" fill="#eafffa">25:00</text>
+                      </svg>
+                      <span class="wp-flag" data-i18n="window_badge_updated">Updated</span>
+                      <span class="wp-stat">★ 2 · ↓ 7</span>
+                    </div>
+                    <div class="wp-card-row">
+                      <img class="wpc-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck_ticktick/main/com.narlei.ticktickfocus.ulanziPlugin/resources/icon.png" alt="" loading="lazy">
+                      <div class="wpc-meta">
+                        <strong>TickTick Focus</strong>
+                        <span>Narlei Moreira</span>
+                      </div>
+                      <span class="wp-btn wp-installed" data-i18n="window_installed">✓ Installed</span>
+                    </div>
+                    <div class="wp-chips">
+                      <span class="wp-chip wp-chip-hl">Deck</span>
+                      <span class="wp-chip">macOS</span>
+                    </div>
+                  </div>
+                  <div class="wp-card">
+                    <div class="wp-cover">
+                      <svg viewBox="0 0 200 100" preserveAspectRatio="xMidYMid slice">
+                        <rect width="200" height="100" fill="#081409"/>
+                        <path class="cv-ecg-glow" d="M0 62h28l12-4 12 4h24l12-38 12 60 12-34 16 8h24l12-4 12 4h24" fill="none" stroke="#22e584" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="0.18"/>
+                        <path class="cv-ecg" d="M0 62h28l12-4 12 4h24l12-38 12 60 12-34 16 8h24l12-4 12 4h24" fill="none" stroke="#22e584" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      <span class="wp-stat">★ 3 · ↓ 16</span>
+                    </div>
+                    <div class="wp-card-row">
+                      <img class="wpc-icon" src="https://raw.githubusercontent.com/JEAN-ALMEIDA-CZO/Ulanzi-Uptime-Monitor-Plugin/ipad/com.uptime.monitor.ulanziPlugin/assets/icons/brand.svg" alt="" loading="lazy">
+                      <div class="wpc-meta">
+                        <strong>Uptime Monitor</strong>
+                        <span>Jean Almeida</span>
+                      </div>
+                      <span class="wp-btn wp-installing"><span class="wp-progress"></span><span class="wp-btn-label">64%</span></span>
+                    </div>
+                    <div class="wp-chips">
+                      <span class="wp-chip wp-chip-hl">Deck</span>
+                      <span class="wp-chip">Windows</span>
+                    </div>
+                  </div>
+                  <div class="wp-card">
+                    <div class="wp-cover">
+                      <svg viewBox="0 0 200 100" preserveAspectRatio="xMidYMid slice">
+                        <defs>
+                          <linearGradient id="cvSys" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stop-color="rgba(63,169,255,0.35)"/><stop offset="1" stop-color="rgba(63,169,255,0)"/>
+                          </linearGradient>
+                        </defs>
+                        <rect width="200" height="100" fill="#060d18"/>
+                        <g stroke="rgba(255,255,255,0.06)" stroke-width="1">
+                          <path d="M0 25h200M0 50h200M0 75h200M40 0v100M80 0v100M120 0v100M160 0v100"/>
+                        </g>
+                        <path d="M0 80 25 72 45 76 65 60 85 66 105 48 125 54 150 34 170 42 200 22V100H0Z" fill="url(#cvSys)"/>
+                        <path class="cv-line" d="M0 80 25 72 45 76 65 60 85 66 105 48 125 54 150 34 170 42 200 22" fill="none" stroke="#3fa9ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      <span class="wp-flag wp-flag-new" data-i18n="window_badge_new">New</span>
+                      <span class="wp-stat">↓ 13</span>
+                    </div>
+                    <div class="wp-card-row">
+                      <img class="wpc-icon" src="https://raw.githubusercontent.com/miroslavb/ulanzi-system-monitor/main/com.ulanzi.sysmonitor.ulanziPlugin/assets/icons/pluginIcon.png" alt="" loading="lazy">
+                      <div class="wpc-meta">
+                        <strong>System Monitor</strong>
+                        <span>Miroslav Babitski</span>
+                      </div>
+                      <span class="wp-btn" data-i18n="window_install">Install</span>
+                    </div>
+                    <div class="wp-chips">
+                      <span class="wp-chip wp-chip-hl">Deck</span>
+                      <span class="wp-chip">Windows</span>
+                    </div>
+                  </div>
+                  <div class="wp-card">
+                    <div class="wp-cover">
+                      <svg viewBox="0 0 200 100" preserveAspectRatio="xMidYMid slice">
+                        <defs>
+                          <linearGradient id="cvCost" x1="0" y1="1" x2="0" y2="0">
+                            <stop offset="0" stop-color="#4f9cff"/><stop offset="1" stop-color="#8b5cf6"/>
+                          </linearGradient>
+                        </defs>
+                        <rect width="200" height="100" fill="#0b0918"/>
+                        <g class="cv-bars" fill="url(#cvCost)">
+                          <rect x="28" y="58" width="16" height="34" rx="3"/>
+                          <rect x="56" y="44" width="16" height="48" rx="3"/>
+                          <rect x="84" y="62" width="16" height="30" rx="3"/>
+                          <rect x="112" y="30" width="16" height="62" rx="3"/>
+                          <rect x="140" y="48" width="16" height="44" rx="3"/>
+                          <rect class="cv-bar-live" x="168" y="20" width="16" height="72" rx="3"/>
+                        </g>
+                        <text x="30" y="22" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="800" fill="#cdb6ff">$ 12.40</text>
+                      </svg>
+                      <span class="wp-stat">★ 1 · ↓ 7</span>
+                    </div>
+                    <div class="wp-card-row">
+                      <img class="wpc-icon" src="https://raw.githubusercontent.com/narlei/ulanzideck-ai-cost/main/com.narlei.aicost.ulanziPlugin/resources/icon.png" alt="" loading="lazy">
+                      <div class="wpc-meta">
+                        <strong>AI Cost Monitor</strong>
+                        <span>Narlei Moreira</span>
+                      </div>
+                      <span class="wp-btn" data-i18n="window_install">Install</span>
+                    </div>
+                    <div class="wp-chips">
+                      <span class="wp-chip wp-chip-hl">Deck</span>
+                      <span class="wp-chip" data-i18n="chip_devtools">Dev tools</span>
+                    </div>
+                  </div>
                 </div>
-                <span class="wp-btn" data-i18n="window_install">Install</span>
               </div>
             </div>
           </div>

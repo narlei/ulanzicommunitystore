@@ -17,6 +17,11 @@
   box-sizing: border-box;
 }
 
+/* Keep [hidden] winning over display rules on classes (e.g. .button) */
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -423,48 +428,302 @@ h1, h2, h3 {
   color: var(--muted);
 }
 
-.window-body {
-  padding: 14px;
+/* Two-pane app layout: sidebar + store grid, mirroring the real app */
+
+.window-app {
+  display: flex;
+  align-items: stretch;
+}
+
+.window-side {
+  flex: none;
+  width: 112px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 8px 10px;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.ws-eyebrow {
+  margin: 0 7px 9px;
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.ws-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 7px;
+  border-radius: 7px;
+  font-size: 0.63rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.ws-item svg {
+  flex: none;
+  opacity: 0.85;
+}
+
+.ws-item.is-active {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+}
+
+.ws-count {
+  margin-left: auto;
+  font-size: 0.56rem;
+  font-weight: 800;
+  font-style: normal;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.ws-count-dim {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ws-star {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.ws-star > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ws-star-icon {
+  color: #f5c451;
+  flex: none;
+}
+
+.window-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 11px;
+}
+
+.window-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wt-pill {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.wt-pill.is-active {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-color: transparent;
+  color: #fff;
+}
+
+.wt-seg {
+  flex: none;
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.wt-seg span {
+  padding: 4px 9px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.wt-seg .is-active {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+}
+
+.window-grid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
-.window-row {
+.wp-card {
   display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 13px 14px;
-  border-radius: 11px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.035);
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
 }
 
-.wp-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+.wp-cover {
+  position: relative;
+  aspect-ratio: 40 / 17;
+  background: #0a0f1a;
+}
+
+.wp-cover svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.wp-flag {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  padding: 2.5px 7px;
+  border-radius: 999px;
+  font-size: 0.48rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  background: #10b981;
+  color: #04120c;
+}
+
+.wp-flag-new {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.wp-stat {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  padding: 2.5px 7px;
+  border-radius: 999px;
+  font-size: 0.53rem;
+  font-weight: 700;
+  background: rgba(5, 8, 14, 0.72);
+  color: #e8edf5;
+  white-space: nowrap;
+}
+
+.wp-card-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 8px 3px;
+  min-width: 0;
+}
+
+.wpc-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
   object-fit: cover;
   background: rgba(255, 255, 255, 0.06);
   flex: none;
 }
 
-.wp-meta {
+.wpc-meta {
   display: grid;
-  gap: 2px;
   min-width: 0;
+  line-height: 1.3;
 }
 
-.wp-meta strong {
-  font-size: 0.9rem;
+.wpc-meta strong {
+  font-size: 0.58rem;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.wp-meta span {
-  font-size: 0.75rem;
+.wpc-meta span {
+  font-size: 0.5rem;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.wp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 9px 9px;
+}
+
+.wp-chip {
+  padding: 1.5px 7px;
+  border-radius: 999px;
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+}
+
+.wp-chip-hl {
+  background: rgba(59, 130, 246, 0.16);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: #8ab8ff;
+}
+
+/* Animated flourishes inside the SVG covers */
+
+.cv-ring {
+  animation: cvRing 6s ease-in-out infinite alternate;
+}
+
+@keyframes cvRing {
+  from { stroke-dashoffset: 47; }
+  to { stroke-dashoffset: 122; }
+}
+
+.cv-ecg {
+  stroke-dasharray: 26 385;
+  animation: cvEcg 3.2s linear infinite;
+}
+
+@keyframes cvEcg {
+  from { stroke-dashoffset: 411; }
+  to { stroke-dashoffset: 0; }
+}
+
+.cv-bar-live {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: cvBar 3.2s ease-in-out infinite alternate;
+}
+
+@keyframes cvBar {
+  from { transform: scaleY(0.72); }
+  to { transform: scaleY(1); }
 }
 
 .wp-btn {
@@ -508,6 +767,22 @@ h1, h2, h3 {
   0% { transform: scaleX(0.1); }
   70% { transform: scaleX(0.85); }
   100% { transform: scaleX(0.95); }
+}
+
+.wp-card .wp-btn {
+  padding: 2.5px 7px;
+  font-size: 0.5rem;
+}
+
+.window-toolbar .window-search {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.window-toolbar .window-search span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ============ Stats strip ============ */
@@ -1916,7 +2191,11 @@ footer {
   .bg-glow-1,
   .bg-glow-2,
   .badge-dot,
-  .wp-progress {
+  .wp-progress,
+  .cv-ring,
+  .cv-ecg,
+  .cv-ecg-glow,
+  .cv-bar-live {
     animation: none;
   }
 
@@ -1926,6 +2205,13 @@ footer {
 }
 
 /* ============ Responsive ============ */
+
+@media (max-width: 960px) {
+  /* Brand + language switcher + download don't leave room for the links */
+  .nav-links {
+    display: none;
+  }
+}
 
 @media (max-width: 980px) {
   .hero {
@@ -1952,9 +2238,68 @@ footer {
   }
 }
 
-@media (max-width: 640px) {
-  .nav-links {
+@media (max-width: 560px) {
+  /* Collapse the mockup sidebar to an icon rail so cards keep room */
+  .window-side {
+    width: 42px;
+    padding: 10px 6px;
+    align-items: center;
+  }
+
+  .ws-eyebrow,
+  .ws-item > span,
+  .ws-count,
+  .ws-star {
     display: none;
+  }
+
+  .ws-item {
+    justify-content: center;
+    padding: 7px 0;
+    width: 30px;
+  }
+
+  .window-toolbar .window-search {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  /* Tiny cards: drop the row icon and tighten type so full plugin names fit */
+  .wpc-icon {
+    display: none;
+  }
+
+  .wpc-meta strong {
+    font-size: 0.52rem;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  .wpc-meta span {
+    font-size: 0.47rem;
+  }
+
+  .wp-card .wp-btn {
+    padding: 2px 5px;
+    font-size: 0.46rem;
+  }
+}
+
+@media (max-width: 640px) {
+  /* The hero CTA is one scroll away — drop the header download to fit the bar */
+  .nav .js-download-trigger {
+    display: none;
+  }
+
+  .brand {
+    font-size: 0.85rem;
+    gap: 8px;
+  }
+
+  .brand-icon {
+    width: 26px;
+    height: 26px;
   }
 
   .nav-actions {
