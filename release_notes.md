@@ -1,4 +1,4 @@
-## v1.1.0 — 2026-07-14
+## v1.1.1 — 2026-07-14
 
 ### Added
 - **Ulanzi Studio official catalog (opt-in)** — a new setting, "Show Ulanzi Studio catalog", lists the official plugins from the Ulanzi Studio Marketplace right alongside community plugins. Official plugins are marked with an **Official** badge and install like any other plugin. Off by default.

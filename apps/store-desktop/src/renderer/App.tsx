@@ -1702,7 +1702,7 @@ function SettingsView({
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
-      <div className="max-w-2xl">
+      <div className="w-full">
         <h2 className="mb-6 text-[26px] font-bold tracking-tight">{t(lang, 'settings')}</h2>
 
         <SettingsSection title={t(lang, 'settingsSectionPreferences')}>
@@ -1955,7 +1955,7 @@ function SubmitView({ lang }: { lang: Lang }) {
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
-      <div className="max-w-3xl space-y-5">
+      <div className="w-full space-y-5">
         <div>
           <h2 className="text-[26px] font-bold tracking-tight">{t(lang, 'submit')}</h2>
           <p className="mt-0.5 leading-6 text-ink2">{t(lang, 'submitSubtitle')}</p>
