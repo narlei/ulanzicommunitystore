@@ -1991,6 +1991,22 @@ footer {
   color: var(--muted);
 }
 
+.copyright .copyright-sep {
+  margin: 0 4px;
+}
+
+.copyright .footer-downloads {
+  color: var(--muted);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  transition: color 0.15s ease;
+  white-space: nowrap;
+}
+
+.copyright .footer-downloads:hover {
+  color: var(--text);
+}
+
 /* ============ Download modal ============ */
 
 .modal-overlay {

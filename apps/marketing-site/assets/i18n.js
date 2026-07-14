@@ -210,6 +210,7 @@
       footer_publish: 'Publish a plugin',
       footer_issue: 'Report an issue',
       footer_copy: 'Ulanzi Community Store — made with 💚 by the community, for the community. Unofficial project, not affiliated with Ulanzi.',
+      footer_downloads: '%s downloads on GitHub Releases',
 
       // Download modal
       modal_close: 'Close',
@@ -421,6 +422,7 @@
       footer_publish: 'Publicar um plugin',
       footer_issue: 'Reportar um problema',
       footer_copy: 'Ulanzi Community Store — feita com 💚 pela comunidade, para a comunidade. Projeto não oficial, sem afiliação com a Ulanzi.',
+      footer_downloads: '%s downloads nas GitHub Releases',
 
       modal_close: 'Fechar',
       modal_title: 'Baixar Ulanzi Community Store',
@@ -631,6 +633,7 @@
       footer_publish: '发布插件',
       footer_issue: '反馈问题',
       footer_copy: 'Ulanzi Community Store — 社区用 💚 为社区打造。非官方项目，与 Ulanzi 无关联。',
+      footer_downloads: 'GitHub Releases 累计下载 %s 次',
 
       modal_close: '关闭',
       modal_title: '下载 Ulanzi Community Store',
