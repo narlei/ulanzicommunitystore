@@ -1335,6 +1335,7 @@ function PluginDetail({
 }) {
   const update = Boolean(installedVersion && compareVersions(plugin.version, installedVersion) > 0);
   const [lightbox, setLightbox] = useState<number | null>(null);
+  const [securityOpen, setSecurityOpen] = useState(false);
   const trapRef = useFocusTrap<HTMLElement>();
   const screenshots = plugin.screenshots || [];
   const moreFromAuthor = useMemo(
@@ -1429,9 +1430,19 @@ function PluginDetail({
             {(plugin.deviceTypes || []).length > 0 && (
               <DetailStat label={t(lang, 'devices')} value={(plugin.deviceTypes || []).map(deviceLabel).join(', ')} />
             )}
+            {plugin.security && (
+              <SecurityStat
+                plugin={plugin}
+                lang={lang}
+                open={securityOpen || plugin.security.status === 'findings'}
+                onToggle={() => setSecurityOpen((v) => !v)}
+              />
+            )}
           </div>
 
-          <SecurityPanel plugin={plugin} lang={lang} />
+          {plugin.security && (securityOpen || plugin.security.status === 'findings') && (
+            <SecurityPanel plugin={plugin} lang={lang} />
+          )}
 
           {screenshots.length > 0 && (
             <div className="mb-6 flex gap-3 overflow-x-auto pb-1">
@@ -2343,6 +2354,59 @@ function SecurityPanel({ plugin, lang }: { plugin: CatalogPlugin; lang: Lang }) 
         </button>
       )}
     </div>
+  );
+}
+
+// Compact security status as a clickable cell in the detail stats bar. Toggles the
+// full SecurityPanel. When status is 'findings' the panel is forced open upstream, so
+// this cell just reflects that state (chevron points up).
+function SecurityStat({
+  plugin,
+  lang,
+  open,
+  onToggle,
+}: {
+  plugin: CatalogPlugin;
+  lang: Lang;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const sec = plugin.security;
+  if (!sec) return null;
+  const ui = SECURITY_UI[sec.status] || SECURITY_UI.unknown;
+  const total = sec.critical + sec.high + sec.secrets;
+  let value: string;
+  if (sec.status === 'findings') value = total > 0 ? String(total) : t(lang, 'securityFindingsShort');
+  else if (sec.status === 'error') value = t(lang, 'securityShortError');
+  else if (sec.status === 'unknown') value = t(lang, 'securityShortUnknown');
+  else value = t(lang, 'securityShortClean');
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className="group min-w-0 flex-1 px-3 text-center outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80"
+    >
+      <div className="truncate text-[11px] font-medium uppercase tracking-wide text-ink3">{t(lang, 'securityScanLabel')}</div>
+      <div className={`mt-0.5 flex items-center justify-center gap-1 truncate text-[15px] font-semibold ${ui.text}`}>
+        <span className="grid h-[18px] w-[18px] shrink-0 place-items-center" aria-hidden="true">
+          {ui.icon}
+        </span>
+        <span className="truncate">{value}</span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`h-3 w-3 shrink-0 opacity-70 transition-transform ${open ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </div>
+    </button>
   );
 }
 
