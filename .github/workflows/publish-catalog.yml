@@ -82,7 +82,7 @@ jobs:
         # Dry-runs on PRs must not touch the rolling issue (and the PR token from a
         # fork would be read-only anyway).
         if: always() && github.event_name != 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
