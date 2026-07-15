@@ -1,26 +1,45 @@
 name: publish-catalog
 
+# Builds dist/catalog/catalog.json from registry/plugins/*.json and publishes it to
+# GitHub Pages. Before building, it runs the vulnerability + secret scan (Trivy) over
+# every plugin repo so each catalog entry carries a `security` field, and posts findings
+# to a single rolling GitHub issue (opened on findings, closed when everything is clean).
+#
+# Pull requests that touch this pipeline run the same scan + build as a dry-run —
+# proving the pipeline works before merge — but skip the Pages deploy and leave the
+# rolling issue untouched.
+
 on:
   push:
     branches: [main]
     paths:
       - 'registry/**'
       - 'packages/catalog/**'
+      - 'scripts/security-scan.mjs'
+      - '.github/workflows/publish-catalog.yml'
+  pull_request:
+    paths:
+      - 'registry/**'
+      - 'packages/catalog/**'
+      - 'scripts/security-scan.mjs'
       - '.github/workflows/publish-catalog.yml'
   schedule:
-    - cron: '0 6 * * *'
+    - cron: '0 6 * * *' # every day at 06:00 UTC
   workflow_dispatch: {}
   repository_dispatch:
     types: [rebuild-catalog]
 
 permissions:
   contents: read
+  issues: write
   pages: write
   id-token: write
 
+# PR dry-runs get their own group so they never queue behind (or block) a real deploy;
+# a new push to the same PR cancels the previous dry-run.
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('catalog-pr-{0}', github.event.pull_request.number) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -35,16 +54,99 @@ jobs:
 
       - run: npm install
 
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.3.1
+        with:
+          version: v0.72.0
+          cache: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run security scan
+        id: scan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SEVERITY: HIGH,CRITICAL
+          REPORT_FILE: security-report.md
+        run: node scripts/security-scan.mjs
+
       - name: Build catalog
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run catalog:build
 
-      - uses: actions/upload-pages-artifact@v5
+      - name: Publish security summary
+        if: always()
+        run: cat security-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open / update / close security issue
+        # Dry-runs on PRs must not touch the rolling issue (and the PR token from a
+        # fork would be read-only anyway).
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('security-report.md', 'utf8');
+            const found = '${{ steps.scan.outputs.found }}' === 'true';
+            const title = '🔒 Community plugin security scan';
+            const marker = '<!-- security-scan-issue -->';
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'security-scan',
+              per_page: 100,
+            });
+            const issue = existing.data.find((i) => (i.body || '').includes(marker));
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const fullBody = `${marker}\n\n${body}\n\n<sub>Last run: ${run}</sub>`;
+
+            if (found) {
+              if (issue) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: issue.number, body: fullBody, state: 'open',
+                });
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `🔁 Scan re-ran and still found issues. See updated report above.\n\n${run}`,
+                });
+              } else {
+                await github.rest.issues.create({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  title, body: fullBody, labels: ['security-scan'],
+                });
+              }
+            } else if (issue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `✅ Latest scan is clean — closing.\n\n${run}`,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: issue.number, state: 'closed',
+              });
+            }
+
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
         with:
           path: dist/catalog
 
+      # On PRs, expose the built catalog + security report as a plain artifact
+      # so reviewers can inspect exactly what would have been published.
+      - if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: catalog-dry-run
+          path: dist/catalog
+          retention-days: 7
+
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

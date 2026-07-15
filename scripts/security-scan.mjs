@@ -15,15 +15,20 @@
 //   MAX_ROWS       max finding rows per repo in the report (default: 25)
 
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, appendFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, appendFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const REGISTRY_DIR = new URL('../registry/plugins/', import.meta.url);
 const SEVERITY = process.env.SEVERITY || 'HIGH,CRITICAL';
 const REPORT_FILE = process.env.REPORT_FILE || 'security-report.md';
 const MAX_ROWS = Number(process.env.MAX_ROWS || 25);
 const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
+// Where the per-repo machine-readable results are written, keyed by registry
+// filename. build-catalog.mjs reads these to attach a `security` field to each
+// catalog entry. Defaults to <root>/dist/security.
+const SECURITY_DIR = process.env.SECURITY_DIR || fileURLToPath(new URL('../dist/security/', import.meta.url));
 
 function readRegistry() {
   const dir = new URL(REGISTRY_DIR);
@@ -50,12 +55,33 @@ function run(cmd, args, opts = {}) {
   return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts });
 }
 
+// Reads the Trivy version at runtime so the catalog never advertises a stale/wrong
+// scanner version. Returns 'unknown' if Trivy is missing or the output is unexpected.
+function trivyVersion() {
+  try {
+    const out = run('trivy', ['--version']);
+    const m = out.match(/Version:\s*v?([\w.\-]+)/i);
+    return m ? m[1] : (out.split('\n')[0] || '').trim() || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
 // Scan a single repo; returns { repo, error?, vulns:[], secrets:[] }.
 function scanRepo(repo) {
   const workdir = mkdtempSync(join(tmpdir(), 'scan-'));
   const checkout = join(workdir, 'repo');
   try {
     run('git', ['clone', '--depth', '1', '--quiet', cloneUrl(repo), checkout]);
+
+    // Record the commit actually scanned so the catalog can show exactly what was
+    // checked (the scan runs against the default branch HEAD, not a release tag).
+    let sha = null;
+    try {
+      sha = run('git', ['-C', checkout, 'rev-parse', 'HEAD']).trim().slice(0, 7);
+    } catch {
+      /* non-fatal — sha stays null */
+    }
 
     const out = run('trivy', [
       'fs',
@@ -93,10 +119,10 @@ function scanRepo(repo) {
         });
       }
     }
-    return { repo, vulns, secrets };
+    return { repo, sha, vulns, secrets };
   } catch (err) {
     const msg = (err.stderr || err.stdout || err.message || '').toString().trim().split('\n').slice(-3).join(' ');
-    return { repo, error: msg || 'unknown error', vulns: [], secrets: [] };
+    return { repo, sha: null, error: msg || 'unknown error', vulns: [], secrets: [] };
   } finally {
     rmSync(workdir, { recursive: true, force: true });
   }
@@ -104,6 +130,29 @@ function scanRepo(repo) {
 
 function sevRank(s) {
   return { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, UNKNOWN: 4 }[s] ?? 5;
+}
+
+// Compact, machine-readable record consumed by build-catalog.mjs. One file per
+// registry entry, so the join key is the registry filename.
+//   status: clean | findings | error   (build-catalog fills `unknown` when absent)
+function toSecurityRecord(repo, result, scanner, scannedAt) {
+  const critical = result.vulns.filter((v) => v.severity === 'CRITICAL').length;
+  const high = result.vulns.filter((v) => v.severity === 'HIGH').length;
+  const secrets = result.secrets.length;
+  const status = result.error ? 'error' : critical || high || secrets ? 'findings' : 'clean';
+  const record = {
+    repo,
+    status,
+    scanner,
+    severityFilter: SEVERITY,
+    critical,
+    high,
+    secrets,
+    scannedRef: result.sha || null,
+    scannedAt,
+  };
+  if (result.error) record.error = result.error;
+  return record;
 }
 
 function buildReport(results) {
@@ -172,21 +221,31 @@ function buildReport(results) {
 
 function main() {
   const entries = readRegistry();
-  console.log(`Scanning ${entries.length} registry entrie(s) with severity ${SEVERITY}…`);
+  const scanner = { name: 'Trivy', version: trivyVersion() };
+  const scannedAt = new Date().toISOString();
+  console.log(`Scanning ${entries.length} registry entrie(s) with severity ${SEVERITY} (Trivy ${scanner.version})…`);
+
+  mkdirSync(SECURITY_DIR, { recursive: true });
 
   const results = [];
   for (const { file, repo } of entries) {
+    let result;
     if (!repo) {
-      results.push({ repo: file, error: 'malformed manifest (no "repo" field)', vulns: [], secrets: [] });
-      continue;
+      result = { repo: file, error: 'malformed manifest (no "repo" field)', vulns: [], secrets: [] };
+    } else {
+      console.log(`→ ${repo}`);
+      result = scanRepo(repo);
     }
-    console.log(`→ ${repo}`);
-    results.push(scanRepo(repo));
+    results.push(result);
+    // One JSON per registry file, so build-catalog can join by the registry entry.
+    const record = toSecurityRecord(repo || file, result, scanner, scannedAt);
+    writeFileSync(join(SECURITY_DIR, file), JSON.stringify(record, null, 2) + '\n');
   }
 
   const { report, hasFindings, errored } = buildReport(results);
   writeFileSync(REPORT_FILE, report);
   console.log(`\nReport written to ${REPORT_FILE} (findings: ${hasFindings}, errors: ${errored}).`);
+  console.log(`Per-repo security records written to ${SECURITY_DIR}`);
 
   if (process.env.GITHUB_OUTPUT) {
     appendFileSync(process.env.GITHUB_OUTPUT, `found=${hasFindings}\n`);

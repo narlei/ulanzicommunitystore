@@ -34,6 +34,28 @@ export type CatalogPlugin = {
   sourceUrl: string;
   /** Present and set to 'official' for plugins pulled from the Ulanzi Studio Marketplace. Absent = community. */
   source?: 'official';
+  /** Automated security scan result for the plugin's repo. Absent in older catalogs. */
+  security?: PluginSecurity;
+};
+
+/**
+ * Result of the automated dependency + secret scan (Trivy) for a plugin's repo.
+ * `status`: clean = scanned, no HIGH/CRITICAL findings; findings = CVEs or leaked
+ * secrets found; error = scan could not run; unknown = not scanned yet (e.g. a
+ * plugin added since the last scan). Absent in older catalogs built before scanning.
+ */
+export type PluginSecurity = {
+  status: 'clean' | 'findings' | 'error' | 'unknown';
+  scanner: { name: string; version: string } | null;
+  severityFilter: string | null;
+  critical: number;
+  high: number;
+  secrets: number;
+  /** Short commit SHA actually scanned (default branch HEAD), or null. */
+  scannedRef: string | null;
+  scannedAt: string | null;
+  /** Deep link to the full report page (security.html#owner-repo), or null on local builds. */
+  reportUrl: string | null;
 };
 
 /** Days a plugin stays marked as NEW after the latest catalog release date (`publishedAt`). */
