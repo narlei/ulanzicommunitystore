@@ -96,10 +96,12 @@ function wrapText(text, { fontSize, weight, maxWidth, maxLines }) {
 }
 
 function textLines(lines, { x, y, lineHeight, fontSize, weight, fill, spacing }) {
+  // Normalize weight to 400 or 700 for better resvg compatibility with variable fonts
+  const normalizedWeight = weight >= 600 ? '700' : '400';
   return lines
     .map((line, i) =>
       `<text x="${x}" y="${y + i * lineHeight}" font-family="Inter" font-size="${fontSize}" ` +
-      `font-weight="${weight}" fill="${fill}"${spacing ? ` letter-spacing="${spacing}"` : ''}>` +
+      `font-weight="${normalizedWeight}" fill="${fill}"${spacing ? ` letter-spacing="${spacing}"` : ''}>` +
       `${escapeXml(line)}</text>`,
     )
     .join('\n');
@@ -133,7 +135,7 @@ function chip(x, y, label, { accent = false, downloadIcon = false } = {}) {
   const svg =
     `<rect x="${x}" y="${y}" width="${w.toFixed(1)}" height="${h}" rx="${h / 2}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>` +
     icon +
-    `<text x="${x + padX + iconW}" y="${y + 30}" font-family="Inter" font-size="${font}" font-weight="600" fill="${textFill}">${escapeXml(label)}</text>`;
+    `<text x="${x + padX + iconW}" y="${y + 30}" font-family="Inter" font-size="${font}" font-weight="700" fill="${textFill}">${escapeXml(label)}</text>`;
   return { svg, width: w };
 }
 
@@ -240,7 +242,7 @@ function buildSvg({ name, description, iconDataUrl, version, platforms, download
       `clip-path="url(#iconClip)" preserveAspectRatio="xMidYMid slice"/>`
     : `<rect x="${iconX}" y="${iconY}" width="${iconSize}" height="${iconSize}" rx="34" fill="#131a26"/>` +
       `<text x="${iconCx}" y="${iconCy + 22}" font-family="Inter" font-size="64" ` +
-      `font-weight="800" fill="${BRAND}" text-anchor="middle">U</text>`;
+      `font-weight="700" fill="${BRAND}" text-anchor="middle">U</text>`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">
   <defs>
@@ -290,7 +292,7 @@ function buildSvg({ name, description, iconDataUrl, version, platforms, download
   ${deckMockup(iconDataUrl)}
 
   ${eyebrowLogo}
-  <text x="${PAD + (logo ? 54 : 40)}" y="88" font-family="Inter" font-size="24" font-weight="700" letter-spacing="4" fill="${BRAND}">ULANZI COMMUNITY STORE</text>
+  <text x="${PAD + (logo ? 54 : 40)}" y="88" font-family="Inter" font-size="24" font-weight="700" letter-spacing="3.5" fill="${BRAND}">ULANZI COMMUNITY STORE</text>
 
   <circle cx="${iconCx}" cy="${iconCy}" r="160" fill="url(#iconGlow)"/>
   ${iconTile}
@@ -306,7 +308,7 @@ function buildSvg({ name, description, iconDataUrl, version, platforms, download
   <path d="M ${arrowCx} ${arrowCy - 12} L ${arrowCx} ${arrowCy + 8} M ${arrowCx - 10} ${arrowCy - 1} L ${arrowCx} ${arrowCy + 10} L ${arrowCx + 10} ${arrowCy - 1}" stroke="${BRAND_INK}" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="${ctaTextX}" y="${arrowCy + 10}" font-family="Inter" font-size="${ctaFont}" font-weight="700" fill="${BRAND_INK}">${escapeXml(ctaLabel)}</text>
 
-  ${repo ? `<text x="1128" y="596" font-family="Inter" font-size="20" font-weight="500" fill="#6b7688" text-anchor="end">${escapeXml(`github.com/${repo}`)}</text>` : ''}
+  ${repo ? `<text x="1128" y="596" font-family="Inter" font-size="20" font-weight="400" fill="#6b7688" text-anchor="end">${escapeXml(`github.com/${repo}`)}</text>` : ''}
 </svg>`;
 }
 
