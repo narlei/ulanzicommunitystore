@@ -27,9 +27,16 @@ install:
 	@ln -s "$(CURDIR)/$(PLUGIN_ID)" "$(INSTALL_DIR)"
 	@$(MAKE) restart
 
+APP_PROC      := /Applications/$(APP_NAME).app/
+
 restart:
 	@echo "→ Restarting $(APP_NAME)..."
-	@killall "$(APP_NAME)" 2>/dev/null || true
+	@osascript -e 'tell application "$(APP_NAME)" to quit' >/dev/null 2>&1 || true
+	@for i in 1 2 3 4 5; do \
+		pgrep -f "$(APP_PROC)" >/dev/null 2>&1 || break; \
+		sleep 1; \
+	done
+	@pkill -f "$(APP_PROC)" >/dev/null 2>&1 || true
 	@sleep 1
 	@open -a "$(APP_NAME)" || echo "⚠️ Could not open $(APP_NAME). Please start it manually."
 

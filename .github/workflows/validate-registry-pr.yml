@@ -7,8 +7,6 @@ name: validate-registry-pr
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - 'registry/plugins/**'
 
 permissions:
   contents: read
@@ -47,6 +45,7 @@ jobs:
 
       - name: Validar registry
         id: validate
+        if: steps.changed.outputs.files != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHANGED_FILES: ${{ steps.changed.outputs.files }}
