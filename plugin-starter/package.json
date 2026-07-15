@@ -1,6 +1,6 @@
 {
   "name": "ulanzi-plugin-starter",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Scaffolding for Ulanzi Deck & Dial Plugins",
   "bin": {
     "ulanzi-plugin": "bin/cli.mjs"
