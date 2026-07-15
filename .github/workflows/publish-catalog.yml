@@ -4,10 +4,20 @@ name: publish-catalog
 # GitHub Pages. Before building, it runs the vulnerability + secret scan (Trivy) over
 # every plugin repo so each catalog entry carries a `security` field, and posts findings
 # to a single rolling GitHub issue (opened on findings, closed when everything is clean).
+#
+# Pull requests that touch this pipeline run the same scan + build as a dry-run —
+# proving the pipeline works before merge — but skip the Pages deploy and leave the
+# rolling issue untouched.
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'registry/**'
+      - 'packages/catalog/**'
+      - 'scripts/security-scan.mjs'
+      - '.github/workflows/publish-catalog.yml'
+  pull_request:
     paths:
       - 'registry/**'
       - 'packages/catalog/**'
@@ -25,9 +35,11 @@ permissions:
   pages: write
   id-token: write
 
+# PR dry-runs get their own group so they never queue behind (or block) a real deploy;
+# a new push to the same PR cancels the previous dry-run.
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('catalog-pr-{0}', github.event.pull_request.number) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -67,7 +79,9 @@ jobs:
         run: cat security-report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Open / update / close security issue
-        if: always()
+        # Dry-runs on PRs must not touch the rolling issue (and the PR token from a
+        # fork would be read-only anyway).
+        if: always() && github.event_name != 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
@@ -117,11 +131,22 @@ jobs:
               });
             }
 
-      - uses: actions/upload-pages-artifact@v5
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
         with:
           path: dist/catalog
 
+      # On PRs, expose the built catalog + security report as a plain artifact
+      # so reviewers can inspect exactly what would have been published.
+      - if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: catalog-dry-run
+          path: dist/catalog
+          retention-days: 7
+
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
