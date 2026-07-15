@@ -15,6 +15,35 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..', '..');
 const REGISTRY_DIR = join(ROOT, 'registry', 'plugins');
 const OUT_FILE = process.env.CATALOG_OUT_FILE || join(ROOT, 'dist', 'catalog', 'catalog.json');
+// Per-repo security records emitted by scripts/security-scan.mjs (keyed by repo).
+// Absent when the catalog is built without a prior scan — every entry falls back
+// to `unknown` and the catalog builds fine.
+const SECURITY_DIR = process.env.SECURITY_DIR || join(ROOT, 'dist', 'security');
+
+// Base URL of the published site, used to build absolute `reportUrl`s pointing at
+// security.html. Explicit PAGES_BASE_URL wins; otherwise derived from the Actions
+// GITHUB_REPOSITORY (owner/repo → https://owner.github.io/repo). Null on local
+// builds without either — reportUrl then stays null.
+const PAGES_BASE_URL = resolvePagesBaseUrl();
+
+function resolvePagesBaseUrl() {
+  if (process.env.PAGES_BASE_URL) return process.env.PAGES_BASE_URL.replace(/\/+$/, '');
+  const repo = process.env.GITHUB_REPOSITORY;
+  if (repo && repo.includes('/')) {
+    const [owner, name] = repo.split('/');
+    return `https://${owner}.github.io/${name}`;
+  }
+  return null;
+}
+
+// Stable in-page anchor / reportUrl for a repo. `owner/repo` → `owner-repo`.
+function anchorFor(repo) {
+  return repo.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-+|-+$/g, '');
+}
+
+function reportUrlFor(repo) {
+  return PAGES_BASE_URL ? `${PAGES_BASE_URL}/security.html#${anchorFor(repo)}` : null;
+}
 
 const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
 const API = 'https://api.github.com';
@@ -158,6 +187,157 @@ async function countDownloads(repo) {
   }
 }
 
+// Shown for repos with no scan record yet (e.g. a plugin added since the last scan).
+const UNKNOWN_SECURITY = {
+  status: 'unknown',
+  scanner: null,
+  severityFilter: null,
+  critical: 0,
+  high: 0,
+  secrets: 0,
+  scannedRef: null,
+  scannedAt: null,
+  reportUrl: null,
+};
+
+// Keeps only the fields the catalog exposes, guarding against a malformed record.
+function normalizeSecurity(rec) {
+  const out = {
+    status: rec.status || 'unknown',
+    scanner: rec.scanner || null,
+    severityFilter: rec.severityFilter || null,
+    critical: Number(rec.critical) || 0,
+    high: Number(rec.high) || 0,
+    secrets: Number(rec.secrets) || 0,
+    scannedRef: rec.scannedRef || null,
+    scannedAt: rec.scannedAt || null,
+  };
+  if (rec.error) out.error = rec.error;
+  return out;
+}
+
+// Loads every per-repo security record into a Map keyed by `owner/repo`.
+// Missing directory / unreadable files degrade gracefully to an empty map.
+async function loadSecurity() {
+  const map = new Map();
+  let files = [];
+  try {
+    files = (await readdir(SECURITY_DIR)).filter((f) => f.endsWith('.json'));
+  } catch {
+    console.warn(`  ! no security records at ${SECURITY_DIR} — entries will be "unknown"`);
+    return map;
+  }
+  for (const f of files) {
+    try {
+      const rec = JSON.parse(await readFile(join(SECURITY_DIR, f), 'utf8'));
+      if (rec && rec.repo) map.set(rec.repo, normalizeSecurity(rec));
+    } catch {
+      console.warn(`  ! invalid security record ${f}, skipping`);
+    }
+  }
+  return map;
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+  );
+}
+
+const STATUS_LABEL = {
+  clean: '✅ Clean',
+  findings: '❌ Findings',
+  error: '⚠️ Scan error',
+  unknown: '· Not yet scanned',
+};
+
+// Findings first (most actionable), then errors, unknown, and clean last.
+function statusRank(s) {
+  return { findings: 0, error: 1, unknown: 2, clean: 3 }[s] ?? 4;
+}
+
+// Renders the standalone security.html served next to catalog.json on Pages.
+// Each plugin gets an anchor (`#owner-repo`) so catalog reportUrls deep-link here.
+function buildSecurityHtml(plugins, generatedAt) {
+  const rows = [...plugins].sort(
+    (a, b) => statusRank(a.security.status) - statusRank(b.security.status) || a.name.localeCompare(b.name),
+  );
+  const tally = plugins.reduce((m, p) => ((m[p.security.status] = (m[p.security.status] || 0) + 1), m), {});
+  const scanner = plugins.map((p) => p.security.scanner).find(Boolean);
+  const scannerLabel = scanner ? `${escapeHtml(scanner.name)} ${escapeHtml(scanner.version)}` : 'Trivy';
+
+  const summary = ['findings', 'error', 'unknown', 'clean']
+    .filter((s) => tally[s])
+    .map((s) => `${STATUS_LABEL[s]}: ${tally[s]}`)
+    .join(' · ');
+
+  const body = rows
+    .map((p) => {
+      const s = p.security;
+      const scanned = s.scannedAt ? escapeHtml(s.scannedAt.slice(0, 10)) : '—';
+      const ref = s.scannedRef ? `<code>${escapeHtml(s.scannedRef)}</code>` : '—';
+      const sv = s.scanner ? `${escapeHtml(s.scanner.name)} ${escapeHtml(s.scanner.version)}` : '—';
+      return `      <tr id="${escapeHtml(anchorFor(p.repo))}" class="s-${escapeHtml(s.status)}">
+        <td><a href="${escapeHtml(p.sourceUrl)}">${escapeHtml(p.name)}</a><div class="repo">${escapeHtml(p.repo)}</div></td>
+        <td class="status">${STATUS_LABEL[s.status] || escapeHtml(s.status)}</td>
+        <td class="num">${s.critical || 0}</td>
+        <td class="num">${s.high || 0}</td>
+        <td class="num">${s.secrets || 0}</td>
+        <td>${scanned}<div class="repo">${ref} · ${sv}</div></td>
+      </tr>`;
+    })
+    .join('\n');
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Community plugin security scan</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 2rem 1rem; background: #fafafa; color: #1a1a1a; }
+  @media (prefers-color-scheme: dark) { body { background: #16181d; color: #e6e6e6; } }
+  main { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+  .meta { opacity: .7; font-size: .85rem; margin-bottom: 1.5rem; }
+  .note { font-size: .85rem; opacity: .75; margin: 1.5rem 0 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid rgba(128,128,128,.25); vertical-align: top; }
+  th { font-weight: 600; opacity: .7; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .repo { opacity: .6; font-size: .78rem; margin-top: .15rem; }
+  a { color: inherit; }
+  code { font-size: .82em; opacity: .85; }
+  tr:target { background: rgba(255,214,0,.18); }
+  tr.s-findings td.status { color: #d33; font-weight: 600; }
+  tr.s-error td.status { color: #b8860b; }
+  tr.s-clean td.status { color: #2a8; }
+  tr.s-unknown td.status { opacity: .55; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🔒 Community plugin security scan</h1>
+  <div class="meta">Scanned with ${scannerLabel} · ${escapeHtml(generatedAt)}${summary ? ` · ${summary}` : ''}</div>
+  <table>
+    <thead>
+      <tr><th>Plugin</th><th>Status</th><th class="num">Critical</th><th class="num">High</th><th class="num">Secrets</th><th>Scanned</th></tr>
+    </thead>
+    <tbody>
+${body}
+    </tbody>
+  </table>
+  <p class="note">Automated dependency &amp; secret scan (severity HIGH/CRITICAL) of each plugin's source at the commit shown.
+  It flags known CVEs and leaked secrets — it does not certify a plugin as safe, and cannot detect malicious logic.
+  Scans run against the default branch, which may differ from the released build you download.</p>
+</main>
+</body>
+</html>
+`;
+}
+
 async function buildEntry(repo) {
   // 1) latest release
   const release = await ghJson(`/repos/${repo}/releases/latest`);
@@ -253,6 +433,8 @@ async function main() {
     process.exit(1);
   }
 
+  const security = await loadSecurity();
+
   const plugins = [];
   const errors = [];
   for (const file of files) {
@@ -265,8 +447,11 @@ async function main() {
     process.stdout.write(`→ ${repo} ... `);
     try {
       const built = await buildEntry(repo);
+      const sec = security.get(repo) ? { ...security.get(repo) } : { ...UNKNOWN_SECURITY };
+      sec.reportUrl = reportUrlFor(repo);
+      built.security = sec;
       plugins.push(built);
-      console.log(`ok (v${built.version}, ${built.deviceTypes.join('+') || '?'})`);
+      console.log(`ok (v${built.version}, ${built.deviceTypes.join('+') || '?'}, sec:${built.security.status})`);
     } catch (err) {
       console.log(`FAILED: ${err.message}`);
       errors.push({ file, repo, error: err.message });
@@ -281,9 +466,14 @@ async function main() {
     plugins,
   };
 
-  await mkdir(dirname(OUT_FILE), { recursive: true });
+  const outDir = dirname(OUT_FILE);
+  await mkdir(outDir, { recursive: true });
   await writeFile(OUT_FILE, JSON.stringify(catalog, null, 2) + '\n');
   console.log(`\nCatalog: ${plugins.length} plugin(s) → ${OUT_FILE}`);
+
+  const reportFile = join(outDir, 'security.html');
+  await writeFile(reportFile, buildSecurityHtml(plugins, catalog.generatedAt));
+  console.log(`Security report → ${reportFile}${PAGES_BASE_URL ? ` (reportUrl base: ${PAGES_BASE_URL})` : ' (no PAGES_BASE_URL — reportUrls null)'}`);
   if (errors.length) {
     console.log(`Warnings (${errors.length}):`);
     for (const e of errors) console.log(`  - ${e.file}${e.repo ? ` (${e.repo})` : ''}: ${e.error}`);

@@ -1431,6 +1431,8 @@ function PluginDetail({
             )}
           </div>
 
+          <SecurityPanel plugin={plugin} lang={lang} />
+
           {screenshots.length > 0 && (
             <div className="mb-6 flex gap-3 overflow-x-auto pb-1">
               {screenshots.map((shot, index) => (
@@ -2214,6 +2216,9 @@ function Meta({ plugin, showUpdate, lang }: { plugin: CatalogPlugin; showUpdate?
   return (
     <div className="flex min-w-0 flex-wrap gap-1.5">
       {showUpdate && lang && <span className="chip bg-accent text-accent-ink">{t(lang, 'updateBadge')}</span>}
+      {plugin.security?.status === 'findings' && lang && (
+        <span className="chip bg-red-500/15 text-red-600 dark:text-red-400">⚠ {t(lang, 'securityFindingsShort')}</span>
+      )}
       {plugin.source === 'official' && lang && <span className="chip">{t(lang, 'officialBadge')}</span>}
       {(plugin.deviceTypes || []).map((item) => (
         <span className="chip chip-brand" key={item}>
@@ -2230,6 +2235,113 @@ function Meta({ plugin, showUpdate, lang }: { plugin: CatalogPlugin; showUpdate?
           {categoryLabel(item)}
         </span>
       ))}
+    </div>
+  );
+}
+
+// Visual treatment per security status. Findings = red (actionable), error = amber,
+// clean = green, unknown = neutral. Kept honest: even "clean" carries the disclaimer.
+const SECURITY_UI: Record<
+  string,
+  { box: string; iconBox: string; text: string; icon: ReactNode; label: string }
+> = {
+  clean: {
+    box: 'border-emerald-500/20 bg-emerald-500/[0.05]',
+    iconBox: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+    text: 'text-emerald-700 dark:text-emerald-400',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]">
+        <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" />
+        <path d="M9 12l2 2 4-4" />
+      </svg>
+    ),
+    label: 'securityClean',
+  },
+  findings: {
+    box: 'border-red-500/25 bg-red-500/[0.05]',
+    iconBox: 'bg-red-500/15 text-red-600 dark:text-red-400',
+    text: 'text-red-600 dark:text-red-400',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]">
+        <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" />
+        <path d="M12 8.5v4" />
+        <path d="M12 15.8h.01" />
+      </svg>
+    ),
+    label: 'securityFindings',
+  },
+  error: {
+    box: 'border-amber-500/25 bg-amber-500/[0.05]',
+    iconBox: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
+    text: 'text-amber-700 dark:text-amber-300',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]">
+        <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" />
+        <path d="M9.5 9.5l5 5M14.5 9.5l-5 5" />
+      </svg>
+    ),
+    label: 'securityError',
+  },
+  unknown: {
+    box: 'border-stroke/70 bg-surface',
+    iconBox: 'bg-black/[0.05] text-ink3 dark:bg-white/[0.07]',
+    text: 'text-ink2',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="h-[18px] w-[18px]">
+        <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" />
+        <path d="M12 14v-.5c0-.8.5-1.2 1.1-1.7.6-.4 1-1 .9-1.8-.1-1-1-1.8-2-1.8s-1.8.7-2 1.6" />
+        <path d="M12 17h.01" />
+      </svg>
+    ),
+    label: 'securityUnknown',
+  },
+};
+
+function securityCountPills(sec: NonNullable<CatalogPlugin['security']>, lang: Lang): string[] {
+  const pills: string[] = [];
+  if (sec.critical) pills.push(t(lang, 'securityCritical', sec.critical));
+  if (sec.high) pills.push(t(lang, 'securityHigh', sec.high));
+  if (sec.secrets) pills.push(t(lang, 'securitySecrets', sec.secrets));
+  return pills;
+}
+
+function SecurityPanel({ plugin, lang }: { plugin: CatalogPlugin; lang: Lang }) {
+  const sec = plugin.security;
+  if (!sec) return null; // catalog built before scanning existed
+  const ui = SECURITY_UI[sec.status] || SECURITY_UI.unknown;
+  const pills = sec.status === 'findings' ? securityCountPills(sec, lang) : [];
+  const scannerLabel = sec.scanner ? `${sec.scanner.name} ${sec.scanner.version}` : 'Trivy';
+  const meta: string[] = [];
+  if (sec.scannedAt) meta.push(t(lang, 'securityScanned', sec.scannedAt.slice(0, 10), scannerLabel));
+  if (sec.scannedRef) meta.push(t(lang, 'securityScannedRef', sec.scannedRef));
+  return (
+    <div className={`mb-6 flex items-start gap-3.5 rounded-xl border px-4 py-3.5 ${ui.box}`}>
+      <span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full ${ui.iconBox}`} aria-hidden="true">
+        {ui.icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <span className={`text-[14px] font-semibold leading-5 ${ui.text}`}>{t(lang, ui.label)}</span>
+          {pills.map((pill) => (
+            <span
+              key={pill}
+              className="rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-red-600 dark:text-red-400"
+            >
+              {pill}
+            </span>
+          ))}
+        </div>
+        {meta.length > 0 && <p className="mt-1 text-[12px] leading-4 text-ink2">{meta.join(' · ')}</p>}
+        <p className="mt-1 text-[11.5px] leading-4 text-ink3">{t(lang, 'securityDisclaimer')}</p>
+      </div>
+      {sec.reportUrl && (
+        <button
+          className="btn-pill-ghost mt-0.5 shrink-0 !text-[12.5px]"
+          onClick={() => void window.api.openExternal(sec.reportUrl!)}
+        >
+          {t(lang, 'securityViewReport')}
+        </button>
+      )}
     </div>
   );
 }
