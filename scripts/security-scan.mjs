@@ -132,6 +132,12 @@ function sevRank(s) {
   return { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, UNKNOWN: 4 }[s] ?? 5;
 }
 
+// The repo owner (`owner/name` → `owner`) is a real GitHub handle, unlike the free-text
+// `Author` in manifest.json — safe to @-mention inside our own issue/comments.
+function mentionFor(repo) {
+  return `@${repo.split('/')[0]}`;
+}
+
 // Compact, machine-readable record consumed by build-catalog.mjs. One file per
 // registry entry, so the join key is the registry filename.
 //   status: clean | findings | error   (build-catalog fills `unknown` when absent)
@@ -176,8 +182,19 @@ function buildReport(results) {
   }
   lines.push('');
 
+  if (withFindings.length) {
+    // Deduped so an author with several plugins is only pinged once. This is our own
+    // issue/comment, so the mention is a real GitHub notification — not a message
+    // posted on a third-party repo.
+    const mentions = [...new Set(withFindings.map((r) => mentionFor(r.repo)))];
+    lines.push(`**Maintainers to ping:** ${mentions.join(' ')}`);
+    lines.push('');
+  }
+
   for (const r of withFindings) {
     lines.push(`## ❌ ${r.repo}`);
+    lines.push('');
+    lines.push(`Maintainer: ${mentionFor(r.repo)}`);
     lines.push('');
     if (r.vulns.length) {
       const rows = [...r.vulns].sort((a, b) => sevRank(a.severity) - sevRank(b.severity)).slice(0, MAX_ROWS);

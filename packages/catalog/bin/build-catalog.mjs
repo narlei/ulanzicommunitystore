@@ -41,6 +41,12 @@ function anchorFor(repo) {
   return repo.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-+|-+$/g, '');
 }
 
+// `owner/name` → `owner`. Real GitHub handle (unlike manifest.json's free-text Author),
+// used to credit/link the maintainer on the security report.
+function ownerOf(repo) {
+  return repo.split('/')[0];
+}
+
 function reportUrlFor(repo) {
   return PAGES_BASE_URL ? `${PAGES_BASE_URL}/security.html#${anchorFor(repo)}` : null;
 }
@@ -278,6 +284,7 @@ function buildSecurityHtml(plugins, generatedAt) {
       const scanned = s.scannedAt ? escapeHtml(s.scannedAt.slice(0, 10)) : '—';
       const ref = s.scannedRef ? `<code>${escapeHtml(s.scannedRef)}</code>` : '—';
       const sv = s.scanner ? `${escapeHtml(s.scanner.name)} ${escapeHtml(s.scanner.version)}` : '—';
+      const owner = ownerOf(p.repo);
       return `      <tr id="${escapeHtml(anchorFor(p.repo))}" class="s-${escapeHtml(s.status)}">
         <td><a href="${escapeHtml(p.sourceUrl)}">${escapeHtml(p.name)}</a><div class="repo">${escapeHtml(p.repo)}</div></td>
         <td class="status">${STATUS_LABEL[s.status] || escapeHtml(s.status)}</td>
@@ -285,6 +292,7 @@ function buildSecurityHtml(plugins, generatedAt) {
         <td class="num">${s.high || 0}</td>
         <td class="num">${s.secrets || 0}</td>
         <td>${scanned}<div class="repo">${ref} · ${sv}</div></td>
+        <td><a href="https://github.com/${escapeHtml(owner)}">@${escapeHtml(owner)}</a></td>
       </tr>`;
     })
     .join('\n');
@@ -323,7 +331,7 @@ function buildSecurityHtml(plugins, generatedAt) {
   <div class="meta">Scanned with ${scannerLabel} · ${escapeHtml(generatedAt)}${summary ? ` · ${summary}` : ''}</div>
   <table>
     <thead>
-      <tr><th>Plugin</th><th>Status</th><th class="num">Critical</th><th class="num">High</th><th class="num">Secrets</th><th>Scanned</th></tr>
+      <tr><th>Plugin</th><th>Status</th><th class="num">Critical</th><th class="num">High</th><th class="num">Secrets</th><th>Scanned</th><th>Maintainer</th></tr>
     </thead>
     <tbody>
 ${body}
