@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { Resvg } from '@resvg/resvg-js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const FONT_FILE = join(__dirname, '..', 'assets', 'fonts', 'InterVariable.ttf');
+const FONT_DIR = join(__dirname, '..', 'assets', 'fonts');
 const LOGO_FILE = join(__dirname, '..', '..', '..', 'apps', 'marketing-site', 'assets', 'logo-512.png');
 
 export const OG_WIDTH = 1200;
@@ -29,12 +29,22 @@ const BRAND_2 = '#4f9cff';
 const BRAND_INK = '#05221b';
 const CHIP_TEXT = '#d6dbe6';
 
-// Inter is loaded from a bundled variable font; weights are matched by fontdb.
-let fontBuffer = null;
-async function loadFont() {
-  if (!fontBuffer) fontBuffer = await readFile(FONT_FILE);
-  return fontBuffer;
+// Static Inter faces (family name "Inter", weights 400/700). Static files — not the
+// variable InterVariable.ttf — because its family name is "Inter Variable", which never
+// matches font-family="Inter": macOS happened to fall back to a good face, but Linux CI
+// picked a wrong instance, breaking both the look and every width estimate.
+let fontBuffers = null;
+async function loadFonts() {
+  if (!fontBuffers) {
+    fontBuffers = [
+      await readFile(join(FONT_DIR, 'Inter-Regular.ttf')),
+      await readFile(join(FONT_DIR, 'Inter-Bold.ttf')),
+    ];
+  }
+  return fontBuffers;
 }
+
+const RESVG_FONT_OPTS = { defaultFontFamily: 'Inter', loadSystemFonts: false };
 
 // Store logo for the eyebrow. Missing file degrades to a plain brand dot.
 let logoDataUrl;
@@ -56,21 +66,45 @@ function escapeXml(s) {
   );
 }
 
-// SVG has no auto-wrapping, so we approximate line breaking ourselves. Inter's average
-// advance is ~0.52em; we use a slightly conservative factor so text never overruns its box.
+// Last-resort width estimate, only used if a measurement render throws.
 function approxWidth(text, fontSize, weight) {
   const factor = weight >= 700 ? 0.56 : 0.53;
   return text.length * fontSize * factor;
 }
 
+// Exact text measurement: render the string alone and take resvg's own bounding box.
+// Whatever face fontdb actually resolves is also what gets measured, so chip/CTA/wrap
+// widths can never drift from the final raster (the bug behind clipped chips on CI).
+function makeMeasure(buffers) {
+  const cache = new Map();
+  return function measure(text, fontSize, weight) {
+    const w = weight >= 600 ? 700 : 400;
+    const key = `${fontSize}|${w}|${text}`;
+    let width = cache.get(key);
+    if (width === undefined) {
+      try {
+        const svg =
+          `<svg xmlns="http://www.w3.org/2000/svg" width="8000" height="300">` +
+          `<text x="10" y="200" font-family="Inter" font-size="${fontSize}" font-weight="${w}">${escapeXml(text)}</text></svg>`;
+        const bbox = new Resvg(svg, { font: { ...RESVG_FONT_OPTS, fontBuffers: buffers } }).getBBox();
+        width = bbox && bbox.width > 0 ? bbox.width : approxWidth(text, fontSize, weight);
+      } catch {
+        width = approxWidth(text, fontSize, weight);
+      }
+      cache.set(key, width);
+    }
+    return width;
+  };
+}
+
 // Greedy word-wrap into at most `maxLines`; the last line is ellipsized if it overflows.
-function wrapText(text, { fontSize, weight, maxWidth, maxLines }) {
+function wrapText(text, { fontSize, weight, maxWidth, maxLines, measure }) {
   const words = String(text ?? '').trim().split(/\s+/).filter(Boolean);
   const lines = [];
   let line = '';
   for (const word of words) {
     const candidate = line ? `${line} ${word}` : word;
-    if (approxWidth(candidate, fontSize, weight) <= maxWidth || !line) {
+    if (measure(candidate, fontSize, weight) <= maxWidth || !line) {
       line = candidate;
     } else {
       lines.push(line);
@@ -85,8 +119,8 @@ function wrapText(text, { fontSize, weight, maxWidth, maxLines }) {
     let last = lines[maxLines - 1];
     const consumed = lines.join(' ').split(/\s+/).length;
     const overflowed = consumed < words.length;
-    if (overflowed || approxWidth(last, fontSize, weight) > maxWidth) {
-      while (last.length && approxWidth(last + '…', fontSize, weight) > maxWidth) {
+    if (overflowed || measure(last, fontSize, weight) > maxWidth) {
+      while (last.length && measure(last + '…', fontSize, weight) > maxWidth) {
         last = last.slice(0, -1).trimEnd();
       }
       lines[maxLines - 1] = last + '…';
@@ -117,12 +151,12 @@ function formatDownloads(n) {
 }
 
 // A rounded meta chip. Returns { svg, width } so chips can be laid out in a row.
-function chip(x, y, label, { accent = false, downloadIcon = false } = {}) {
+function chip(x, y, label, { accent = false, downloadIcon = false, measure } = {}) {
   const font = 22;
   const h = 46;
   const padX = 18;
   const iconW = downloadIcon ? 26 : 0;
-  const w = padX * 2 + iconW + approxWidth(label, font, 600);
+  const w = padX * 2 + iconW + measure(label, font, 700);
   const stroke = accent ? 'rgba(65,230,195,0.38)' : 'rgba(255,255,255,0.10)';
   const fill = accent ? 'rgba(65,230,195,0.08)' : 'rgba(255,255,255,0.055)';
   const textFill = accent ? '#7dead0' : CHIP_TEXT;
@@ -175,7 +209,7 @@ function deckMockup(iconDataUrl) {
 }
 
 // Builds the SVG markup. `iconDataUrl` may be null (renders a branded placeholder tile).
-function buildSvg({ name, description, iconDataUrl, version, platforms, downloads, repo, logo }) {
+function buildSvg({ name, description, iconDataUrl, version, platforms, downloads, repo, logo, measure }) {
   const PAD = 72;
   const NAME_MAX_W = 500;
   const DESC_MAX_W = 660;
@@ -189,15 +223,17 @@ function buildSvg({ name, description, iconDataUrl, version, platforms, download
 
   const nameLines = wrapText(name || 'Untitled plugin', {
     fontSize: 58,
-    weight: 800,
+    weight: 700,
     maxWidth: NAME_MAX_W,
     maxLines: 2,
+    measure,
   });
   const descLines = wrapText(description || 'A community plugin for the Ulanzi Deck.', {
     fontSize: 28,
     weight: 400,
     maxWidth: DESC_MAX_W,
     maxLines: 2,
+    measure,
   });
 
   // Name is vertically centered against the icon.
@@ -212,12 +248,12 @@ function buildSvg({ name, description, iconDataUrl, version, platforms, download
   const platformLabel = (platforms || []).map((p) => PLATFORM_LABEL[p] || p).join(' · ');
   if (platformLabel) chipDefs.push({ label: platformLabel, opts: {} });
   const dl = formatDownloads(downloads);
-  if (dl) chipDefs.push({ label: `${dl} downloads`, opts: { downloadIcon: true } });
+  if (dl) chipDefs.push({ label: `${dl} download${downloads === 1 ? '' : 's'}`, opts: { downloadIcon: true } });
 
   let chipX = PAD;
   let chipsSvg = '';
   for (const c of chipDefs) {
-    const built = chip(chipX, chipY, c.label, c.opts);
+    const built = chip(chipX, chipY, c.label, { ...c.opts, measure });
     chipsSvg += built.svg;
     chipX += built.width + chipGap;
   }
@@ -231,7 +267,7 @@ function buildSvg({ name, description, iconDataUrl, version, platforms, download
   const arrowCx = ctaX + 44;
   const arrowCy = ctaY + ctaH / 2;
   const ctaTextX = arrowCx + 24 + 18;
-  const ctaW = ctaTextX - ctaX + approxWidth(ctaLabel, ctaFont, 700) + 36;
+  const ctaW = ctaTextX - ctaX + measure(ctaLabel, ctaFont, 700) + 36;
 
   const eyebrowLogo = logo
     ? `<image href="${logo}" x="${PAD}" y="60" width="40" height="40" clip-path="url(#logoClip)"/>`
@@ -315,14 +351,12 @@ function buildSvg({ name, description, iconDataUrl, version, platforms, download
 // Renders a plugin banner to a PNG Buffer (1200×630).
 export async function renderBanner({ name, description, iconDataUrl, version, platforms, downloads, repo }) {
   const logo = await loadLogo();
-  const svg = buildSvg({ name, description, iconDataUrl, version, platforms, downloads, repo, logo });
+  const buffers = await loadFonts();
+  const measure = makeMeasure(buffers);
+  const svg = buildSvg({ name, description, iconDataUrl, version, platforms, downloads, repo, logo, measure });
   const resvg = new Resvg(svg, {
     fitTo: { mode: 'width', value: OG_WIDTH },
-    font: {
-      fontBuffers: [await loadFont()],
-      defaultFontFamily: 'Inter',
-      loadSystemFonts: false,
-    },
+    font: { ...RESVG_FONT_OPTS, fontBuffers: buffers },
   });
   return resvg.render().asPng();
 }
