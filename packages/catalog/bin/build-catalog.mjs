@@ -10,11 +10,15 @@
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { renderBanner } from './og-banner.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..', '..');
 const REGISTRY_DIR = join(ROOT, 'registry', 'plugins');
 const OUT_FILE = process.env.CATALOG_OUT_FILE || join(ROOT, 'dist', 'catalog', 'catalog.json');
+// Social-share banners (og/<slug>.png) are written next to catalog.json and published to
+// Pages, so plugins/index.php can point og:image at them when a plugin link is shared.
+const OG_DIR = join(dirname(OUT_FILE), 'og');
 // Per-repo security records emitted by scripts/security-scan.mjs (keyed by repo).
 // Absent when the catalog is built without a prior scan — every entry falls back
 // to `unknown` and the catalog builds fine.
@@ -127,6 +131,58 @@ async function ghRawFile(repo, path, ref) {
 
 function rawUrl(repo, ref, path) {
   return `https://raw.githubusercontent.com/${repo}/${ref}/${path}`;
+}
+
+// Filesystem-/URL-safe banner name for a repo. `owner/name` → `owner__name`.
+function ogSlug(repo) {
+  return repo.replace(/[^a-z0-9._-]+/gi, '__').toLowerCase();
+}
+
+const ICON_MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', svg: 'image/svg+xml' };
+
+// Downloads a plugin icon and returns it as a data: URL for embedding in the banner SVG.
+// Any failure (missing icon, network, unknown type) returns null → the banner draws a
+// branded placeholder tile instead of taking down the build.
+async function fetchIconDataUrl(iconUrl) {
+  if (!iconUrl) return null;
+  try {
+    const ext = (iconUrl.split('?')[0].match(/\.([a-z0-9]+)$/i)?.[1] || '').toLowerCase();
+    const mime = ICON_MIME[ext];
+    if (!mime || mime === 'image/svg+xml') return null; // resvg embeds raster reliably; skip SVG.
+    const res = await ghFetch(iconUrl);
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (!buf.length) return null;
+    return `data:${mime};base64,${buf.toString('base64')}`;
+  } catch {
+    return null;
+  }
+}
+
+// Renders the plugin's social-share banner to og/<slug>.png and returns its public Pages
+// URL (null on local builds without PAGES_BASE_URL, or if rendering fails). The card is
+// English-only, so it prefers the plugin's English name/description when available.
+async function generateBanner(entry) {
+  if (process.env.CATALOG_SKIP_OG === '1') return null;
+  try {
+    const en = entry.i18n?.en || {};
+    const iconDataUrl = await fetchIconDataUrl(entry.icon);
+    const png = await renderBanner({
+      name: en.name || entry.name,
+      description: en.description || entry.description,
+      iconDataUrl,
+      version: entry.version,
+      platforms: entry.platforms,
+      downloads: entry.downloads,
+      repo: entry.repo,
+    });
+    await mkdir(OG_DIR, { recursive: true });
+    await writeFile(join(OG_DIR, `${ogSlug(entry.repo)}.png`), png);
+    return PAGES_BASE_URL ? `${PAGES_BASE_URL}/og/${ogSlug(entry.repo)}.png` : null;
+  } catch (err) {
+    console.warn(`  ! banner render failed for ${entry.repo}: ${err.message}`);
+    return null;
+  }
 }
 
 // Derives device types from the Controllers of the manifest actions.
@@ -458,6 +514,7 @@ async function main() {
       const sec = security.get(repo) ? { ...security.get(repo) } : { ...UNKNOWN_SECURITY };
       sec.reportUrl = reportUrlFor(repo);
       built.security = sec;
+      built.ogImage = await generateBanner(built);
       plugins.push(built);
       console.log(`ok (v${built.version}, ${built.deviceTypes.join('+') || '?'}, sec:${built.security.status})`);
     } catch (err) {

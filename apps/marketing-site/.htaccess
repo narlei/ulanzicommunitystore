@@ -12,3 +12,6 @@
 
 # Serve /plugins as /plugins/
 DirectorySlash On
+
+# Prefer index.php (server-side OG tags for shared plugin links) over index.html.
+DirectoryIndex index.php index.html
