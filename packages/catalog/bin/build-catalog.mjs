@@ -10,6 +10,7 @@
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Resvg } from '@resvg/resvg-js';
 import { renderBanner } from './og-banner.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -140,19 +141,38 @@ function ogSlug(repo) {
 
 const ICON_MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', svg: 'image/svg+xml' };
 
+// Rasterizes an SVG icon to a 300×300 PNG so it can be embedded reliably: resvg (the
+// banner rasterizer) draws nested <image href="data:image/svg..."> inconsistently, so we
+// pre-render SVGs to PNG here instead. Returns null on any failure → branded placeholder.
+function svgToPngDataUrl(svgBuffer) {
+  try {
+    const png = new Resvg(svgBuffer, {
+      fitTo: { mode: 'width', value: 300 },
+      font: { loadSystemFonts: false },
+    })
+      .render()
+      .asPng();
+    return `data:image/png;base64,${Buffer.from(png).toString('base64')}`;
+  } catch {
+    return null;
+  }
+}
+
 // Downloads a plugin icon and returns it as a data: URL for embedding in the banner SVG.
-// Any failure (missing icon, network, unknown type) returns null → the banner draws a
+// Raster icons (PNG/JPG/GIF) are embedded as-is; SVGs are pre-rasterized to PNG. Any
+// failure (missing icon, network, unknown type) returns null → the banner draws a
 // branded placeholder tile instead of taking down the build.
 async function fetchIconDataUrl(iconUrl) {
   if (!iconUrl) return null;
   try {
     const ext = (iconUrl.split('?')[0].match(/\.([a-z0-9]+)$/i)?.[1] || '').toLowerCase();
     const mime = ICON_MIME[ext];
-    if (!mime || mime === 'image/svg+xml') return null; // resvg embeds raster reliably; skip SVG.
+    if (!mime) return null;
     const res = await ghFetch(iconUrl);
     if (!res.ok) return null;
     const buf = Buffer.from(await res.arrayBuffer());
     if (!buf.length) return null;
+    if (mime === 'image/svg+xml') return svgToPngDataUrl(buf);
     return `data:${mime};base64,${buf.toString('base64')}`;
   } catch {
     return null;
