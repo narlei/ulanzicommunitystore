@@ -8,6 +8,7 @@
 // In the Action, GITHUB_TOKEN is injected automatically.
 
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Resvg } from '@resvg/resvg-js';
@@ -198,7 +199,12 @@ async function generateBanner(entry) {
     });
     await mkdir(OG_DIR, { recursive: true });
     await writeFile(join(OG_DIR, `${ogSlug(entry.repo)}.png`), png);
-    return PAGES_BASE_URL ? `${PAGES_BASE_URL}/og/${ogSlug(entry.repo)}.png` : null;
+    // The filename is stable (overwritten each build), but aggressive scraper caches
+    // (Discord's image proxy) ignore cache-control and pin the URL. A content hash in the
+    // query string makes the og:image URL change iff the image changes, so a stale embed
+    // can never outlive a regenerated banner.
+    const bust = createHash('sha1').update(png).digest('hex').slice(0, 8);
+    return PAGES_BASE_URL ? `${PAGES_BASE_URL}/og/${ogSlug(entry.repo)}.png?v=${bust}` : null;
   } catch (err) {
     console.warn(`  ! banner render failed for ${entry.repo}: ${err.message}`);
     return null;
