@@ -23,7 +23,7 @@
     "typescript": "^5.7.2"
   },
   "allowScripts": {
-    "electron@43.0.0": true,
+    "electron@43.1.1": true,
     "esbuild@0.25.12": true
   }
 }

@@ -528,6 +528,12 @@ export function App() {
     }
   }
 
+  function openErrorLog() {
+    void window.api.openErrorLog().catch(() => {
+      pushToast('error', t(lang, 'openErrorLogError'));
+    });
+  }
+
   async function uninstall(plugin: CatalogPlugin) {
     setBusy((current) => ({ ...current, [plugin.id]: { pct: 35, msg: 'remove' } }));
     try {
@@ -690,6 +696,7 @@ export function App() {
             appUpdateBusy={appUpdateBusy}
             onCheckAppUpdate={() => void refreshAppUpdate()}
             onApplyAppUpdate={() => void applyAppUpdate()}
+            onOpenErrorLog={openErrorLog}
           />
         ) : view === 'submit' ? (
           <SubmitView lang={lang} />
@@ -1699,6 +1706,7 @@ function SettingsView({
   appUpdateBusy,
   onCheckAppUpdate,
   onApplyAppUpdate,
+  onOpenErrorLog,
 }: {
   lang: Lang;
   settings: Settings;
@@ -1709,6 +1717,7 @@ function SettingsView({
   appUpdateBusy: boolean;
   onCheckAppUpdate: () => void;
   onApplyAppUpdate: () => void;
+  onOpenErrorLog: () => void;
 }) {
   const version = appUpdate?.currentVersion || '—';
   const hasUpdate = Boolean(appUpdate?.updateAvailable && appUpdate.latestVersion);
@@ -1793,6 +1802,15 @@ function SettingsView({
               onClick={() => void window.api.openExternal(`${REPO_URL}/issues/new?template=plugin_request.yml`)}
             >
               {t(lang, 'requestPluginButton')}
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-6 py-4">
+            <div>
+              <h3 className="font-semibold">{t(lang, 'openErrorLog')}</h3>
+              <p className="mt-0.5 text-[12px] text-ink2">{t(lang, 'openErrorLogHelp')}</p>
+            </div>
+            <button className="btn-ghost shrink-0" onClick={onOpenErrorLog}>
+              {t(lang, 'openErrorLogButton')}
             </button>
           </div>
         </SettingsSection>

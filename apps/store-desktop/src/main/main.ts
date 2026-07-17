@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { compareVersions, isPluginId, isRepoSlug, type CatalogPlugin } from '@ulanzideck/catalog';
 import { applyAppUpdate, checkAppUpdate } from './app-update.js';
 import { fetchCatalog, installPlugin, listInstalled, restartUlanzi, uninstallPlugin, type InstallOptions } from './install.js';
+import { logError, openErrorLog } from './logger.js';
 import { fetchStoreCatalog } from './official-catalog.js';
 import { getSettings, updateSettings } from './settings.js';
 import { checkSubmission } from './submit.js';
@@ -104,8 +105,18 @@ async function handleDeepLink(url: string): Promise<void> {
     await installPlugin(plugin, (progress) => win?.webContents.send('plugin:progress', progress));
     win?.webContents.send('installed:refresh');
     scheduleUpdateCheck();
-  } catch {
-    // Ignore malformed external links.
+  } catch (err) {
+    await logError(`deepLink:install (${url})`, err);
+  }
+}
+
+/** Logs the technical detail of any failure surfaced to the user before rethrowing it unchanged. */
+async function withErrorLog<T>(context: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    await logError(context, err);
+    throw err;
   }
 }
 
@@ -248,8 +259,8 @@ ipcMain.handle('plugin:pendingOpen', () => {
   return repo;
 });
 
-ipcMain.handle('catalog:get', () => fetchStoreCatalog());
-ipcMain.handle('installed:list', () => listInstalled());
+ipcMain.handle('catalog:get', () => withErrorLog('catalog:get', () => fetchStoreCatalog()));
+ipcMain.handle('installed:list', () => withErrorLog('installed:list', () => listInstalled()));
 ipcMain.handle('settings:get', () => getSettings());
 ipcMain.handle('settings:developerMode', (_event, enabled: unknown) =>
   updateSettings({ developerMode: enabled === true }),
@@ -259,21 +270,25 @@ ipcMain.handle('settings:officialCatalog', (_event, enabled: unknown) =>
 );
 
 ipcMain.handle('plugin:install', (event, plugin: CatalogPlugin, options?: InstallOptions) =>
-  installPlugin(plugin, (progress) => event.sender.send('plugin:progress', progress), {
-    skipRestart: options?.skipRestart === true,
-  }).finally(() => {
-    scheduleUpdateCheck();
-  }),
+  withErrorLog(`plugin:install (${plugin?.id})`, () =>
+    installPlugin(plugin, (progress) => event.sender.send('plugin:progress', progress), {
+      skipRestart: options?.skipRestart === true,
+    }).finally(() => {
+      scheduleUpdateCheck();
+    }),
+  ),
 );
 
 ipcMain.handle('studio:restart', async () => {
-  await restartUlanzi();
+  await withErrorLog('studio:restart', () => restartUlanzi());
   return { ok: true };
 });
 
 ipcMain.handle('plugin:uninstall', async (event, pluginId: unknown) => {
   if (typeof pluginId !== 'string' || !isPluginId(pluginId)) throw new Error('Invalid pluginId');
-  await uninstallPlugin(pluginId, (progress) => event.sender.send('plugin:progress', progress));
+  await withErrorLog(`plugin:uninstall (${pluginId})`, () =>
+    uninstallPlugin(pluginId, (progress) => event.sender.send('plugin:progress', progress)),
+  );
   scheduleUpdateCheck();
   return { ok: true };
 });
@@ -284,8 +299,12 @@ ipcMain.handle('appUpdate:check', async (_event, force: unknown) => pushAppUpdat
 ipcMain.handle('appUpdate:apply', () => applyAppUpdate());
 
 ipcMain.handle('submit:check', (_event, repoInput: unknown) =>
-  checkSubmission(typeof repoInput === 'string' ? repoInput : ''),
+  withErrorLog(`submit:check (${repoInput})`, () =>
+    checkSubmission(typeof repoInput === 'string' ? repoInput : ''),
+  ),
 );
+
+ipcMain.handle('logs:open', () => withErrorLog('logs:open', () => openErrorLog()));
 
 ipcMain.handle('shell:openExternal', async (_event, url: unknown) => {
   if (typeof url !== 'string' || !/^https?:\/\//.test(url)) throw new Error('Invalid URL');
