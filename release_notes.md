@@ -1,11 +1,23 @@
-## v1.2.1 — 2026-07-15
+## v1.3.0 — 2026-07-17
+
+### Added
+
+- Social-share banners: plugin pages now generate an og:image banner (with rasterized plugin icons) so links shared on social media and chat apps show a rich preview instead of a plain link.
+- The desktop app can now log install/catalog/submission failures to disk and offers an **Open logs** action in Settings, so users can share technical details when reporting issues.
+- New plugins in the catalog: GitHub Repo Stats, Internet Speed Test, macOS Controls, and YouTube Channel Stats.
+
+### Fixed
+
+- Banner font rendering on CI now uses static Inter faces with measured text widths, fixing incorrect font weights and glyph overflow on the server-generated images.
+- og:image URLs are now cache-busted with a content hash, so social platforms pick up updated banners instead of serving a stale cached image.
+- Plugin install no longer fails on harmless macOS zip metadata (`__MACOSX`, `.DS_Store`) bundled in some release archives.
 
 ### Changed
 
-- The security banner in the plugin detail sheet is now a compact **Scan** cell in the stats bar (next to version, downloads, stars and devices). Clicking it expands the full security panel; when the scan found issues, the panel is always visible and the cell shows the issue count. The wording stays factual about the scan result ("Clean") rather than asserting the plugin is safe.
-- The public security report page now credits each plugin's maintainer with a link to their GitHub profile.
-- Security scan reports with findings now @-mention the affected plugin maintainers (deduped), so they get notified directly.
+- Plugin install validation errors are now more descriptive (invalid plugin id, untrusted download URL, unexpected zip structure) to make failures easier to diagnose.
+- Shared plugin links now serve through `index.php` (server-side OG tags) instead of the static HTML page.
+- Electron bumped to 43.1.1 (latest stable patch).
 
 ### Internal
 
-- GitHub Actions in all workflows bumped to their latest versions.
+- Security scan workflow always installs the latest Trivy instead of a pinned version.

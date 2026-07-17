@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('api', {
   setOfficialCatalog: (enabled: boolean) => ipcRenderer.invoke('settings:officialCatalog', enabled),
   checkSubmission: (repoInput: string) => ipcRenderer.invoke('submit:check', repoInput),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
+  openErrorLog: () => ipcRenderer.invoke('logs:open'),
   getPendingOpen: (): Promise<string | null> => ipcRenderer.invoke('plugin:pendingOpen'),
   onOpenPlugin: (callback: (repo: string) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, repo: string) => callback(repo);

@@ -158,10 +158,18 @@ export async function uninstallPlugin(
 const TRUSTED_DOWNLOAD_HOSTS = [/^https:\/\/github\.com\//, /^https:\/\/([a-z0-9-]+\.)*ulanzistudio\.com\//];
 
 function assertCatalogPlugin(plugin: CatalogPlugin): void {
-  if (!plugin || !isPluginId(plugin.id)) throw new Error('Invalid plugin id');
-  if (!plugin.downloadUrl || !TRUSTED_DOWNLOAD_HOSTS.some((host) => host.test(plugin.downloadUrl))) {
-    throw new Error('Invalid download URL');
+  if (!plugin || !isPluginId(plugin.id)) {
+    throw new Error(`Invalid plugin id: "${plugin?.id}" doesn't match the expected com.<author>.<name>.ulanziPlugin format`);
   }
+  if (!plugin.downloadUrl || !TRUSTED_DOWNLOAD_HOSTS.some((host) => host.test(plugin.downloadUrl))) {
+    throw new Error(`Invalid download URL "${plugin.downloadUrl}": not hosted on a trusted domain (github.com or *.ulanzistudio.com)`);
+  }
+}
+
+// Harmless clutter added by macOS's Finder/zip (AppleDouble resource forks and Finder
+// metadata) that ships in some plugin releases built on a Mac. Not part of the plugin.
+function isMacMetadataEntry(name: string): boolean {
+  return name === '__MACOSX' || name.startsWith('__MACOSX/') || name === '.DS_Store' || name.endsWith('/.DS_Store');
 }
 
 function validateZipEntries(zip: AdmZip, pluginId: string): void {
@@ -171,22 +179,36 @@ function validateZipEntries(zip: AdmZip, pluginId: string): void {
 
   for (const entry of zip.getEntries()) {
     const name = entry.entryName.replace(/\\/g, '/');
-    if (
-      name.startsWith('/') ||
-      /^[A-Za-z]:\//.test(name) ||
-      name.split('/').includes('..') ||
-      !name.startsWith(prefix)
-    ) {
-      throw new Error(`Unsafe zip entry: ${entry.entryName}`);
+    if (isMacMetadataEntry(name)) continue;
+
+    if (name.startsWith('/')) {
+      throw new Error(`Unsafe zip entry "${entry.entryName}": absolute path`);
     }
+    if (/^[A-Za-z]:\//.test(name)) {
+      throw new Error(`Unsafe zip entry "${entry.entryName}": Windows drive-letter path`);
+    }
+    if (name.split('/').includes('..')) {
+      throw new Error(`Unsafe zip entry "${entry.entryName}": path traversal ("..")`);
+    }
+    if (!name.startsWith(prefix)) {
+      throw new Error(`Unsafe zip entry "${entry.entryName}": outside the expected "${prefix}" folder`);
+    }
+
     if (name === prefix) hasRoot = true;
     if (name === `${prefix}manifest.json`) hasManifest = true;
   }
 
-  if (!hasRoot && !zip.getEntries().some((entry) => entry.entryName.replace(/\\/g, '/').startsWith(prefix))) {
-    throw new Error(`Unexpected zip structure: missing ${pluginId}/`);
+  if (
+    !hasRoot &&
+    !zip
+      .getEntries()
+      .some((entry) => !isMacMetadataEntry(entry.entryName.replace(/\\/g, '/')) && entry.entryName.startsWith(prefix))
+  ) {
+    throw new Error(`Unexpected zip structure: no "${prefix}" top-level folder found in the archive`);
   }
-  if (!hasManifest) throw new Error(`Unexpected zip structure: missing ${pluginId}/manifest.json`);
+  if (!hasManifest) {
+    throw new Error(`Unexpected zip structure: "${prefix}manifest.json" is missing from the archive`);
+  }
 }
 
 function safePluginPath(root: string, pluginId: string): string {

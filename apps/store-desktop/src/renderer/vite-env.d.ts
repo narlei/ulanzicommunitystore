@@ -19,6 +19,7 @@ declare global {
       setOfficialCatalog: (enabled: boolean) => Promise<Settings>;
       checkSubmission: (repoInput: string) => Promise<SubmitCheckResult>;
       openExternal: (url: string) => Promise<void>;
+      openErrorLog: () => Promise<void>;
       getPendingOpen: () => Promise<string | null>;
       onOpenPlugin: (callback: (repo: string) => void) => () => void;
       onProgress: (callback: (progress: InstallProgress) => void) => () => void;

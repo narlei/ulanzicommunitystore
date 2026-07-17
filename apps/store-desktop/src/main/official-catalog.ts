@@ -1,6 +1,7 @@
 import type { Catalog, CatalogPlugin } from '@ulanzideck/catalog';
 import { isPluginId } from '@ulanzideck/catalog';
 import { fetchCatalog } from './install.js';
+import { logError } from './logger.js';
 import { getSettings } from './settings.js';
 
 // Undocumented endpoint used by the Ulanzi Studio desktop app to list its official
@@ -137,6 +138,7 @@ export async function fetchStoreCatalog(): Promise<Catalog> {
     };
   } catch (err) {
     console.error('Official catalog fetch failed:', err);
+    await logError('catalog:official (degraded to community-only)', err);
     return community;
   }
 }
