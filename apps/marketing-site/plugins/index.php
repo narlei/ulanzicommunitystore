@@ -13,6 +13,7 @@
 $CATALOG_URL = 'https://narlei.github.io/ulanzicommunitystore/catalog.json';
 $BASE_URL = 'https://ulanzicommunitystore.narlei.com/plugins/';
 $CACHE_TTL = 600; // seconds; crawls are bursty, don't hit Pages on every hit
+$MISS_REFRESH_COOLDOWN = 60; // min seconds between forced refreshes on a cache miss
 
 $template = file_get_contents(__DIR__ . '/index.html');
 
@@ -23,6 +24,15 @@ if ($template === false || !preg_match('#^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$#', $r
 }
 
 $plugin = findPlugin(loadCatalog($CATALOG_URL, $CACHE_TTL), $repo);
+
+// A just-published plugin is missing from a cache that is still inside its TTL, and the
+// first crawler to hit the link is usually the share that was posted seconds after the
+// catalog deploy — Discord & co. then pin that generic card for hours. So a miss on a
+// well-formed repo buys one forced (CDN-bypassing) refresh, rate-limited so a flood of
+// bogus ?plugin=foo/bar can't turn into a flood of Pages fetches.
+if (!$plugin && allowMissRefresh($MISS_REFRESH_COOLDOWN)) {
+    $plugin = findPlugin(loadCatalog($CATALOG_URL, $CACHE_TTL, true), $repo);
+}
 if (!$plugin) {
     serveTemplate($template);
 }
@@ -39,9 +49,11 @@ $descriptionCard = $description . ' Get it free on the Ulanzi Community Store.';
 $shareUrl = $BASE_URL . '?plugin=' . rawurlencode($plugin['repo']);
 
 // Prefer the generated 1200×630 banner; fall back to the plugin icon (small card).
+// Crawlers don't rasterize SVG, so an SVG icon would render as a card with a blank
+// image slot — worse than the template's PNG logo, so leave the template's image alone.
 $ogImage = firstNonEmpty(array(
     isset($plugin['ogImage']) ? $plugin['ogImage'] : '',
-    isset($plugin['icon']) ? $plugin['icon'] : '',
+    isRasterImageUrl(isset($plugin['icon']) ? $plugin['icon'] : '') ? $plugin['icon'] : '',
 ), '');
 $largeCard = !empty($plugin['ogImage']);
 
@@ -66,12 +78,14 @@ function serveTemplate($html)
 
 // catalog.json via a small temp-dir cache. A fetch failure falls back to a stale
 // cache when one exists; with no cache at all it returns null (→ default page).
-function loadCatalog($url, $ttl)
+// $force skips the local cache *and* the Pages CDN copy (which carries its own
+// 10-minute max-age) so a freshly deployed catalog is actually visible.
+function loadCatalog($url, $ttl, $force = false)
 {
     $cacheFile = sys_get_temp_dir() . '/ucs-catalog-cache.json';
 
     $stat = @stat($cacheFile);
-    if ($stat && time() - $stat['mtime'] < $ttl) {
+    if (!$force && $stat && time() - $stat['mtime'] < $ttl) {
         $cached = @file_get_contents($cacheFile);
         if ($cached !== false) {
             $json = json_decode($cached, true);
@@ -81,8 +95,13 @@ function loadCatalog($url, $ttl)
         }
     }
 
-    $ctx = stream_context_create(array('http' => array('timeout' => 5, 'ignore_errors' => false)));
-    $body = @file_get_contents($url, false, $ctx);
+    $ctx = stream_context_create(array('http' => array(
+        'timeout' => 5,
+        'ignore_errors' => false,
+        'header' => "Cache-Control: no-cache\r\nPragma: no-cache\r\n",
+    )));
+    $fetchUrl = $force ? $url . '?cb=' . time() : $url;
+    $body = @file_get_contents($fetchUrl, false, $ctx);
     if ($body !== false) {
         $json = json_decode($body, true);
         if (is_array($json)) {
@@ -100,6 +119,30 @@ function loadCatalog($url, $ttl)
         }
     }
     return null;
+}
+
+// True at most once per $cooldown seconds, process-wide, so an unknown ?plugin= can
+// trigger a catalog refresh without letting a crawl (or a scan) stampede GitHub Pages.
+function allowMissRefresh($cooldown)
+{
+    $stamp = sys_get_temp_dir() . '/ucs-catalog-miss-refresh';
+
+    $stat = @stat($stamp);
+    if ($stat && time() - $stat['mtime'] < $cooldown) {
+        return false;
+    }
+    return @touch($stamp) !== false;
+}
+
+// Only formats social crawlers actually decode. SVG in particular renders as an empty
+// image slot on Discord/Slack/X, and query strings are ignored (banners are ?v=hashed).
+function isRasterImageUrl($url)
+{
+    if (!is_string($url) || trim($url) === '') {
+        return false;
+    }
+    $path = strtok($url, '?');
+    return (bool) preg_match('#\.(png|jpe?g|gif|webp)$#i', $path);
 }
 
 function findPlugin($catalog, $repo)
