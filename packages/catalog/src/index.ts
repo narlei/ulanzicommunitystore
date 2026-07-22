@@ -32,8 +32,11 @@ export type CatalogPlugin = {
   stars?: number;
   downloadUrl: string;
   sourceUrl: string;
-  /** Present and set to 'official' for plugins pulled from the Ulanzi Studio Marketplace. Absent = community. */
-  source?: 'official';
+  /**
+   * Where the entry came from. 'official' = Ulanzi Studio Marketplace product feed,
+   * 'ugc' = the ugc.ulanzistudio.com creator portal. Absent = community registry.
+   */
+  source?: 'official' | 'ugc';
   /** Automated security scan result for the plugin's repo. Absent in older catalogs. */
   security?: PluginSecurity;
 };

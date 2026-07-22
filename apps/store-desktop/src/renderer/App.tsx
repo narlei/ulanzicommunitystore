@@ -31,7 +31,7 @@ type BusyState = Record<string, { pct: number; msg: string }>;
 
 type Toast = { id: number; kind: 'error' | 'success' | 'info'; text: string };
 
-const defaultSettings: Settings = { developerMode: false, officialCatalog: false };
+const defaultSettings: Settings = { developerMode: false, officialCatalog: false, ugcCatalog: false };
 
 function detectHostPlatform(): PlatformFilter {
   const platform = (navigator.platform || navigator.userAgent || '').toLowerCase();
@@ -248,6 +248,8 @@ export function App() {
   const [device, setDevice] = useState('');
   const [platform, setPlatformState] = useState<PlatformFilter>(() => loadPlatformFilter());
   const [category, setCategory] = useState('');
+  const [source, setSource] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [sort, setSortState] = useState<Sort>(() => loadSort());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -255,6 +257,7 @@ export function App() {
   const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | null>(null);
   const [appUpdateDismissed, setAppUpdateDismissed] = useState<string | null>(null);
   const [appUpdateBusy, setAppUpdateBusy] = useState(false);
+  const [cacheBusy, setCacheBusy] = useState(false);
   const [githubStarDismissed, setGithubStarDismissed] = useState(() => isGithubStarDismissed());
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [confirmUninstall, setConfirmUninstall] = useState<CatalogPlugin | null>(null);
@@ -269,19 +272,33 @@ export function App() {
   // the item settles into its natural position on the next launch.
   const sortInstalledRef = useRef<Record<string, string | null> | null>(null);
 
-  const pushToast = useCallback((kind: Toast['kind'], text: string) => {
+  /**
+   * Returns the toast id so a caller can update or dismiss it later. `sticky` skips the
+   * auto-dismiss, for progress toasts that must outlive a step of unknown duration —
+   * the caller then owns clearing it.
+   */
+  const pushToast = useCallback((kind: Toast['kind'], text: string, sticky = false) => {
     const id = ++toastId.current;
     setToasts((current) => [...current, { id, kind, text }]);
-    window.setTimeout(() => {
-      setToasts((current) => current.filter((toast) => toast.id !== id));
-    }, 6000);
+    if (!sticky) {
+      window.setTimeout(() => {
+        setToasts((current) => current.filter((toast) => toast.id !== id));
+      }, 6000);
+    }
+    return id;
+  }, []);
+
+  /** Swaps a live toast's text in place, so a multi-step action reuses one slot. */
+  const updateToast = useCallback((id: number, kind: Toast['kind'], text: string) => {
+    setToasts((current) => current.map((toast) => (toast.id === id ? { ...toast, kind, text } : toast)));
   }, []);
 
   const dismissToast = useCallback((id: number) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
-  const load = useCallback(async () => {
+  /** Resolves to whether the refresh succeeded, for callers that report the outcome. */
+  const load = useCallback(async (): Promise<boolean> => {
     setLoading(true);
     setError(false);
     try {
@@ -295,8 +312,10 @@ export function App() {
       if (!sortInstalledRef.current) sortInstalledRef.current = installedMap;
       setInstalled(installedMap);
       setSettings(appSettings);
+      return true;
     } catch {
       setError(true);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -411,8 +430,22 @@ export function App() {
     setPlatform('');
     setDevice('');
     setCategory('');
+    setSource('');
     setQuery('');
   }
+
+  // Only the catalogs actually present get an option — with both Ulanzi toggles off there
+  // is nothing to choose between, and the filter hides itself entirely.
+  const availableSources = useMemo(() => {
+    const present = new Set(plugins.map(pluginSource));
+    return ['community', 'official', 'ugc'].filter((item) => present.has(item));
+  }, [plugins]);
+
+  // Turning a catalog off in Settings can strip the source currently being filtered on,
+  // which would silently empty the list. Drop the filter instead.
+  useEffect(() => {
+    if (source && !availableSources.includes(source)) setSource('');
+  }, [availableSources, source]);
 
   const devices = useMemo(
     () => Array.from(new Set(plugins.flatMap((plugin) => plugin.deviceTypes || []))).sort(),
@@ -433,12 +466,15 @@ export function App() {
 
   // Categories in the UI come from store.json `tags` (e.g. productivity), not
   // manifest.Category (often the plugin product name).
+  // Normalised keys, not raw tags: the same category reaches us spelled differently per
+  // source, and a key keeps the selected value stable even if the contributing source goes
+  // away when a catalog toggle flips.
   const categories = useMemo(
     () =>
       Array.from(
         new Set(
           plugins.flatMap((plugin) =>
-            (plugin.tags || []).map((tag) => tag.trim()).filter(Boolean),
+            (plugin.tags || []).map((tag) => categoryKey(tag)).filter(Boolean),
           ),
         ),
       ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
@@ -466,23 +502,34 @@ export function App() {
     [plugins, installed],
   );
 
+  // Built once per catalog/language rather than per keystroke — long descriptions are in
+  // here, and rebuilding all of them on every character typed is pure waste.
+  const haystacks = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const plugin of plugins) map.set(plugin.id, pluginHaystack(plugin, lang));
+    return map;
+  }, [plugins, lang]);
+
+  // Whitespace splits the query into independent terms that must ALL match, so "claude
+  // narlei" finds the plugin named Claude published by narlei — the words need not be
+  // adjacent, nor even live in the same field.
+  const searchTerms = useMemo(
+    () => searchNormalize(query).split(/\s+/).filter(Boolean),
+    [query],
+  );
+
   const visible = useMemo(() => {
     const filtered = plugins.filter((plugin) => {
       if (view === 'installed' && !installed[plugin.id]) return false;
       if (view === 'updates' && !hasUpdate(plugin, installed)) return false;
       if (device && !(plugin.deviceTypes || []).includes(device)) return false;
       if (!pluginSupportsPlatform(plugin, platform)) return false;
-      if (category && !(plugin.tags || []).some((tag) => tag.trim() === category)) return false;
-      if (query.trim()) {
-        const haystack = [
-          pluginText(plugin, 'name', lang),
-          pluginText(plugin, 'description', lang),
-          plugin.author,
-          (plugin.tags || []).join(' '),
-        ]
-          .join(' ')
-          .toLowerCase();
-        if (!haystack.includes(query.toLowerCase())) return false;
+      // `category` already holds a normalised key, so both spellings of a tag match it.
+      if (category && !(plugin.tags || []).some((tag) => categoryKey(tag) === category)) return false;
+      if (source && pluginSource(plugin) !== source) return false;
+      if (searchTerms.length > 0) {
+        const haystack = haystacks.get(plugin.id) || '';
+        if (!searchTerms.every((term) => haystack.includes(term))) return false;
       }
       return true;
     });
@@ -500,10 +547,19 @@ export function App() {
       });
     }
     return filtered;
-  }, [plugins, view, installed, device, platform, category, query, lang, sort]);
+    // searchTerms covers `query`, haystacks covers `lang` — neither is read directly here.
+  }, [plugins, view, installed, device, platform, category, source, searchTerms, haystacks, sort]);
 
   // Any narrowing of the catalog list (OS default counts — clear resets it to “all”).
-  const hasActiveFilters = Boolean(platform || device || category || query.trim());
+  // Query lives in its own field in the bar, so it is not counted on the filters badge.
+  const activeFilterCount = [platform, device, category, source].filter(Boolean).length;
+  const hasAnyFilter =
+    availablePlatforms.length > 0 ||
+    deviceFilterOptions.length > 1 ||
+    categories.length > 0 ||
+    availableSources.length > 1;
+
+  const hasActiveFilters = Boolean(activeFilterCount > 0 || query.trim());
   // Prefer the view empty-state when that view has nothing at all (e.g. zero installed).
   // Only offer Clear when filters/search may be hiding items that exist in the view.
   const viewHasItems =
@@ -585,6 +641,34 @@ export function App() {
     setSettings(await window.api.setOfficialCatalog(enabled));
     // Refetch so official plugins appear/disappear immediately instead of on next reload.
     void load();
+  }
+
+  async function setUgcCatalog(enabled: boolean) {
+    setSettings(await window.api.setUgcCatalog(enabled));
+    void load();
+  }
+
+  /**
+   * Drop the cached Ulanzi catalogs, then refetch so the result is visible right away
+   * rather than on some later load. The refetch is the cold path — several seconds against
+   * the Ulanzi CDN — so it narrates each step through one reused toast; without that the
+   * Settings screen just sits there and reads as frozen.
+   */
+  async function clearCatalogCache() {
+    setCacheBusy(true);
+    const toast = pushToast('info', t(lang, 'catalogCacheClearingToast'), true);
+    try {
+      await window.api.clearCatalogCache();
+      updateToast(toast, 'info', t(lang, 'catalogCacheRebuildingToast'));
+      const ok = await load();
+      dismissToast(toast);
+      pushToast(ok ? 'success' : 'error', t(lang, ok ? 'catalogCacheDoneToast' : 'catalogCacheErrorToast'));
+    } catch {
+      dismissToast(toast);
+      pushToast('error', t(lang, 'catalogCacheErrorToast'));
+    } finally {
+      setCacheBusy(false);
+    }
   }
 
   async function refreshAppUpdate() {
@@ -692,6 +776,9 @@ export function App() {
             setLang={setLang}
             setDeveloperMode={setDeveloperMode}
             setOfficialCatalog={setOfficialCatalog}
+            setUgcCatalog={setUgcCatalog}
+            cacheBusy={cacheBusy}
+            onClearCatalogCache={() => void clearCatalogCache()}
             appUpdate={appUpdate}
             appUpdateBusy={appUpdateBusy}
             onCheckAppUpdate={() => void refreshAppUpdate()}
@@ -742,92 +829,18 @@ export function App() {
               </div>
             </div>
 
+            {/* Elastic search on the left; sort and filters pinned to the right. */}
             <div className="filter-bar sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-stroke/50 px-7 py-3">
-              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                <div className="seg" role="group" aria-label={t(lang, 'sortRecent')}>
-                  <button
-                    type="button"
-                    className={sort === 'recent' ? 'seg-active' : ''}
-                    onClick={() => setSort('recent')}
-                  >
-                    {t(lang, 'sortRecent')}
-                  </button>
-                  <button
-                    type="button"
-                    className={sort === 'popular' ? 'seg-active' : ''}
-                    onClick={() => setSort('popular')}
-                  >
-                    {t(lang, 'sortPopular')}
-                  </button>
-                </div>
-                {/* OS is a preference people rarely change — dropdown saves bar space for device filters. */}
-                {availablePlatforms.length > 0 && (
-                  <label className="filter-select">
-                    <span className="sr-only">{t(lang, 'filterPlatform')}</span>
-                    <select
-                      className={platform ? 'is-active' : ''}
-                      value={platform}
-                      onChange={(event) => setPlatform(event.target.value as PlatformFilter)}
-                      aria-label={t(lang, 'filterPlatform')}
-                    >
-                      <option value="">{t(lang, 'allPlatforms')}</option>
-                      {availablePlatforms.map((item) => (
-                        <option key={item} value={item}>
-                          {platformFilterLabel(item)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                {/* Device filter: Deck / Dial (preview always shows both for layout). */}
-                {deviceFilterOptions.length > 1 && (
-                  <div className="seg" role="group" aria-label={t(lang, 'filterDevice')}>
-                    <button
-                      type="button"
-                      className={device === '' ? 'seg-active' : ''}
-                      onClick={() => setDevice('')}
-                    >
-                      {t(lang, 'all')}
-                    </button>
-                    {deviceFilterOptions.map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        className={device === item ? 'seg-active' : ''}
-                        onClick={() => setDevice(item)}
-                      >
-                        {deviceLabel(item)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {categories.length > 0 && (
-                  <label className="filter-select">
-                    <span className="sr-only">{t(lang, 'filterCategory')}</span>
-                    <select
-                      className={category ? 'is-active' : ''}
-                      value={category}
-                      onChange={(event) => setCategory(event.target.value)}
-                      aria-label={t(lang, 'filterCategory')}
-                    >
-                      <option value="">{t(lang, 'allCategories')}</option>
-                      {categories.map((item) => (
-                        <option key={item} value={item}>
-                          {categoryLabel(item)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-              </div>
               <div className="search-field filter-search">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="search-icon h-3.5 w-3.5">
                   <circle cx="11" cy="11" r="7" />
                   <path d="M21 21l-4.3-4.3" />
                 </svg>
+                {/* Placeholder advertises the searchable fields; aria-label stays short so a
+                    screen reader announces the control, not the hint. */}
                 <input
                   ref={searchRef}
-                  placeholder={t(lang, 'search')}
+                  placeholder={t(lang, 'searchPlaceholder')}
                   value={query}
                   onChange={(event) => onSearch(event.target.value)}
                   spellCheck={false}
@@ -849,6 +862,62 @@ export function App() {
                   </button>
                 ) : (
                   <span className="kbd">⌘K</span>
+                )}
+              </div>
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                <div className="seg" role="group" aria-label={t(lang, 'sortRecent')}>
+                  <button
+                    type="button"
+                    className={sort === 'recent' ? 'seg-active' : ''}
+                    onClick={() => setSort('recent')}
+                  >
+                    {t(lang, 'sortRecent')}
+                  </button>
+                  <button
+                    type="button"
+                    className={sort === 'popular' ? 'seg-active' : ''}
+                    onClick={() => setSort('popular')}
+                  >
+                    {t(lang, 'sortPopular')}
+                  </button>
+                </div>
+                {hasAnyFilter && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      data-filters-trigger
+                      className={`filter-trigger ${activeFilterCount > 0 ? 'is-active' : ''}`}
+                      onClick={() => setFiltersOpen((open) => !open)}
+                      aria-expanded={filtersOpen}
+                      aria-haspopup="dialog"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="h-3.5 w-3.5" aria-hidden="true">
+                        <path d="M3 6h18M6 12h12M10 18h4" />
+                      </svg>
+                      {t(lang, 'filters')}
+                      {activeFilterCount > 0 && <span className="filter-count">{activeFilterCount}</span>}
+                    </button>
+                    {filtersOpen && (
+                      <FiltersPanel
+                        lang={lang}
+                        platform={platform}
+                        setPlatform={setPlatform}
+                        availablePlatforms={availablePlatforms}
+                        device={device}
+                        setDevice={setDevice}
+                        deviceOptions={deviceFilterOptions}
+                        category={category}
+                        setCategory={setCategory}
+                        categories={categories}
+                        source={source}
+                        setSource={setSource}
+                        availableSources={availableSources}
+                        activeCount={activeFilterCount}
+                        onClear={clearAllFilters}
+                        onClose={() => setFiltersOpen(false)}
+                      />
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -1148,11 +1217,12 @@ function PluginCard({
       }}
     >
       <div className="relative h-32 w-full overflow-hidden bg-raised">
-        {plugin.cover ? (
-          <img src={plugin.cover} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
-        ) : (
-          <div className="grid h-full place-items-center text-3xl text-accent/50">◆</div>
-        )}
+        {/* Screenshots back the cover up — a dead coverUrl usually still has live banners. */}
+        <PluginImage
+          sources={[plugin.cover, ...(plugin.screenshots || [])]}
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+          fallbackClassName="grid h-full place-items-center text-3xl text-accent/50"
+        />
         {showNew && (
           <span className="absolute left-2 top-2 z-[1] rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-ink shadow-sm">
             {t(lang, 'newBadge')}
@@ -1167,11 +1237,11 @@ function PluginCard({
       </div>
       <div className="flex flex-1 flex-col p-4">
         <div className="flex items-center gap-3">
-          {plugin.icon ? (
-            <img src={plugin.icon} alt="" className="h-10 w-10 shrink-0 rounded-[10px] object-cover shadow-card" />
-          ) : (
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-accent/10 text-accent">◆</div>
-          )}
+          <PluginImage
+            sources={[plugin.icon, plugin.cover, ...(plugin.screenshots || [])]}
+            className="h-10 w-10 shrink-0 rounded-[10px] object-cover shadow-card"
+            fallbackClassName="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-accent/10 text-accent"
+          />
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-[14px] font-semibold">{pluginText(plugin, 'name', lang)}</h3>
             <p className="truncate text-[12px] text-ink3">{plugin.author}</p>
@@ -1383,11 +1453,11 @@ function PluginDetail({
         onClick={(event) => event.stopPropagation()}
       >
         <header className="relative flex items-center gap-5 border-b border-stroke/70 p-6 pr-14">
-          {plugin.icon ? (
-            <img src={plugin.icon} alt="" className="h-[76px] w-[76px] shrink-0 rounded-[17px] object-cover shadow-card" />
-          ) : (
-            <div className="grid h-[76px] w-[76px] shrink-0 place-items-center rounded-[17px] bg-accent/10 text-3xl text-accent">◆</div>
-          )}
+          <PluginImage
+            sources={[plugin.icon, plugin.cover, ...(plugin.screenshots || [])]}
+            className="h-[76px] w-[76px] shrink-0 rounded-[17px] object-cover shadow-card"
+            fallbackClassName="grid h-[76px] w-[76px] shrink-0 place-items-center rounded-[17px] bg-accent/10 text-3xl text-accent"
+          />
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-[22px] font-bold tracking-tight">{pluginText(plugin, 'name', lang)}</h2>
             <p className="mt-0.5 text-ink2">{plugin.author}</p>
@@ -1454,18 +1524,7 @@ function PluginDetail({
           {screenshots.length > 0 && (
             <div className="mb-6 flex gap-3 overflow-x-auto pb-1">
               {screenshots.map((shot, index) => (
-                <button
-                  key={shot}
-                  type="button"
-                  className="group/shot shrink-0 cursor-pointer rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  onClick={() => setLightbox(index)}
-                >
-                  <img
-                    src={shot}
-                    alt=""
-                    className="h-56 rounded-xl object-cover shadow-card transition-opacity group-hover/shot:opacity-90"
-                  />
-                </button>
+                <ScreenshotThumb key={shot} src={shot} onOpen={() => setLightbox(index)} />
               ))}
             </div>
           )}
@@ -1520,11 +1579,11 @@ function PluginDetail({
                     className="card-interactive flex items-center gap-3 rounded-xl bg-surface p-3 text-left shadow-card outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     onClick={() => onSelectPlugin(other)}
                   >
-                    {other.icon ? (
-                      <img src={other.icon} alt="" className="h-10 w-10 shrink-0 rounded-[10px] object-cover shadow-card" />
-                    ) : (
-                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-accent/10 text-accent">◆</div>
-                    )}
+                    <PluginImage
+                      sources={[other.icon, other.cover]}
+                      className="h-10 w-10 shrink-0 rounded-[10px] object-cover shadow-card"
+                      fallbackClassName="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-accent/10 text-accent"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13.5px] font-semibold">{pluginText(other, 'name', lang)}</p>
                       <p className="truncate text-[12px] text-ink3">{pluginText(other, 'description', lang)}</p>
@@ -1548,6 +1607,25 @@ function PluginDetail({
       )}
     </div>
   );
+}
+
+/**
+ * Whether (clientX, clientY) falls on the pixels an `object-contain` image actually paints,
+ * as opposed to the transparent letterbox around them. Mirrors how object-contain fits the
+ * bitmap: scale to the smaller axis ratio, then centre.
+ */
+function isPointOnPaintedImage(img: HTMLImageElement, clientX: number, clientY: number): boolean {
+  const { naturalWidth, naturalHeight } = img;
+  if (!naturalWidth || !naturalHeight) return false;
+
+  const box = img.getBoundingClientRect();
+  const scale = Math.min(box.width / naturalWidth, box.height / naturalHeight);
+  const paintedWidth = naturalWidth * scale;
+  const paintedHeight = naturalHeight * scale;
+  const offsetX = clientX - (box.left + (box.width - paintedWidth) / 2);
+  const offsetY = clientY - (box.top + (box.height - paintedHeight) / 2);
+
+  return offsetX >= 0 && offsetX <= paintedWidth && offsetY >= 0 && offsetY <= paintedHeight;
 }
 
 function Lightbox({
@@ -1578,11 +1656,19 @@ function Lightbox({
         onClose();
       }}
     >
+      {/* h/w-full (not max-*) so shots smaller than the viewport scale UP to fill it;
+          object-contain keeps the aspect ratio and letterboxes the remainder. Since the
+          element now spans the whole backdrop, a click only counts as "on the image" when
+          it lands inside the painted area — otherwise it falls through and closes. */}
       <img
         src={shots[index]}
         alt=""
-        className="max-h-full max-w-full rounded-xl object-contain shadow-sheet"
-        onClick={(event) => event.stopPropagation()}
+        className="h-full w-full object-contain"
+        onClick={(event) => {
+          if (isPointOnPaintedImage(event.currentTarget, event.clientX, event.clientY)) {
+            event.stopPropagation();
+          }
+        }}
       />
       <button
         type="button"
@@ -1702,6 +1788,9 @@ function SettingsView({
   setLang,
   setDeveloperMode,
   setOfficialCatalog,
+  setUgcCatalog,
+  cacheBusy,
+  onClearCatalogCache,
   appUpdate,
   appUpdateBusy,
   onCheckAppUpdate,
@@ -1713,6 +1802,9 @@ function SettingsView({
   setLang: (lang: Lang) => void;
   setDeveloperMode: (enabled: boolean) => void;
   setOfficialCatalog: (enabled: boolean) => void;
+  setUgcCatalog: (enabled: boolean) => void;
+  cacheBusy: boolean;
+  onClearCatalogCache: () => void;
   appUpdate: AppUpdateInfo | null;
   appUpdateBusy: boolean;
   onCheckAppUpdate: () => void;
@@ -1765,6 +1857,31 @@ function SettingsView({
               <span />
             </button>
           </div>
+          <div className="flex items-center justify-between gap-6 py-4">
+            <div>
+              <h3 className="font-semibold">{t(lang, 'ugcCatalogToggle')}</h3>
+              <p className="mt-0.5 text-[12px] text-ink2">{t(lang, 'ugcCatalogToggleHelp')}</p>
+            </div>
+            <button
+              className={`toggle shrink-0 ${settings.ugcCatalog ? 'toggle-on' : ''}`}
+              onClick={() => setUgcCatalog(!settings.ugcCatalog)}
+            >
+              <span />
+            </button>
+          </div>
+          {/* Only the Ulanzi sources are cached, so the action is meaningless — and the row
+              just noise — until at least one of them is on. */}
+          {(settings.officialCatalog || settings.ugcCatalog) && (
+            <div className="flex items-center justify-between gap-6 py-4">
+              <div>
+                <h3 className="font-semibold">{t(lang, 'catalogCache')}</h3>
+                <p className="mt-0.5 text-[12px] text-ink2">{t(lang, 'catalogCacheHelp')}</p>
+              </div>
+              <button className="btn-ghost shrink-0" disabled={cacheBusy} onClick={onClearCatalogCache}>
+                {cacheBusy ? t(lang, 'catalogCacheClearing') : t(lang, 'catalogCacheClear')}
+              </button>
+            </div>
+          )}
         </SettingsSection>
 
         <SettingsSection title={t(lang, 'settingsSectionSupport')}>
@@ -2120,7 +2237,11 @@ function SubmitView({ lang }: { lang: Lang }) {
             <div className="mt-5 rounded-xl border border-accent/25 bg-accent/[0.05] p-5">
               <div className="flex items-center gap-3">
                 {result.plugin?.icon && (
-                  <img src={result.plugin.icon} alt="" className="h-10 w-10 rounded-[10px] object-cover shadow-card" />
+                  <PluginImage
+                    sources={[result.plugin.icon]}
+                    className="h-10 w-10 rounded-[10px] object-cover shadow-card"
+                    fallbackClassName="grid h-10 w-10 place-items-center rounded-[10px] bg-accent/10 text-accent"
+                  />
                 )}
                 <div>
                   <div className="font-semibold text-accent">{t(lang, 'submitReadyTitle')}</div>
@@ -2249,6 +2370,7 @@ function Meta({ plugin, showUpdate, lang }: { plugin: CatalogPlugin; showUpdate?
         <span className="chip bg-red-500/15 text-red-600 dark:text-red-400">⚠ {t(lang, 'securityFindingsShort')}</span>
       )}
       {plugin.source === 'official' && lang && <span className="chip">{t(lang, 'officialBadge')}</span>}
+      {plugin.source === 'ugc' && lang && <span className="chip">{t(lang, 'ugcBadge')}</span>}
       {(plugin.deviceTypes || []).map((item) => (
         <span className="chip chip-brand" key={item}>
           {deviceLabel(item)}
@@ -2629,6 +2751,90 @@ function formatDownloads(count: number): string {
   return String(count);
 }
 
+/**
+ * One screenshot in the detail gallery, with a skeleton standing in until the bitmap is
+ * decoded. The portal serves these off a slow CDN, so without it the strip is an empty gap
+ * that reads as a layout bug rather than as loading.
+ *
+ * A screenshot that fails drops its tile instead of leaving a dead frame in the strip.
+ */
+function ScreenshotThumb({ src, onOpen }: { src: string; onOpen: () => void }) {
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+
+  // Tiles are keyed by url, but a re-render with a new src must not inherit the old state.
+  useEffect(() => setStatus('loading'), [src]);
+
+  if (status === 'error') return null;
+
+  return (
+    <button
+      type="button"
+      className="group/shot shrink-0 cursor-pointer rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      onClick={onOpen}
+      // Nothing to open until it has actually decoded.
+      disabled={status !== 'ready'}
+    >
+      {status === 'loading' && <div className="skeleton h-56 w-80 !rounded-xl" />}
+      {/* Kept mounted while loading — `hidden` still fetches, so the skeleton is swapped
+          out the moment onLoad fires rather than starting the request then. */}
+      <img
+        src={src}
+        alt=""
+        className={
+          status === 'ready'
+            ? 'animate-fade h-56 rounded-xl object-cover shadow-card transition-opacity group-hover/shot:opacity-90'
+            : 'hidden'
+        }
+        onLoad={() => setStatus('ready')}
+        onError={() => setStatus('error')}
+      />
+    </button>
+  );
+}
+
+/**
+ * Plugin artwork that degrades instead of showing a broken-image glyph.
+ *
+ * A non-empty URL is no guarantee the object still exists: the Ulanzi portal keeps records
+ * whose CDN file has been deleted (3 of 21 covers when this was written), and a cached
+ * catalog entry can outlive artwork that was fine when it was fetched. Each source is tried
+ * in order and the placeholder is the last resort — so a plugin whose cover is gone but
+ * whose screenshots survive still shows real art.
+ */
+function PluginImage({
+  sources,
+  className,
+  fallbackClassName,
+}: {
+  sources: (string | null | undefined)[];
+  className: string;
+  fallbackClassName: string;
+}) {
+  // Deduped, and not just for tidiness: UGC records reuse one URL for both icon and cover,
+  // so a repeated entry would advance `attempt` to an identical src. React skips the DOM
+  // write when the prop value is unchanged, the browser never retries, onError never fires
+  // again — and the cascade stalls on the broken image instead of reaching the good one.
+  const candidates = [...new Set(sources.filter((src): src is string => Boolean(src)))];
+  const [attempt, setAttempt] = useState(0);
+  const key = candidates.join('|');
+
+  // Card components are recycled across list renders; without this a plugin whose art
+  // failed would poison whichever plugin reused its slot.
+  useEffect(() => setAttempt(0), [key]);
+
+  const src = candidates[attempt];
+  if (!src) return <div className={fallbackClassName}>◆</div>;
+
+  return (
+    <img
+      src={src}
+      alt=""
+      className={className}
+      onError={() => setAttempt((current) => current + 1)}
+    />
+  );
+}
+
 function deviceLabel(value: string): string {
   if (value === 'deck') return 'Deck';
   if (value === 'dial') return 'Dial';
@@ -2636,6 +2842,236 @@ function deviceLabel(value: string): string {
 }
 
 /** Title-case store tags for UI (productivity → Productivity). */
+/**
+ * Comparison key for a category tag. The community registry publishes lowercase slugs
+ * (`tools`, `smart-home`) while the Ulanzi feeds publish title-case labels (`Tools`), and
+ * both render through categoryLabel to the same text — so without normalising, one filter
+ * shows up twice and each half only ever matches its own source.
+ */
+/**
+ * The filters that used to sit inline in the bar, collapsed behind one trigger.
+ *
+ * They were moved because the bar had run out of room: at the default window width the
+ * Portuguese labels already filled it edge to edge, so anything added — a source filter
+ * included — wrapped and pushed the search field onto a second line. Consolidating buys
+ * back more width than it spends, and holds in every language rather than only the ones
+ * whose words happen to be short.
+ */
+function FiltersPanel({
+  lang,
+  platform,
+  setPlatform,
+  availablePlatforms,
+  device,
+  setDevice,
+  deviceOptions,
+  category,
+  setCategory,
+  categories,
+  source,
+  setSource,
+  availableSources,
+  activeCount,
+  onClear,
+  onClose,
+}: {
+  lang: Lang;
+  platform: PlatformFilter;
+  setPlatform: (value: PlatformFilter) => void;
+  availablePlatforms: string[];
+  device: string;
+  setDevice: (value: string) => void;
+  deviceOptions: string[];
+  category: string;
+  setCategory: (value: string) => void;
+  categories: string[];
+  source: string;
+  setSource: (value: string) => void;
+  availableSources: string[];
+  activeCount: number;
+  onClear: () => void;
+  onClose: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onPointerDown(event: MouseEvent) {
+      const node = panelRef.current;
+      // The trigger toggles on its own click; ignoring it here avoids close-then-reopen.
+      if (!node || node.contains(event.target as Node)) return;
+      if ((event.target as HTMLElement).closest('[data-filters-trigger]')) return;
+      onClose();
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        onClose();
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div ref={panelRef} className="filter-panel" role="dialog" aria-label={t(lang, 'filters')}>
+      <div className="space-y-3.5">
+        {availablePlatforms.length > 0 && (
+          <div>
+            <span className="filter-panel-label">{t(lang, 'filterPlatform')}</span>
+            <label className="filter-select block">
+              <select
+                className={`w-full !max-w-none ${platform ? 'is-active' : ''}`}
+                value={platform}
+                onChange={(event) => setPlatform(event.target.value as PlatformFilter)}
+                aria-label={t(lang, 'filterPlatform')}
+              >
+                <option value="">{t(lang, 'allPlatforms')}</option>
+                {availablePlatforms.map((item) => (
+                  <option key={item} value={item}>
+                    {platformFilterLabel(item)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
+
+        {deviceOptions.length > 1 && (
+          <div>
+            <span className="filter-panel-label">{t(lang, 'filterDevice')}</span>
+            <div className="seg" role="group" aria-label={t(lang, 'filterDevice')}>
+              <button type="button" className={device === '' ? 'seg-active' : ''} onClick={() => setDevice('')}>
+                {t(lang, 'all')}
+              </button>
+              {deviceOptions.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={device === item ? 'seg-active' : ''}
+                  onClick={() => setDevice(item)}
+                >
+                  {deviceLabel(item)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {categories.length > 0 && (
+          <div>
+            <span className="filter-panel-label">{t(lang, 'filterCategory')}</span>
+            <label className="filter-select block">
+              <select
+                className={`w-full !max-w-none ${category ? 'is-active' : ''}`}
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+                aria-label={t(lang, 'filterCategory')}
+              >
+                <option value="">{t(lang, 'allCategories')}</option>
+                {categories.map((item) => (
+                  <option key={item} value={item}>
+                    {categoryLabel(item)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
+
+        {/* Only worth showing once a Ulanzi catalog is on — otherwise every entry is community. */}
+        {availableSources.length > 1 && (
+          <div>
+            <span className="filter-panel-label">{t(lang, 'filterSource')}</span>
+            <label className="filter-select block">
+              <select
+                className={`w-full !max-w-none ${source ? 'is-active' : ''}`}
+                value={source}
+                onChange={(event) => setSource(event.target.value)}
+                aria-label={t(lang, 'filterSource')}
+              >
+                <option value="">{t(lang, 'allSources')}</option>
+                {availableSources.map((item) => (
+                  <option key={item} value={item}>
+                    {t(lang, sourceFilterKey(item))}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
+      </div>
+
+      <button
+        type="button"
+        className="btn-ghost mt-4 w-full justify-center disabled:opacity-40"
+        disabled={activeCount === 0}
+        onClick={onClear}
+      >
+        {t(lang, 'clearFilters')}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * i18n key for a source option. Reuses the badge wording shown on the cards so the filter
+ * and the chip a user is looking at name the same thing.
+ */
+function sourceFilterKey(source: string): string {
+  if (source === 'official') return 'officialBadge';
+  if (source === 'ugc') return 'ugcBadge';
+  return 'sourceCommunity';
+}
+
+/**
+ * Lowercased and stripped of diacritics, so "acao" finds "Ação" and "atalho" finds "Atalho".
+ * Applied to both sides of the comparison, never to anything shown on screen.
+ */
+function searchNormalize(value: string): string {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+}
+
+/**
+ * Everything a plugin can be found by, flattened into one string.
+ *
+ * `id` and `repo` are in here because they carry the author handle and the short name a
+ * user is likely to remember (`com.narlei.aicost.ulanziPlugin`), which often differ from
+ * the display name.
+ */
+function pluginHaystack(plugin: CatalogPlugin, lang: Lang): string {
+  return searchNormalize(
+    [
+      pluginText(plugin, 'name', lang),
+      pluginText(plugin, 'description', lang),
+      pluginText(plugin, 'longDescription', lang),
+      plugin.author,
+      plugin.id,
+      plugin.repo,
+      plugin.category || '',
+      (plugin.tags || []).join(' '),
+    ].join(' '),
+  );
+}
+
+/** Catalog an entry came from. Community entries carry no `source`, so they default in. */
+function pluginSource(plugin: CatalogPlugin): string {
+  return plugin.source || 'community';
+}
+
+function categoryKey(value: string): string {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, ' ');
+}
+
 function categoryLabel(value: string): string {
   return String(value || '')
     .split(/[\s_-]+/)

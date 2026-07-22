@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compareVersions, isPluginId, isRepoSlug, type CatalogPlugin } from '@ulanzideck/catalog';
 import { applyAppUpdate, checkAppUpdate } from './app-update.js';
+import { clearCache } from './catalog-cache.js';
 import { fetchCatalog, installPlugin, listInstalled, restartUlanzi, uninstallPlugin, type InstallOptions } from './install.js';
 import { logError, openErrorLog } from './logger.js';
 import { fetchStoreCatalog } from './official-catalog.js';
@@ -260,11 +261,16 @@ ipcMain.handle('plugin:pendingOpen', () => {
 });
 
 ipcMain.handle('catalog:get', () => withErrorLog('catalog:get', () => fetchStoreCatalog()));
+ipcMain.handle('catalog:clearCache', () => withErrorLog('catalog:clearCache', () => clearCache()));
 ipcMain.handle('installed:list', () => withErrorLog('installed:list', () => listInstalled()));
 ipcMain.handle('settings:get', () => getSettings());
 ipcMain.handle('settings:developerMode', (_event, enabled: unknown) =>
   updateSettings({ developerMode: enabled === true }),
 );
+ipcMain.handle('settings:ugcCatalog', (_event, enabled: unknown) =>
+  updateSettings({ ugcCatalog: enabled === true }),
+);
+
 ipcMain.handle('settings:officialCatalog', (_event, enabled: unknown) =>
   updateSettings({ officialCatalog: enabled === true }),
 );

@@ -163,9 +163,11 @@ button:disabled {
     @apply relative flex items-center;
   }
 
-  /* Catalog search lives in the sticky filter bar (right side). */
+  /* Catalog search anchors the left of the sticky filter bar and takes whatever width sort
+     and the filters trigger — both pinned right — leave behind. No max width: the whole
+     point is that it absorbs the slack instead of leaving a dead gap mid-bar. */
   .filter-search {
-    @apply w-full max-w-[280px] min-w-[180px] shrink-0 basis-[220px];
+    @apply w-full min-w-[180px] flex-1;
   }
 
   .search-field input {
@@ -245,6 +247,41 @@ button:disabled {
   .filter-select select.is-active:hover,
   .filter-select select.is-active:focus {
     @apply text-accent-ink;
+  }
+
+  /* Trigger for the filters popover. Matches .filter-select select so the bar reads as one
+     family, and keeps a fixed font weight for the same reason: an active filter must not
+     resize the control and reflow the search field. */
+  .filter-trigger {
+    @apply inline-flex items-center gap-1.5 rounded-[9px] border border-transparent bg-black/[0.08] px-3 py-1 text-[12px] font-medium text-ink3 outline-none transition-colors dark:bg-white/[0.1];
+  }
+
+  .filter-trigger:hover,
+  .filter-trigger:focus-visible {
+    @apply text-ink2;
+  }
+
+  .filter-trigger.is-active {
+    @apply border-accent/40 bg-accent text-accent-ink;
+  }
+
+  .filter-trigger.is-active:hover {
+    @apply text-accent-ink;
+  }
+
+  .filter-count {
+    @apply grid h-4 min-w-4 place-items-center rounded-full bg-white/25 px-1 text-[10px] font-bold leading-none;
+  }
+
+  /* Right-anchored: the trigger sits at the right end of the bar, so opening leftward is
+     what keeps the panel inside the window. */
+  .filter-panel {
+    @apply absolute right-0 top-[calc(100%+8px)] z-30 w-[268px] rounded-xl border border-stroke/70 bg-surface p-4 text-left shadow-sheet;
+    animation: sheet-in 0.18s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .filter-panel-label {
+    @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-ink3;
   }
 
   .sr-only {
@@ -405,6 +442,11 @@ button:disabled {
 
   .animate-backdrop {
     animation: fade-in 0.2s ease-out;
+  }
+
+  /* Screenshot easing in once decoded, so it doesn't pop over the skeleton. */
+  .animate-fade {
+    animation: fade-in 0.25s ease-out;
   }
 
   .animate-card {

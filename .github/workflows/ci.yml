@@ -20,6 +20,12 @@ jobs:
 
       - run: npm run typecheck
 
+      # Reports React Hooks findings without gating the build — rules are `warn`, and
+      # continue-on-error keeps it that way even if a future rule is set to `error`.
+      # Remove this line and raise the severities to make lint blocking.
+      - run: npm run lint
+        continue-on-error: true
+
       - run: npm run catalog:validate
 
       - run: npm run app:build

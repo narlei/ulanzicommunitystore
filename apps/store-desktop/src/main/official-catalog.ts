@@ -1,8 +1,10 @@
 import type { Catalog, CatalogPlugin } from '@ulanzideck/catalog';
 import { isPluginId } from '@ulanzideck/catalog';
+import { loadCached } from './catalog-cache.js';
 import { fetchCatalog } from './install.js';
 import { logError } from './logger.js';
 import { getSettings } from './settings.js';
+import { fetchUgcCatalog } from './ugc-catalog.js';
 
 // Undocumented endpoint used by the Ulanzi Studio desktop app to list its official
 // marketplace. os=3 (Windows+Mac, no OS filtering) and type=1 (plugins only — Ulanzi
@@ -119,26 +121,52 @@ export async function fetchOfficialCatalog(): Promise<CatalogPlugin[]> {
 }
 
 /**
- * Community catalog, plus the Ulanzi Studio official catalog merged in when the
- * `officialCatalog` setting is on. Community entries always win on id collisions.
- * Official-fetch failures degrade to community-only rather than breaking the store.
+ * Community catalog, plus the opt-in Ulanzi Studio sources merged in: the official
+ * marketplace feed (`officialCatalog`) and the creator portal (`ugcCatalog`).
+ *
+ * Precedence on id collisions is community > official > UGC, so a plugin published in the
+ * community registry keeps its repo, changelog and security scan. Each extra source is
+ * fetched independently and a failure degrades to whatever else resolved, rather than
+ * breaking the store.
  */
 export async function fetchStoreCatalog(): Promise<Catalog> {
-  const community = await fetchCatalog();
+  // Settings is a local file read; the three catalogs are network-bound and independent,
+  // so they all run together rather than making the fast community fetch wait its turn.
   const settings = await getSettings();
-  if (!settings.officialCatalog) return community;
 
-  try {
-    const communityIds = new Set(community.plugins.map((plugin) => plugin.id));
-    const official = (await fetchOfficialCatalog()).filter((plugin) => !communityIds.has(plugin.id));
-    return {
-      ...community,
-      count: community.count + official.length,
-      plugins: [...community.plugins, ...official],
-    };
-  } catch (err) {
-    console.error('Official catalog fetch failed:', err);
-    await logError('catalog:official (degraded to community-only)', err);
-    return community;
+  const [community, official, ugc] = await Promise.all([
+    fetchCatalog(),
+    settings.officialCatalog ? loadExtraSource('official', fetchOfficialCatalog) : [],
+    settings.ugcCatalog ? loadExtraSource('ugc', fetchUgcCatalog) : [],
+  ]);
+
+  if (official.length === 0 && ugc.length === 0) return community;
+
+  // Precedence, highest first — the first source to claim an id owns the entry. The
+  // community registry must stay ahead of both Ulanzi sources: its entries are the only
+  // ones carrying a repo, changelog and security scan, so letting an Ulanzi record win
+  // would silently strip all of that from a plugin published in both places.
+  const sourcesByPrecedence = [community.plugins, official, ugc];
+
+  const seen = new Set<string>();
+  const plugins: CatalogPlugin[] = [];
+  for (const source of sourcesByPrecedence) {
+    for (const plugin of source) {
+      if (seen.has(plugin.id)) continue;
+      seen.add(plugin.id);
+      plugins.push(plugin);
+    }
   }
+
+  return { ...community, count: plugins.length, plugins };
+}
+
+function loadExtraSource(
+  name: string,
+  fetchSource: () => Promise<CatalogPlugin[]>,
+): Promise<CatalogPlugin[]> {
+  return loadCached(name, fetchSource, async (err) => {
+    console.error(`${name} catalog fetch failed:`, err);
+    await logError(`catalog:${name} (served from cache or skipped)`, err);
+  });
 }

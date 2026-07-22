@@ -17,6 +17,8 @@ declare global {
       getSettings: () => Promise<Settings>;
       setDeveloperMode: (enabled: boolean) => Promise<Settings>;
       setOfficialCatalog: (enabled: boolean) => Promise<Settings>;
+      setUgcCatalog: (enabled: boolean) => Promise<Settings>;
+      clearCatalogCache: () => Promise<void>;
       checkSubmission: (repoInput: string) => Promise<SubmitCheckResult>;
       openExternal: (url: string) => Promise<void>;
       openErrorLog: () => Promise<void>;

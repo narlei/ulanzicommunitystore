@@ -4,6 +4,7 @@ import type { AppUpdateInfo, InstallProgress } from '../shared.js';
 
 contextBridge.exposeInMainWorld('api', {
   getCatalog: () => ipcRenderer.invoke('catalog:get'),
+  clearCatalogCache: () => ipcRenderer.invoke('catalog:clearCache'),
   listInstalled: () => ipcRenderer.invoke('installed:list'),
   install: (plugin: CatalogPlugin, options?: { skipRestart?: boolean }) =>
     ipcRenderer.invoke('plugin:install', plugin, options),
@@ -15,6 +16,7 @@ contextBridge.exposeInMainWorld('api', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setDeveloperMode: (enabled: boolean) => ipcRenderer.invoke('settings:developerMode', enabled),
   setOfficialCatalog: (enabled: boolean) => ipcRenderer.invoke('settings:officialCatalog', enabled),
+  setUgcCatalog: (enabled: boolean) => ipcRenderer.invoke('settings:ugcCatalog', enabled),
   checkSubmission: (repoInput: string) => ipcRenderer.invoke('submit:check', repoInput),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
   openErrorLog: () => ipcRenderer.invoke('logs:open'),
