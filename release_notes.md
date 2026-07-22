@@ -30,3 +30,7 @@
 
 - **adm-zip upgraded to 0.6.0** (GHSA-xcpc-8h2w-3j85). A crafted ZIP could trigger a 4 GB allocation in the library the store uses to unpack downloaded plugin archives. Downloads remain restricted to GitHub and Ulanzi hosts, and archives are still validated before extraction.
 - Resolved transitive `brace-expansion` and `fast-uri` advisories. Both are build tooling and never shipped in the app.
+
+### Internal
+
+- Added ESLint with the two React Hooks rules, reported on every pull request without gating the build. They cover a class of bug the type checker cannot see: a hook whose dependency array omits a value it reads type-checks cleanly and simply stops recomputing.
