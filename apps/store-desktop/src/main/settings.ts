@@ -6,6 +6,7 @@ import type { Settings } from '../shared.js';
 const DEFAULT_SETTINGS: Settings = {
   developerMode: false,
   officialCatalog: false,
+  ugcCatalog: false,
 };
 
 function settingsPath(): string {
@@ -18,6 +19,7 @@ export async function getSettings(): Promise<Settings> {
     return {
       developerMode: parsed.developerMode === true,
       officialCatalog: parsed.officialCatalog === true,
+      ugcCatalog: parsed.ugcCatalog === true,
     };
   } catch {
     return DEFAULT_SETTINGS;

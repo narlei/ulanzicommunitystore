@@ -2,6 +2,8 @@ export type Settings = {
   developerMode: boolean;
   /** Merge the Ulanzi Studio official marketplace into the local catalog. Off by default. */
   officialCatalog: boolean;
+  /** Merge the Ulanzi Studio creator portal (ugc.ulanzistudio.com) into the local catalog. Off by default. */
+  ugcCatalog: boolean;
 };
 
 /** Result of checking whether a newer desktop app build is on GitHub Releases. */
