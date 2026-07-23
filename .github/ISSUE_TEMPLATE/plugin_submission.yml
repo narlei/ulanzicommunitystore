@@ -3,17 +3,27 @@ description: Submit a plugin you already built to the community store — no for
 title: "[Plugin]: "
 labels: ["plugin-submission"]
 body:
+  # Uma quebra de linha simples vira <br> aqui — cada parágrafo/item fica numa
+  # linha só, por mais longa que seja, senão o texto sai picotado.
   - type: markdown
     attributes:
       value: |
-        Fill in your repository below and submit. A bot validates it and opens the
-        registry Pull Request for you — **you don't need to fork anything**.
+        ### No fork, no Pull Request
 
-        Requirements: a public repo with a `com.<you>.<plugin>.ulanziPlugin/` folder
-        containing `manifest.json`, and a GitHub Release with the
-        `com.<you>.<plugin>.ulanziPlugin.zip` asset.
-        The [starter](https://github.com/narlei/ulanzicommunitystore/tree/main/plugin-starter)
-        sets all of that up: `npx ulanzi-plugin-starter@latest init`.
+        Paste your repository below and submit. A bot validates it and opens the registry Pull Request for you.
+
+        **What your repo needs**
+
+        - a `com.<you>.<plugin>.ulanziPlugin/` folder with `manifest.json`
+        - a **GitHub Release** with the `com.<you>.<plugin>.ulanziPlugin.zip` asset
+
+        Not there yet? The [starter](https://github.com/narlei/ulanzicommunitystore/tree/main/plugin-starter) sets it all up for you:
+
+        ```
+        npx ulanzi-plugin-starter@latest init
+        ```
+
+        ---
 
   # O id vira o nome do parâmetro de prefill na URL. `repo` é reservado pelo GitHub
   # e some antes de chegar no formulário — daí `plugin_repo`.
