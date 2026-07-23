@@ -3,23 +3,49 @@ name: validate-registry-pr
 # Valida entradas de registry adicionadas/alteradas em um PR: nome de arquivo,
 # duplicata, e se o repo submetido segue os padrões da loja (release + manifest + store.json).
 # Bloqueia o merge e comenta no PR quando algo está fora do padrão.
+#
+# Além do gatilho normal de PR, aceita `/revalidate` num comentário de maintainer —
+# necessário porque PR aberto pelo bot (submit-plugin-issue) não dispara workflows.
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'Número do PR a revalidar'
+        required: true
 
 permissions:
   contents: read
+  issues: write
   pull-requests: write
 
 concurrency:
-  group: validate-registry-pr-${{ github.event.pull_request.number }}
+  group: validate-registry-pr-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
   cancel-in-progress: true
 
 jobs:
   validate:
+    # Comentário só entra quando é `/revalidate` num PR, vindo de quem tem acesso de
+    # escrita — o job roda com token de escrita, então não pode ser aberto a qualquer um.
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.event.issue.pull_request != null &&
+       startsWith(github.event.comment.body, '/revalidate') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: Confirmar o comando
+        if: github.event_name == 'issue_comment'
+        run: |
+          gh api "repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -f content=eyes --silent || true
+
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -28,10 +54,23 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Resolver o PR alvo
+        id: pr
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
+        run: |
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          BASE=$(gh pr view "$PR_NUMBER" --json baseRefName --jq .baseRefName)
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout do PR
+        if: github.event_name != 'pull_request'
+        run: gh pr checkout "${{ steps.pr.outputs.number }}"
+
       - name: Detectar arquivos de registry alterados
         id: changed
         env:
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          BASE_REF: ${{ steps.pr.outputs.base }}
         run: |
           git fetch --no-tags --depth=1 origin "$BASE_REF"
           FILES=$(git diff --name-only --diff-filter=ACMR "origin/$BASE_REF"...HEAD -- 'registry/plugins/**/*.json' || true)
@@ -57,6 +96,7 @@ jobs:
         uses: actions/github-script@v9
         env:
           MD_PATH: ${{ runner.temp }}/pr-validation.md
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
         with:
           script: |
             const fs = require('fs');
@@ -68,7 +108,7 @@ jobs:
             const body = fs.readFileSync(path, 'utf8');
             const marker = '<!-- registry-validation -->';
             const { owner, repo } = context.repo;
-            const issue_number = context.issue.number;
+            const issue_number = Number(process.env.PR_NUMBER);
             const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number });
             const existing = comments.find((c) => c.body && c.body.includes(marker));
             if (existing) {

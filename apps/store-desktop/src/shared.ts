@@ -37,5 +37,5 @@ export type SubmitCheckResult = {
   plugin: { id: string; name: string; version: string; icon: string | null } | null;
   registryFileName: string;
   registryJson: string;
-  prUrl: string;
+  issueUrl: string;
 };

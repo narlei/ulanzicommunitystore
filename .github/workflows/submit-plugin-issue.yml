@@ -1,0 +1,166 @@
+name: submit-plugin-issue
+
+# Fluxo de publicação sem fork: a pessoa abre uma issue com o repo do plugin, o bot
+# roda a MESMA validação do PR e, se passar, cria a entrada no registry e abre o
+# Pull Request aqui no upstream. Se não passar, comenta na issue o que falta.
+#
+# O corpo da issue é entrada não confiável — nunca é interpolado em `run:`. O parser
+# roda em Node lendo env e devolve só o slug `owner/repo` já validado por regex.
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: submit-plugin-issue-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Ler a issue
+        id: parse
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+        run: node packages/catalog/bin/parse-submission.mjs
+
+      - name: Avisar que não deu pra ler o repositório
+        if: steps.parse.outputs.is_submission == 'true' && steps.parse.outputs.repo == ''
+        run: |
+          {
+            echo '<!-- plugin-submission -->'
+            echo "❌ I couldn't find the plugin repository in this issue."
+            echo ''
+            echo 'Edit the issue and put your public repository URL in the **Plugin repository**'
+            echo 'field — for example `https://github.com/you/your-plugin` (or just `you/your-plugin`).'
+            echo 'As soon as you save the edit I try again automatically.'
+          } > "$RUNNER_TEMP/comment.md"
+          gh issue comment "$ISSUE_NUMBER" --body-file "$RUNNER_TEMP/comment.md"
+
+      - name: Checar se o plugin já está no registry
+        id: existing
+        if: steps.parse.outputs.repo != ''
+        env:
+          ENTRY_FILE: ${{ steps.parse.outputs.file }}
+        run: |
+          if [ -f "$ENTRY_FILE" ]; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Avisar que já está publicado
+        if: steps.existing.outputs.already == 'true'
+        env:
+          REPO_SLUG: ${{ steps.parse.outputs.repo }}
+        run: |
+          {
+            echo '<!-- plugin-submission -->'
+            echo "✅ \`${REPO_SLUG}\` is already in the store registry — no need to submit it again."
+            echo 'Every new GitHub Release in your repo becomes an update in the store automatically.'
+          } > "$RUNNER_TEMP/comment.md"
+          gh issue comment "$ISSUE_NUMBER" --body-file "$RUNNER_TEMP/comment.md"
+          gh issue close "$ISSUE_NUMBER" --reason completed
+
+      - name: Gerar a entrada do registry
+        id: entry
+        if: steps.existing.outputs.already == 'false'
+        env:
+          REPO_SLUG: ${{ steps.parse.outputs.repo }}
+          ENTRY_FILE: ${{ steps.parse.outputs.file }}
+        run: |
+          printf '{\n  "repo": "%s"\n}\n' "$REPO_SLUG" > "$ENTRY_FILE"
+          cat "$ENTRY_FILE"
+
+      - name: Validar o plugin
+        id: validate
+        if: steps.existing.outputs.already == 'false'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGED_FILES: ${{ steps.parse.outputs.file }}
+          PR_VALIDATION_MD: ${{ runner.temp }}/validation.md
+        run: node packages/catalog/bin/validate-pr.mjs
+
+      - name: Comentar o que falta ajustar
+        if: steps.validate.outcome == 'failure'
+        env:
+          MD_PATH: ${{ runner.temp }}/validation.md
+        run: |
+          {
+            echo '<!-- plugin-submission -->'
+            echo "❌ **Not ready to publish yet.** Fix the points below in your repository, then"
+            echo '**edit this issue** (just re-saving it is enough) — I revalidate right away.'
+            echo ''
+            cat "$MD_PATH" 2>/dev/null || echo 'Validation failed before producing a report. Check the Action logs.'
+          } > "$RUNNER_TEMP/comment.md"
+          gh issue comment "$ISSUE_NUMBER" --body-file "$RUNNER_TEMP/comment.md"
+
+      - name: Abrir o Pull Request
+        if: steps.validate.outcome == 'success'
+        env:
+          REPO_SLUG: ${{ steps.parse.outputs.repo }}
+          ENTRY_FILE: ${{ steps.parse.outputs.file }}
+          MD_PATH: ${{ runner.temp }}/validation.md
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+          ISSUE_USER_ID: ${{ github.event.issue.user.id }}
+        run: |
+          BRANCH="registry/${REPO_SLUG/\//__}"
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -b "$BRANCH"
+          git add "$ENTRY_FILE"
+          git commit \
+            -m "Add ${REPO_SLUG} to the community registry" \
+            -m "Submitted via #${ISSUE_NUMBER}." \
+            -m "Co-authored-by: ${ISSUE_USER} <${ISSUE_USER_ID}+${ISSUE_USER}@users.noreply.github.com>"
+          git push --force origin "$BRANCH"
+
+          {
+            echo "Registry entry for \`${REPO_SLUG}\`, submitted by @${ISSUE_USER} in issue #${ISSUE_NUMBER}."
+            echo ''
+            echo "Closes #${ISSUE_NUMBER}"
+            echo ''
+            cat "$MD_PATH" 2>/dev/null || true
+            echo ''
+            echo '> This PR was opened by the bot, so the native checks do not fire on their own.'
+            echo '> The validation above ran before the PR was created — comment `/revalidate` to run it again.'
+          } > "$RUNNER_TEMP/pr-body.md"
+
+          PR_URL=$(gh pr list --head "$BRANCH" --state open --json url --jq '.[0].url // empty')
+          if [ -n "$PR_URL" ]; then
+            gh pr edit "$PR_URL" --body-file "$RUNNER_TEMP/pr-body.md"
+          else
+            PR_URL=$(gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "Add ${REPO_SLUG} to the community registry" \
+              --body-file "$RUNNER_TEMP/pr-body.md")
+          fi
+
+          {
+            echo '<!-- plugin-submission -->'
+            echo "✅ **All good!** I validated \`${REPO_SLUG}\` and opened the Pull Request for you: ${PR_URL}"
+            echo ''
+            echo 'Nothing else for you to do — once a maintainer approves and merges it, your plugin'
+            echo 'goes live and this issue closes itself. Every new release in your repo becomes an'
+            echo 'update in the store automatically.'
+          } > "$RUNNER_TEMP/ok.md"
+          gh issue comment "$ISSUE_NUMBER" --body-file "$RUNNER_TEMP/ok.md"

@@ -1,0 +1,33 @@
+name: 📦 Publish a plugin
+description: Submit a plugin you already built to the community store — no fork, no Pull Request
+title: "[Plugin]: "
+labels: ["plugin-submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fill in your repository below and submit. A bot validates it and opens the
+        registry Pull Request for you — **you don't need to fork anything**.
+
+        Requirements: a public repo with a `com.<you>.<plugin>.ulanziPlugin/` folder
+        containing `manifest.json`, and a GitHub Release with the
+        `com.<you>.<plugin>.ulanziPlugin.zip` asset.
+        The [starter](https://github.com/narlei/ulanzicommunitystore/tree/main/plugin-starter)
+        sets all of that up: `npx ulanzi-plugin-starter@latest init`.
+
+  - type: input
+    id: repo
+    attributes:
+      label: Plugin repository
+      description: Public GitHub repository of your plugin.
+      placeholder: https://github.com/you/your-plugin
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?
+      description: Optional — context for the maintainers.
+    validations:
+      required: false

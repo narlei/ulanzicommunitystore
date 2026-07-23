@@ -2260,8 +2260,8 @@ function SubmitView({ lang }: { lang: Lang }) {
                 </pre>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                <button className="btn-primary" onClick={() => void window.api.openExternal(result.prUrl)}>
-                  {t(lang, 'submitOpenPr')}
+                <button className="btn-primary" onClick={() => void window.api.openExternal(result.issueUrl)}>
+                  {t(lang, 'submitOpenIssue')}
                 </button>
                 <button className="btn-ghost" onClick={() => void copyJson()}>
                   {copied ? t(lang, 'submitCopied') : t(lang, 'submitCopy')}

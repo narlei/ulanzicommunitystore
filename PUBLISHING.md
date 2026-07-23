@@ -64,7 +64,11 @@ Paste your repo URL (`https://github.com/<you>/<repo>`) into either:
 - the **Send plugin** tab inside the desktop app, or
 - the [**Publish section on the website**](https://ulanzicommunitystore.narlei.com/#publish).
 
-It validates your repo and opens the Pull Request for you. **Once it's merged, you're live.** 🎉
+It validates your repo and opens a pre-filled submission issue — **you don't need to fork anything**.
+A bot re-runs the validation on the issue and opens the registry Pull Request for you.
+**Once it's merged, you're live.** 🎉
+
+Prefer to skip the app? Open the [**Publish a plugin** issue](https://github.com/narlei/ulanzicommunitystore/issues/new?template=plugin_submission.yml) directly.
 
 ---
 

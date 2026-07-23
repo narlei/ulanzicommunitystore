@@ -26,7 +26,7 @@ A **community-run, open-source catalog** for Ulanzi Deck & Dial plugins. Anyone 
 
 **It's not a replacement for the official Ulanzi Studio Marketplace — it's the companion fast lane.** The marketplace is where plugins get Ulanzi's review and stamp of approval. The Community Store is where makers ship early, iterate with users, and grow the ecosystem. Your plugin can (and should!) live in both.
 
-- 🚀 **Publish in minutes** — one Pull Request, automated validation, no waiting queue.
+- 🚀 **Publish in minutes** — one issue, automated validation, no fork and no waiting queue.
 - 🔄 **Instant updates** — every new GitHub Release becomes an update in the store.
 - 🛍️ **One-click install** — straight into your Ulanzi plugins folder.
 - 🌍 **Multilingual** — English, Português, and 中文 out of the box.

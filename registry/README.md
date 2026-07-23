@@ -4,14 +4,17 @@ This folder is the **source of truth** for the Ulanzi Community Store. Each file
 `plugins/<owner>__<repo>.json` represents a published plugin — anyone can add theirs
 with a Pull Request, and every new GitHub Release ships to users automatically.
 
-> **Easy way:** the **Submit Plugin** tab in the app (or the *Publish* section at
-> [narlei.github.io/ulanzicommunitystore](https://narlei.github.io/ulanzicommunitystore/#publish))
-> validates your repository, generates this file, and opens the Pull Request for you in one click.
-> The steps below are the equivalent manual process.
+> **Easy way — no fork, no Pull Request:** open a
+> [**Publish a plugin** issue](https://github.com/narlei/ulanzicommunitystore/issues/new?template=plugin_submission.yml)
+> with your repository URL. A bot validates it and opens the registry Pull Request for you.
+> The **Submit Plugin** tab in the app (or the *Publish* section at
+> [ulanzicommunitystore.narlei.com](https://ulanzicommunitystore.narlei.com/#publish)) checks your
+> repo first and then opens that issue already filled in.
+> The steps below are the equivalent manual process, for whoever prefers doing it by hand.
 
 > **Starting from scratch?** Check out the [Plugin Starter Kit](../plugin-starter/README.md) to bootstrap your repository with everything needed.
 
-To submit yours:
+To submit yours manually:
 
 1. Fork this repository.
 2. Create `plugins/<owner>__<repo>.json` with the minimum:

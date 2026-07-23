@@ -36,14 +36,15 @@ function registryJson(repo: string): string {
   return `{\n  "repo": "${repo}"\n}\n`;
 }
 
-// Link "novo arquivo" pré-preenchido: para quem não tem write access, o GitHub
-// faz o fork e abre o Pull Request sozinho.
-function prUrl(repo: string): string {
+// Issue de publicação pré-preenchida. Ninguém precisa forkar: o bot valida o repo
+// na própria issue e abre o Pull Request do registry no upstream.
+function issueUrl(repo: string): string {
   const params = new URLSearchParams({
-    filename: registryFileName(repo),
-    value: registryJson(repo),
+    template: 'plugin_submission.yml',
+    title: `[Plugin]: ${repo}`,
+    repo: `https://github.com/${repo}`,
   });
-  return `https://github.com/${STORE_REPO}/new/main/registry/plugins?${params.toString()}`;
+  return `https://github.com/${STORE_REPO}/issues/new?${params.toString()}`;
 }
 
 async function rawFile(repo: string, ref: string, path: string): Promise<string | null> {
@@ -67,7 +68,7 @@ export async function checkSubmission(input: string): Promise<SubmitCheckResult>
     plugin,
     registryFileName: repo ? registryFileName(repo) : '',
     registryJson: repo ? registryJson(repo) : '',
-    prUrl: repo ? prUrl(repo) : '',
+    issueUrl: repo ? issueUrl(repo) : '',
   });
 
   if (!repo) {

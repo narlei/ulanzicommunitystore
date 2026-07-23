@@ -514,10 +514,10 @@
             <p class="publish-file">registry/plugins/<code id="publishFileName"></code></p>
             <pre id="publishJson"></pre>
             <div class="publish-actions">
-              <a class="button" id="publishPrLink" href="#" target="_blank" rel="noopener noreferrer" data-i18n="publish_pr">Open the Pull Request on GitHub</a>
+              <a class="button" id="publishPrLink" href="#" target="_blank" rel="noopener noreferrer" data-i18n="publish_pr">Submit the plugin on GitHub</a>
               <button class="button secondary" type="button" id="publishCopy" data-i18n="publish_copy_json">Copy JSON</button>
             </div>
-            <p class="publish-hint" data-i18n="publish_hint">GitHub forks the store repository and creates the file for you — just confirm with “Propose changes”. Once the PR is merged, your plugin goes live automatically.</p>
+            <p class="publish-hint" data-i18n="publish_hint">No fork needed: the button opens a pre-filled submission issue. A bot validates your repo, opens the registry Pull Request, and once it is merged your plugin goes live automatically.</p>
             <div class="publish-nudge" id="publishStoreNudge" hidden>
               <p data-i18n-html="publish_store_nudge">Optional: generate <code>store.json</code> for cover, screenshots and tags:</p>
               <div class="modal-code" style="margin-top: 0.75rem;">
@@ -1028,8 +1028,10 @@
             var json = '{\n  "repo": "' + repo + '"\n}\n';
             fileNameEl.textContent = fileName;
             jsonEl.textContent = json.trim();
-            prLink.href = 'https://github.com/' + STORE_REPO + '/new/main/registry/plugins?filename=' +
-              encodeURIComponent(fileName) + '&value=' + encodeURIComponent(json);
+            // Issue de publicação pré-preenchida: o bot valida e abre o PR do registry.
+            prLink.href = 'https://github.com/' + STORE_REPO + '/issues/new?template=plugin_submission.yml' +
+              '&title=' + encodeURIComponent('[Plugin]: ' + repo) +
+              '&repo=' + encodeURIComponent('https://github.com/' + repo);
             ready.hidden = false;
             storeNudge.hidden = !result.storeMissing;
           }).catch(function () {
