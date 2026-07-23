@@ -15,8 +15,10 @@ body:
         The [starter](https://github.com/narlei/ulanzicommunitystore/tree/main/plugin-starter)
         sets all of that up: `npx ulanzi-plugin-starter@latest init`.
 
+  # O id vira o nome do parâmetro de prefill na URL. `repo` é reservado pelo GitHub
+  # e some antes de chegar no formulário — daí `plugin_repo`.
   - type: input
-    id: repo
+    id: plugin_repo
     attributes:
       label: Plugin repository
       description: Public GitHub repository of your plugin.

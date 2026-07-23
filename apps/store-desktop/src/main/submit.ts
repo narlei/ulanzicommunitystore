@@ -42,7 +42,8 @@ function issueUrl(repo: string): string {
   const params = new URLSearchParams({
     template: 'plugin_submission.yml',
     title: `[Plugin]: ${repo}`,
-    repo: `https://github.com/${repo}`,
+    // `plugin_repo` é o id do campo no template — `repo` é reservado na URL do GitHub.
+    plugin_repo: `https://github.com/${repo}`,
   });
   return `https://github.com/${STORE_REPO}/issues/new?${params.toString()}`;
 }

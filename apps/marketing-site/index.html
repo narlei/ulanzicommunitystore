@@ -1031,7 +1031,7 @@
             // Issue de publicação pré-preenchida: o bot valida e abre o PR do registry.
             prLink.href = 'https://github.com/' + STORE_REPO + '/issues/new?template=plugin_submission.yml' +
               '&title=' + encodeURIComponent('[Plugin]: ' + repo) +
-              '&repo=' + encodeURIComponent('https://github.com/' + repo);
+              '&plugin_repo=' + encodeURIComponent('https://github.com/' + repo);
             ready.hidden = false;
             storeNudge.hidden = !result.storeMissing;
           }).catch(function () {

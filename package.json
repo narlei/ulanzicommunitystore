@@ -14,7 +14,7 @@
     "catalog:build": "npm run generate -w @ulanzideck/catalog",
     "catalog:validate": "npm run validate -w @ulanzideck/catalog",
     "typecheck": "npm run build -w @ulanzideck/catalog && npm run typecheck -w @ulanzideck/store-desktop",
-  "lint": "eslint .",
+    "lint": "eslint .",
     "build": "npm run catalog:build && npm run app:build",
     "electron:ensure": "node scripts/ensure-electron.mjs",
     "sync:version": "node scripts/sync-version.mjs",
