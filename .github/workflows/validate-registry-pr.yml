@@ -1,11 +1,11 @@
 name: validate-registry-pr
 
-# Valida entradas de registry adicionadas/alteradas em um PR: nome de arquivo,
-# duplicata, e se o repo submetido segue os padrões da loja (release + manifest + store.json).
-# Bloqueia o merge e comenta no PR quando algo está fora do padrão.
+# Validates registry entries added/changed in a PR: filename, duplicates, and whether the
+# submitted repo follows the store standards (release + manifest + store.json). Blocks the
+# merge and comments on the PR when something is off standard.
 #
-# Além do gatilho normal de PR, aceita `/revalidate` num comentário de maintainer —
-# necessário porque PR aberto pelo bot (submit-plugin-issue) não dispara workflows.
+# Besides the normal PR trigger, it accepts `/revalidate` in a maintainer comment — needed
+# because a PR opened by the bot (submit-plugin-issue) does not trigger workflows.
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       pr:
-        description: 'Número do PR a revalidar'
+        description: 'PR number to revalidate'
         required: true
 
 permissions:
@@ -29,8 +29,8 @@ concurrency:
 
 jobs:
   validate:
-    # Comentário só entra quando é `/revalidate` num PR, vindo de quem tem acesso de
-    # escrita — o job roda com token de escrita, então não pode ser aberto a qualquer um.
+    # A comment only runs when it is `/revalidate` on a PR, from someone with write access —
+    # the job runs with a write token, so it must not be open to anyone.
     if: >-
       github.event_name != 'issue_comment' ||
       (github.event.issue.pull_request != null &&
@@ -40,7 +40,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - name: Confirmar o comando
+      - name: Acknowledge the command
         if: github.event_name == 'issue_comment'
         run: |
           gh api "repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" \
@@ -54,30 +54,39 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Resolver o PR alvo
+      - name: Resolve the target PR
         id: pr
         env:
           PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
         run: echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout do PR
+      - name: Bring in the PR registry data
         if: github.event_name != 'pull_request'
-        run: gh pr checkout "${{ steps.pr.outputs.number }}"
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          # Run the scripts from the base branch (trusted and up to date) and overlay only the
+          # PR's registry data. We used to `gh pr checkout`, which swapped EVERY file to the
+          # PR branch — so PRs opened before a pipeline fix ran the old scripts (e.g. a
+          # security-scan without ONLY_FILES, scanning all repos instead of just the submitted
+          # one). It also avoids running scripts from the PR branch under the job's write token.
+          git fetch --no-tags origin "pull/${PR_NUMBER}/head"
+          git checkout FETCH_HEAD -- registry/plugins/
 
-      - name: Detectar arquivos de registry alterados
+      - name: Detect changed registry files
         id: changed
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
         run: |
-          # Lista os arquivos do PR pela API do GitHub — funciona igual em `pull_request`
-          # e em `/revalidate` (issue_comment). O git diff anterior falhava no caminho do
-          # comentário: o clone raso (--depth=1) + `gh pr checkout` deixavam o repo sem
-          # merge-base local, então `origin/main...HEAD` dava "no merge base", a lista
-          # ficava vazia e a validação era pulada silenciosamente.
+          # List the PR files via the GitHub API — works the same for `pull_request` and
+          # `/revalidate` (issue_comment). The previous git diff failed on the comment path:
+          # the shallow clone (--depth=1) + `gh pr checkout` left the repo without a local
+          # merge-base, so `origin/main...HEAD` gave "no merge base", the list came out empty
+          # and validation was skipped silently.
           FILES=$(gh pr view "$PR_NUMBER" --json files --jq '.files[].path' \
             | grep -E '^registry/plugins/.*\.json$' || true)
-          echo "Arquivos alterados:"
+          echo "Changed files:"
           echo "$FILES"
           {
             echo "files<<EOF"
@@ -85,7 +94,7 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Validar registry
+      - name: Validate registry
         id: validate
         if: steps.changed.outputs.files != ''
         env:
@@ -94,7 +103,7 @@ jobs:
           PR_VALIDATION_MD: ${{ runner.temp }}/pr-validation.md
         run: node packages/catalog/bin/validate-pr.mjs
 
-      - name: Comentar resultado no PR
+      - name: Comment the result on the PR
         if: always()
         uses: actions/github-script@v9
         env:
@@ -105,7 +114,7 @@ jobs:
             const fs = require('fs');
             const path = process.env.MD_PATH;
             if (!fs.existsSync(path)) {
-              core.info('Sem markdown de validação para comentar.');
+              core.info('No validation markdown to comment.');
               return;
             }
             const body = fs.readFileSync(path, 'utf8');
@@ -120,18 +129,18 @@ jobs:
               await github.rest.issues.createComment({ owner, repo, issue_number, body });
             }
 
-      # ── Segurança: escaneia (Trivy) SÓ o(s) repo(s) submetido(s) neste PR e comenta os
-      # achados. Segredos vazados e vulnerabilidades CRITICAL reprovam o job (bloqueiam o
-      # merge); vulnerabilidades HIGH apenas sinalizam no comentário. Rodar aqui — e não no
-      # publish-catalog — garante que PRs abertos pelo bot (submit-plugin-issue) e
-      # revalidações via /revalidate também passem pela verificação.
-      - name: Instalar Trivy
+      # ── Security: scan (Trivy) ONLY the repo(s) submitted in this PR and comment the
+      # findings. Leaked secrets and CRITICAL vulnerabilities fail the job (block the merge);
+      # HIGH vulnerabilities only flag in the comment. Running this here — and not in
+      # publish-catalog — ensures PRs opened by the bot (submit-plugin-issue) and
+      # revalidations via /revalidate also go through the check.
+      - name: Install Trivy
         if: steps.changed.outputs.files != ''
         uses: aquasecurity/setup-trivy@v0.3.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Escanear segurança do repo submetido
+      - name: Scan the submitted repo
         id: security
         if: steps.changed.outputs.files != ''
         env:
@@ -142,7 +151,7 @@ jobs:
           SECURITY_DIR: ${{ runner.temp }}/security
         run: node scripts/security-scan.mjs
 
-      - name: Comentar segurança no PR
+      - name: Comment security on the PR
         if: always() && steps.changed.outputs.files != ''
         uses: actions/github-script@v9
         env:
@@ -153,7 +162,7 @@ jobs:
             const fs = require('fs');
             const path = process.env.MD_PATH;
             if (!fs.existsSync(path)) {
-              core.info('Sem markdown de segurança para comentar.');
+              core.info('No security markdown to comment.');
               return;
             }
             const marker = '<!-- registry-security -->';
@@ -168,10 +177,10 @@ jobs:
               await github.rest.issues.createComment({ owner, repo, issue_number, body });
             }
 
-      - name: Reprovar em segredos vazados ou vulnerabilidade CRITICAL
+      - name: Fail on leaked secrets or CRITICAL vulnerability
         if: >-
           (steps.security.outputs.secrets != '' && steps.security.outputs.secrets != '0') ||
           (steps.security.outputs.critical != '' && steps.security.outputs.critical != '0')
         run: |
-          echo "::error::Segredos vazados ou vulnerabilidade CRITICAL no(s) repo(s) submetido(s) — veja o comentário de segurança no PR."
+          echo "::error::Leaked secrets or a CRITICAL vulnerability in the submitted repo(s) — see the security comment on the PR."
           exit 1
