@@ -60,9 +60,19 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
         run: echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout do PR
+      - name: Trazer os dados de registry do PR
         if: github.event_name != 'pull_request'
-        run: gh pr checkout "${{ steps.pr.outputs.number }}"
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          # Roda os scripts a partir do main (confiável e atualizado) e sobrepõe apenas os
+          # dados de registry do PR. Antes usávamos `gh pr checkout`, que trocava TODOS os
+          # arquivos para a branch do PR — então PRs abertos antes de uma correção de
+          # pipeline rodavam a versão antiga dos scripts (ex.: security-scan sem ONLY_FILES,
+          # escaneando os 27 repos em vez de só o submetido). Também evita executar scripts
+          # vindos da branch do PR com o token de escrita do job.
+          git fetch --no-tags origin "pull/${PR_NUMBER}/head"
+          git checkout FETCH_HEAD -- registry/plugins/
 
       - name: Detectar arquivos de registry alterados
         id: changed
