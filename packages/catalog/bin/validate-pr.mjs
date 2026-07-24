@@ -167,8 +167,8 @@ async function validateRepo(repo) {
   const zipAsset = (relRes.json?.assets || []).find((a) => ASSET_RE.test(a.name));
   if (!zipAsset) {
     problems.push(
-      'a release mais recente não tem o asset `com.<...>.ulanziPlugin.zip` ' +
-      '(o nome pode incluir a versão, ex.: `com.<...>.ulanziPlugin-1.5.0.zip`)',
+      'the latest release has no `com.<...>.ulanziPlugin.zip` asset ' +
+      '(the name may include the version, e.g. `com.<...>.ulanziPlugin-1.5.0.zip`)',
     );
     return problems;
   }
