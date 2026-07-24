@@ -29,11 +29,22 @@ const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
 // filename. build-catalog.mjs reads these to attach a `security` field to each
 // catalog entry. Defaults to <root>/dist/security.
 const SECURITY_DIR = process.env.SECURITY_DIR || fileURLToPath(new URL('../dist/security/', import.meta.url));
+// Optional allow-list of registry entries to scan, used by the PR check to scan ONLY the
+// files a Pull Request touched instead of the whole registry. Accepts full paths or bare
+// filenames, space/newline separated. Empty → scan everything (daily/full run).
+const ONLY_FILES = new Set(
+  (process.env.ONLY_FILES || '')
+    .split(/\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => s.split('/').pop()),
+);
 
 function readRegistry() {
   const dir = new URL(REGISTRY_DIR);
   return readdirSync(dir)
     .filter((f) => f.endsWith('.json'))
+    .filter((f) => ONLY_FILES.size === 0 || ONLY_FILES.has(f))
     .map((f) => {
       const raw = readFileSync(new URL(f, REGISTRY_DIR), 'utf8');
       let repo = null;
@@ -265,8 +276,15 @@ function main() {
   console.log(`Per-repo security records written to ${SECURITY_DIR}`);
 
   if (process.env.GITHUB_OUTPUT) {
+    const secretsTotal = results.reduce((n, r) => n + (r.secrets?.length || 0), 0);
+    const criticalTotal = results.reduce(
+      (n, r) => n + (r.vulns?.filter((v) => v.severity === 'CRITICAL').length || 0),
+      0,
+    );
     appendFileSync(process.env.GITHUB_OUTPUT, `found=${hasFindings}\n`);
     appendFileSync(process.env.GITHUB_OUTPUT, `errors=${errored}\n`);
+    appendFileSync(process.env.GITHUB_OUTPUT, `secrets=${secretsTotal}\n`);
+    appendFileSync(process.env.GITHUB_OUTPUT, `critical=${criticalTotal}\n`);
   }
 
   // Never fail the job on findings — we surface them via summary + issue instead.

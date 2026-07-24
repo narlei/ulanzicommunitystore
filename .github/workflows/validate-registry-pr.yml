@@ -58,10 +58,7 @@ jobs:
         id: pr
         env:
           PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
-        run: |
-          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-          BASE=$(gh pr view "$PR_NUMBER" --json baseRefName --jq .baseRefName)
-          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+        run: echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Checkout do PR
         if: github.event_name != 'pull_request'
@@ -70,10 +67,16 @@ jobs:
       - name: Detectar arquivos de registry alterados
         id: changed
         env:
-          BASE_REF: ${{ steps.pr.outputs.base }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
         run: |
-          git fetch --no-tags --depth=1 origin "$BASE_REF"
-          FILES=$(git diff --name-only --diff-filter=ACMR "origin/$BASE_REF"...HEAD -- 'registry/plugins/**/*.json' || true)
+          # Lista os arquivos do PR pela API do GitHub — funciona igual em `pull_request`
+          # e em `/revalidate` (issue_comment). O git diff anterior falhava no caminho do
+          # comentário: o clone raso (--depth=1) + `gh pr checkout` deixavam o repo sem
+          # merge-base local, então `origin/main...HEAD` dava "no merge base", a lista
+          # ficava vazia e a validação era pulada silenciosamente.
+          FILES=$(gh pr view "$PR_NUMBER" --json files --jq '.files[].path' \
+            | grep -E '^registry/plugins/.*\.json$' || true)
           echo "Arquivos alterados:"
           echo "$FILES"
           {
@@ -116,3 +119,59 @@ jobs:
             } else {
               await github.rest.issues.createComment({ owner, repo, issue_number, body });
             }
+
+      # ── Segurança: escaneia (Trivy) SÓ o(s) repo(s) submetido(s) neste PR e comenta os
+      # achados. Segredos vazados e vulnerabilidades CRITICAL reprovam o job (bloqueiam o
+      # merge); vulnerabilidades HIGH apenas sinalizam no comentário. Rodar aqui — e não no
+      # publish-catalog — garante que PRs abertos pelo bot (submit-plugin-issue) e
+      # revalidações via /revalidate também passem pela verificação.
+      - name: Instalar Trivy
+        if: steps.changed.outputs.files != ''
+        uses: aquasecurity/setup-trivy@v0.3.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Escanear segurança do repo submetido
+        id: security
+        if: steps.changed.outputs.files != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ONLY_FILES: ${{ steps.changed.outputs.files }}
+          SEVERITY: HIGH,CRITICAL
+          REPORT_FILE: ${{ runner.temp }}/pr-security.md
+          SECURITY_DIR: ${{ runner.temp }}/security
+        run: node scripts/security-scan.mjs
+
+      - name: Comentar segurança no PR
+        if: always() && steps.changed.outputs.files != ''
+        uses: actions/github-script@v9
+        env:
+          MD_PATH: ${{ runner.temp }}/pr-security.md
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = process.env.MD_PATH;
+            if (!fs.existsSync(path)) {
+              core.info('Sem markdown de segurança para comentar.');
+              return;
+            }
+            const marker = '<!-- registry-security -->';
+            const body = `${marker}\n\n${fs.readFileSync(path, 'utf8')}`;
+            const { owner, repo } = context.repo;
+            const issue_number = Number(process.env.PR_NUMBER);
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+      - name: Reprovar em segredos vazados ou vulnerabilidade CRITICAL
+        if: >-
+          (steps.security.outputs.secrets != '' && steps.security.outputs.secrets != '0') ||
+          (steps.security.outputs.critical != '' && steps.security.outputs.critical != '0')
+        run: |
+          echo "::error::Segredos vazados ou vulnerabilidade CRITICAL no(s) repo(s) submetido(s) — veja o comentário de segurança no PR."
+          exit 1
