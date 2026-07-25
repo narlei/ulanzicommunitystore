@@ -348,6 +348,177 @@ function buildSvg({ name, description, iconDataUrl, version, platforms, download
 </svg>`;
 }
 
+// --------------------------------------------------------------------- digest
+// The card behind a shared /updates/?from=&to= link. Where the plugin banner sells one
+// plugin, this one sells a period: the icon wall is the subject, so the tile size adapts
+// to how many landed — one plugin gets a single hero tile, a busy week gets a 3×3 grid
+// with the overflow rolled into a "+N" tile.
+
+// Tile geometry per icon count, chosen so the block always reads as deliberate rather
+// than as a grid with holes in it.
+function digestGrid(count) {
+  if (count <= 1) return { cols: 1, size: 236, gap: 0, cap: 1 };
+  if (count === 2) return { cols: 2, size: 190, gap: 26, cap: 2 };
+  if (count <= 4) return { cols: 2, size: 172, gap: 24, cap: 4 };
+  if (count <= 6) return { cols: 3, size: 136, gap: 22, cap: 6 };
+  return { cols: 3, size: 132, gap: 20, cap: 9 };
+}
+
+function digestTiles(icons, panel) {
+  const total = icons.length;
+  const { cols, size, gap, cap } = digestGrid(total);
+  // With more icons than cells, the last cell becomes the overflow counter.
+  const overflow = total > cap ? total - (cap - 1) : 0;
+  const shown = icons.slice(0, overflow ? cap - 1 : Math.min(total, cap));
+  const cells = shown.length + (overflow ? 1 : 0);
+  const rows = Math.ceil(cells / cols);
+
+  const blockW = cols * size + (cols - 1) * gap;
+  const blockH = rows * size + (rows - 1) * gap;
+  const originX = panel.x + (panel.w - blockW) / 2;
+  const originY = panel.y + (panel.h - blockH) / 2;
+
+  const at = (i) => {
+    // The final row is centered when it doesn't fill its columns.
+    const row = Math.floor(i / cols);
+    const isLastRow = row === rows - 1;
+    const inRow = isLastRow ? cells - row * cols : cols;
+    const rowW = inRow * size + (inRow - 1) * gap;
+    const rowX = panel.x + (panel.w - rowW) / 2;
+    return { x: rowX + (i % cols) * (size + gap), y: originY + row * (size + gap) };
+  };
+
+  const radius = Math.round(size * 0.23);
+  let clips = '';
+  let body = '';
+
+  shown.forEach((icon, i) => {
+    const { x, y } = at(i);
+    const id = `dg${i}`;
+    clips += `<clipPath id="${id}"><rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${radius}"/></clipPath>`;
+    body +=
+      `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${radius}" fill="#131a26"/>` +
+      (icon
+        ? `<image href="${icon}" x="${x}" y="${y}" width="${size}" height="${size}" clip-path="url(#${id})" preserveAspectRatio="xMidYMid slice"/>`
+        : `<text x="${x + size / 2}" y="${y + size / 2 + size * 0.14}" font-family="Inter" font-size="${size * 0.4}" font-weight="700" fill="${BRAND}" text-anchor="middle">U</text>`) +
+      `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${radius}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>`;
+  });
+
+  if (overflow) {
+    const { x, y } = at(shown.length);
+    body +=
+      `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${radius}" fill="rgba(65,230,195,0.09)" stroke="rgba(65,230,195,0.34)" stroke-width="2"/>` +
+      `<text x="${x + size / 2}" y="${y + size / 2 + size * 0.15}" font-family="Inter" font-size="${Math.round(size * 0.34)}" ` +
+      `font-weight="700" fill="#7dead0" text-anchor="middle">+${overflow}</text>`;
+  }
+
+  return { clips, body, center: { x: panel.x + panel.w / 2, y: panel.y + panel.h / 2 }, glow: blockW };
+}
+
+function buildDigestSvg({ range, newCount, updatedCount, icons, logo, measure }) {
+  const PAD = 72;
+  const panel = { x: 640, y: 96, w: 496, h: 438 };
+  const grid = digestTiles(icons, panel);
+
+  const titleLines = wrapText("What's new", { fontSize: 76, weight: 700, maxWidth: 500, maxLines: 1, measure });
+
+  const chipY = 372;
+  const chipGap = 14;
+  let chipX = PAD;
+  let chipsSvg = '';
+  const chipDefs = [];
+  if (newCount > 0) chipDefs.push({ label: `${newCount} new plugin${newCount === 1 ? '' : 's'}`, opts: { accent: true } });
+  if (updatedCount > 0) chipDefs.push({ label: `${updatedCount} updated`, opts: {} });
+  for (const c of chipDefs) {
+    const built = chip(chipX, chipY, c.label, { ...c.opts, measure });
+    chipsSvg += built.svg;
+    chipX += built.width + chipGap;
+  }
+
+  const ctaLabel =
+    newCount + updatedCount === 1
+      ? 'Get it free on the Ulanzi Community Store'
+      : 'Get them free on the Ulanzi Community Store';
+  const ctaFont = 26;
+  const ctaH = 78;
+  const ctaY = 466;
+  const arrowCx = PAD + 44;
+  const arrowCy = ctaY + ctaH / 2;
+  const ctaTextX = arrowCx + 42;
+  const ctaW = ctaTextX - PAD + measure(ctaLabel, ctaFont, 700) + 36;
+
+  const eyebrowLogo = logo
+    ? `<image href="${logo}" x="${PAD}" y="60" width="40" height="40" clip-path="url(#logoClip)"/>`
+    : `<circle cx="${PAD + 20}" cy="80" r="7" fill="${BRAND}"/>`;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${BG0}"/>
+      <stop offset="1" stop-color="${BG1}"/>
+    </linearGradient>
+    <radialGradient id="glowTeal" cx="0.10" cy="0.05" r="0.75">
+      <stop offset="0" stop-color="${BRAND}" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="${BRAND}" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowBlue" cx="0.92" cy="0.95" r="0.8">
+      <stop offset="0" stop-color="${BRAND_2}" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="${BRAND_2}" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="wallGlow">
+      <stop offset="0" stop-color="${BRAND}" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="${BRAND}" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cta" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="${BRAND}"/>
+      <stop offset="1" stop-color="#2fd4b0"/>
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 48 0 H 0 V 48" fill="none" stroke="rgba(255,255,255,0.035)" stroke-width="1"/>
+    </pattern>
+    <clipPath id="logoClip">
+      <rect x="${PAD}" y="60" width="40" height="40" rx="10"/>
+    </clipPath>
+    ${grid.clips}
+  </defs>
+
+  <rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="url(#bg)"/>
+  <rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="url(#grid)"/>
+  <rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="url(#glowTeal)"/>
+  <rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="url(#glowBlue)"/>
+
+  ${eyebrowLogo}
+  <text x="${PAD + (logo ? 54 : 40)}" y="88" font-family="Inter" font-size="24" font-weight="700" letter-spacing="3.5" fill="${BRAND}">ULANZI COMMUNITY STORE</text>
+
+  <circle cx="${grid.center.x}" cy="${grid.center.y}" r="${Math.round(grid.glow * 0.78)}" fill="url(#wallGlow)"/>
+  ${grid.body}
+
+  ${textLines(titleLines, { x: PAD, y: 216, lineHeight: 84, fontSize: 76, weight: 700, fill: WHITE })}
+  <text x="${PAD}" y="288" font-family="Inter" font-size="34" font-weight="400" fill="${MUTED}">${escapeXml(range)}</text>
+
+  ${chipsSvg}
+
+  <rect x="${PAD}" y="${ctaY}" width="${ctaW.toFixed(1)}" height="${ctaH}" rx="${ctaH / 2}" fill="url(#cta)"/>
+  <circle cx="${arrowCx}" cy="${arrowCy}" r="24" fill="rgba(4,32,25,0.16)"/>
+  <path d="M ${arrowCx} ${arrowCy - 12} L ${arrowCx} ${arrowCy + 8} M ${arrowCx - 10} ${arrowCy - 1} L ${arrowCx} ${arrowCy + 10} L ${arrowCx + 10} ${arrowCy - 1}" stroke="${BRAND_INK}" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="${ctaTextX}" y="${arrowCy + 10}" font-family="Inter" font-size="${ctaFont}" font-weight="700" fill="${BRAND_INK}">${escapeXml(ctaLabel)}</text>
+</svg>`;
+}
+
+// Renders the /updates/ digest banner to a PNG Buffer (1200×630). `icons` are data: URLs
+// (a null entry draws the branded placeholder tile), newest first.
+export async function renderDigestBanner({ range, newCount, updatedCount, icons }) {
+  const logo = await loadLogo();
+  const buffers = await loadFonts();
+  const measure = makeMeasure(buffers);
+  const svg = buildDigestSvg({ range, newCount, updatedCount, icons: icons || [], logo, measure });
+  const resvg = new Resvg(svg, {
+    fitTo: { mode: 'width', value: OG_WIDTH },
+    font: { ...RESVG_FONT_OPTS, fontBuffers: buffers },
+  });
+  return resvg.render().asPng();
+}
+
 // Renders a plugin banner to a PNG Buffer (1200×630).
 export async function renderBanner({ name, description, iconDataUrl, version, platforms, downloads, repo }) {
   const logo = await loadLogo();

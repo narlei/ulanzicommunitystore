@@ -14,7 +14,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { Resvg } from '@resvg/resvg-js';
-import { renderBanner } from './og-banner.mjs';
+import { renderBanner, renderDigestBanner } from './og-banner.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..', '..');
@@ -165,8 +165,19 @@ function svgToPngDataUrl(svgBuffer) {
 // Raster icons (PNG/JPG/GIF) are embedded as-is; SVGs are pre-rasterized to PNG. Any
 // failure (missing icon, network, unknown type) returns null → the banner draws a
 // branded placeholder tile instead of taking down the build.
+// Memoized: each icon is also reused by every digest banner whose window contains the
+// plugin, so without this a 28-window run would refetch the same PNGs dozens of times.
+const iconDataUrlCache = new Map();
+
 async function fetchIconDataUrl(iconUrl) {
   if (!iconUrl) return null;
+  if (iconDataUrlCache.has(iconUrl)) return iconDataUrlCache.get(iconUrl);
+  const pending = fetchIconDataUrlUncached(iconUrl);
+  iconDataUrlCache.set(iconUrl, pending);
+  return pending;
+}
+
+async function fetchIconDataUrlUncached(iconUrl) {
   try {
     const ext = (iconUrl.split('?')[0].match(/\.([a-z0-9]+)$/i)?.[1] || '').toLowerCase();
     const mime = ICON_MIME[ext];
@@ -211,6 +222,114 @@ async function generateBanner(entry) {
     console.warn(`  ! banner render failed for ${entry.repo}: ${err.message}`);
     return null;
   }
+}
+
+// --------------------------------------------------------- /updates/ share cards
+// A shared /updates/?from=&to= link needs its own 1200×630 card, but the window is a URL
+// parameter — there is no single "current edition" to render. So the build pre-renders the
+// windows the page can actually produce: paging always shifts by the window's own length,
+// so every window reachable from the default is a 7-day one ending on some recent day.
+// Rendering one per day for the last few weeks covers sharing from any of those days plus
+// several pages back. Anything else (a hand-typed range) simply has no entry, and the page
+// falls back to the site's generic cover.
+const DIGEST_WINDOW_DAYS = 7;
+const DIGEST_BANNER_DAYS = Number(process.env.CATALOG_DIGEST_DAYS || 28);
+const DIGEST_MAX_ICONS = 24;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function ymd(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function shiftYmd(value, days) {
+  return ymd(new Date(Date.parse(`${value}T00:00:00Z`) + days * DAY_MS));
+}
+
+function inWindow(iso, from, to) {
+  if (!iso) return false;
+  const ts = Date.parse(iso);
+  return (
+    !isNaN(ts) && ts >= Date.parse(`${from}T00:00:00Z`) && ts <= Date.parse(`${to}T23:59:59.999Z`)
+  );
+}
+
+// Mirrors partition() in assets/updates.js and countWindow() in updates/index.php:
+// `addedAt` inside the window means the plugin entered the store then, otherwise any
+// release inside the window counts as an update.
+function partitionWindow(plugins, from, to) {
+  const added = [];
+  const updated = [];
+
+  for (const plugin of plugins) {
+    const releases = plugin.releases?.length
+      ? plugin.releases
+      : [{ publishedAt: plugin.publishedAt }];
+    const shipped = releases.some((r) => inWindow(r.publishedAt, from, to));
+
+    if (inWindow(plugin.addedAt, from, to)) added.push(plugin);
+    else if (shipped) updated.push(plugin);
+  }
+
+  return { added, updated };
+}
+
+// "17–24 Jul 2026" — same collapsing rules as formatRange() in updates/index.php, so the
+// card and the text of the embed agree.
+function formatRange(from, to) {
+  const a = new Date(`${from}T00:00:00Z`);
+  const b = new Date(`${to}T00:00:00Z`);
+  const month = (d) => d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+  const day = (d) => d.getUTCDate();
+  if (from === to) return `${day(a)} ${month(a)} ${a.getUTCFullYear()}`;
+  if (a.getUTCFullYear() === b.getUTCFullYear()) {
+    if (a.getUTCMonth() === b.getUTCMonth()) return `${day(a)}–${day(b)} ${month(b)} ${b.getUTCFullYear()}`;
+    return `${day(a)} ${month(a)} – ${day(b)} ${month(b)} ${b.getUTCFullYear()}`;
+  }
+  return `${day(a)} ${month(a)} ${a.getUTCFullYear()} – ${day(b)} ${month(b)} ${b.getUTCFullYear()}`;
+}
+
+// Renders one card per non-empty window into og/updates/, returning
+// { "<from>_<to>": "<absolute url>" } for updates/index.php to look the window up in.
+async function generateDigestBanners(plugins) {
+  const banners = {};
+  if (process.env.CATALOG_SKIP_OG === '1' || !PAGES_BASE_URL) return banners;
+
+  const dir = join(OG_DIR, 'updates');
+  await mkdir(dir, { recursive: true });
+  const today = ymd(new Date());
+  let rendered = 0;
+
+  for (let back = 0; back < DIGEST_BANNER_DAYS; back++) {
+    const to = shiftYmd(today, -back);
+    const from = shiftYmd(to, -(DIGEST_WINDOW_DAYS - 1));
+    const { added, updated } = partitionWindow(plugins, from, to);
+    if (!added.length && !updated.length) continue;
+
+    try {
+      // New plugins lead the wall — they're what the edition is about.
+      const icons = await Promise.all(
+        [...added, ...updated].slice(0, DIGEST_MAX_ICONS).map((p) => fetchIconDataUrl(p.icon)),
+      );
+      const png = await renderDigestBanner({
+        range: formatRange(from, to),
+        newCount: added.length,
+        updatedCount: updated.length,
+        icons,
+      });
+      const name = `${from}_${to}.png`;
+      await writeFile(join(dir, name), png);
+      // Same cache-buster reasoning as the plugin banners: Discord's image proxy pins the
+      // URL, so it has to change whenever the image does.
+      const bust = createHash('sha1').update(png).digest('hex').slice(0, 8);
+      banners[`${from}_${to}`] = `${PAGES_BASE_URL}/og/updates/${name}?v=${bust}`;
+      rendered++;
+    } catch (err) {
+      console.warn(`  ! digest banner failed for ${from}..${to}: ${err.message}`);
+    }
+  }
+
+  console.log(`Digest banners: ${rendered} window(s) → ${dir}`);
+  return banners;
 }
 
 // Derives device types from the Controllers of the manifest actions.
@@ -640,6 +759,7 @@ async function main() {
     generatedAt: new Date().toISOString(),
     count: plugins.length,
     plugins,
+    updates: { banners: await generateDigestBanners(plugins) },
   };
 
   const outDir = dirname(OUT_FILE);

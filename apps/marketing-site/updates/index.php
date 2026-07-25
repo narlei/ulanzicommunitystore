@@ -53,6 +53,7 @@ serveTemplate(injectMeta($template, array(
     'title' => $title,
     'description' => $description,
     'url' => $BASE_URL . '?from=' . rawurlencode($from) . '&to=' . rawurlencode($to),
+    'image' => bannerFor($catalog, $from, $to),
 )));
 
 // ---------------------------------------------------------------------------
@@ -127,6 +128,22 @@ function englishName($plugin)
         return trim($plugin['i18n']['en']['name']);
     }
     return isset($plugin['name']) ? trim($plugin['name']) : '';
+}
+
+// The pre-rendered card for this exact window, or '' to keep the template's generic cover.
+// The catalog only carries windows the page can reach by paging; a hand-typed range, or a
+// catalog built before this field existed, simply has no entry.
+function bannerFor($catalog, $from, $to)
+{
+    if (!isset($catalog['updates']['banners']) || !is_array($catalog['updates']['banners'])) {
+        return '';
+    }
+    $key = $from . '_' . $to;
+    if (!isset($catalog['updates']['banners'][$key])) {
+        return '';
+    }
+    $url = $catalog['updates']['banners'][$key];
+    return is_string($url) ? $url : '';
 }
 
 function plural($n, $one, $many)
@@ -210,13 +227,16 @@ function loadCatalog($url, $ttl)
 }
 
 // Swaps the template's <title>, description, canonical and OG/Twitter meta. The image is
-// left alone — the template already points at the 1200×630 site cover. A pattern that
-// doesn't match (template drift) is skipped; the page still works with partial meta.
+// only swapped when this window has its own pre-rendered card; otherwise the template's
+// 1200×630 site cover stands, and either way the card stays `summary_large_image`. A
+// pattern that doesn't match (template drift) is skipped; the page still works with
+// partial meta.
 function injectMeta($html, $meta)
 {
     $title = htmlspecialchars($meta['title'], ENT_QUOTES, 'UTF-8');
     $desc = htmlspecialchars(truncate($meta['description'], 300), ENT_QUOTES, 'UTF-8');
     $url = htmlspecialchars($meta['url'], ENT_QUOTES, 'UTF-8');
+    $image = isset($meta['image']) ? htmlspecialchars($meta['image'], ENT_QUOTES, 'UTF-8') : '';
 
     $swaps = array(
         '#<title>.*?</title>#s' => "<title>$title</title>",
@@ -228,6 +248,10 @@ function injectMeta($html, $meta)
         '#<meta name="twitter:title" content="[^"]*">#' => "<meta name=\"twitter:title\" content=\"$title\">",
         '#<meta name="twitter:description" content="[^"]*">#' => "<meta name=\"twitter:description\" content=\"$desc\">",
     );
+    if ($image !== '') {
+        $swaps['#<meta property="og:image" content="[^"]*">#'] = "<meta property=\"og:image\" content=\"$image\">";
+        $swaps['#<meta name="twitter:image" content="[^"]*">#'] = "<meta name=\"twitter:image\" content=\"$image\">";
+    }
 
     foreach ($swaps as $pattern => $replacement) {
         $swapped = preg_replace($pattern, $replacement, $html, 1);
