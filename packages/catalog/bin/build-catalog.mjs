@@ -9,8 +9,10 @@
 
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { execFile } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { Resvg } from '@resvg/resvg-js';
 import { renderBanner } from './og-banner.mjs';
 
@@ -428,6 +430,76 @@ ${body}
 `;
 }
 
+// How much release history each entry carries. The /updates page needs enough past
+// releases to reconstruct an arbitrary date window (a shared link must keep showing what
+// it showed on the day it was posted), but catalog.json is fetched by every app launch —
+// so bodies are truncated and the list is capped.
+const RELEASE_HISTORY_LIMIT = 10;
+const RELEASE_NOTES_MAX = 800;
+
+function truncateNotes(body) {
+  const text = String(body || '').trim();
+  if (text.length <= RELEASE_NOTES_MAX) return text;
+  return text.slice(0, RELEASE_NOTES_MAX).replace(/\s+\S*$/, '') + '…';
+}
+
+// Past releases, newest first — the window a shared /updates link is rebuilt from.
+// Drafts and prereleases never reach the store, so they are dropped here too.
+// A failure is not fatal: the entry keeps its latest-release fields and the page
+// simply can't place that plugin in an older window.
+async function fetchReleases(repo) {
+  try {
+    const list = await ghJson(`/repos/${repo}/releases?per_page=${RELEASE_HISTORY_LIMIT}`);
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((r) => r && !r.draft && !r.prerelease && r.published_at)
+      .map((r) => ({
+        tag: r.tag_name,
+        version: String(r.tag_name || '').replace(/^v/, ''),
+        publishedAt: r.published_at,
+        notes: truncateNotes(r.body),
+      }))
+      // The API orders by creation, not publication. Consumers walk this newest-first to
+      // resolve "the version as of date X", so publication order is what matters.
+      .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+  } catch (err) {
+    console.warn(`  ! ${repo}: release history unavailable (${err.message})`);
+    return [];
+  }
+}
+
+const execFileAsync = promisify(execFile);
+
+// Maps `registry/plugins/<file>.json` → ISO date of the commit that first added it, i.e.
+// when the plugin actually entered the store. This is the only thing that separates a
+// *new* plugin from an *updated* one — a release date alone can't tell them apart.
+//
+// One `git log` for the whole directory: entries come newest-first, so overwriting on
+// each sighting leaves the earliest (the add) in the map. Needs full history — with a
+// shallow checkout the map comes back empty and every plugin reads as an update, so the
+// workflow checks out with fetch-depth: 0.
+async function buildAddedAtMap() {
+  const map = new Map();
+  try {
+    const { stdout } = await execFileAsync(
+      'git',
+      ['log', '--diff-filter=A', '--format=\x01%cI', '--name-only', '--', 'registry/plugins'],
+      { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 },
+    );
+    let date = null;
+    for (const line of stdout.split('\n')) {
+      if (line.startsWith('\x01')) {
+        date = line.slice(1).trim();
+      } else if (date && line.startsWith('registry/plugins/')) {
+        map.set(line.slice('registry/plugins/'.length).trim(), date);
+      }
+    }
+  } catch (err) {
+    console.warn(`! git history unavailable (${err.message}); addedAt will be null`);
+  }
+  return map;
+}
+
 async function buildEntry(repo) {
   // 1) latest release
   const release = await ghJson(`/repos/${repo}/releases/latest`);
@@ -465,6 +537,7 @@ async function buildEntry(repo) {
   const languages = await detectLanguages(repo, pluginId, ref);
   const i18n = await fetchI18n(repo, pluginId, ref, languages);
   const downloads = await countDownloads(repo);
+  const releases = await fetchReleases(repo);
 
   // 6) device types (store.json overrides the one derived from the manifest)
   const deviceTypes =
@@ -482,12 +555,19 @@ async function buildEntry(repo) {
     ? store.screenshots.map((s) => rawUrl(repo, ref, s))
     : [];
 
+  // Tag and manifest can disagree (a repo tagged v1.5.0 whose manifest still says 1.4.2).
+  // The catalog trusts the manifest, so the newest entry in the history is realigned to it
+  // — otherwise /updates would announce a version the plugin page never shows.
+  const version = manifest.Version || release.tag_name.replace(/^v/, '');
+  const latest = releases.find((r) => r.tag === release.tag_name);
+  if (latest) latest.version = version;
+
   return {
     id: pluginId,
     repo,
     name: manifest.Name || pluginId,
     author: manifest.Author || repo.split('/')[0],
-    version: manifest.Version || release.tag_name.replace(/^v/, ''),
+    version,
     description: manifest.Description || '',
     longDescription: store.longDescription || manifest.Description || '',
     category: manifest.Category || null,
@@ -503,6 +583,9 @@ async function buildEntry(repo) {
     releaseTag: release.tag_name,
     changelog: release.body || '',
     publishedAt: release.published_at,
+    releases,
+    // Filled in by main() from the git history of registry/plugins.
+    addedAt: null,
     downloads,
     stars,
     // Fixed name: stable permalink that always points to the latest release.
@@ -524,6 +607,7 @@ async function main() {
   }
 
   const security = await loadSecurity();
+  const addedAt = await buildAddedAtMap();
 
   const plugins = [];
   const errors = [];
@@ -537,6 +621,7 @@ async function main() {
     process.stdout.write(`→ ${repo} ... `);
     try {
       const built = await buildEntry(repo);
+      built.addedAt = addedAt.get(file) || null;
       const sec = security.get(repo) ? { ...security.get(repo) } : { ...UNKNOWN_SECURITY };
       sec.reportUrl = reportUrlFor(repo);
       built.security = sec;
@@ -561,6 +646,15 @@ async function main() {
   await mkdir(outDir, { recursive: true });
   await writeFile(OUT_FILE, JSON.stringify(catalog, null, 2) + '\n');
   console.log(`\nCatalog: ${plugins.length} plugin(s) → ${OUT_FILE}`);
+
+  // A shallow checkout resolves nothing here, which silently turns every plugin into an
+  // "update" on the /updates page. Loud warning rather than a quietly wrong digest.
+  const withAddedAt = plugins.filter((p) => p.addedAt).length;
+  if (plugins.length && !withAddedAt) {
+    console.warn('! addedAt is null for every plugin — is this a shallow clone? (need fetch-depth: 0)');
+  } else if (withAddedAt < plugins.length) {
+    console.warn(`! addedAt missing for ${plugins.length - withAddedAt} plugin(s); they will read as updates`);
+  }
 
   const reportFile = join(outDir, 'security.html');
   await writeFile(reportFile, buildSecurityHtml(plugins, catalog.generatedAt));

@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>What's new — Ulanzi Community Store</title>
+    <meta name="description" content="New plugins and updates in the Ulanzi Community Store, week by week. Share any edition — the link keeps showing the same period.">
+    <link rel="canonical" href="https://ulanzicommunitystore.narlei.com/updates/">
+    <meta name="theme-color" content="#070b12">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/assets/logo-512.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/logo-512.png">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="What's new — Ulanzi Community Store">
+    <meta property="og:description" content="New plugins and updates in the Ulanzi Community Store, week by week.">
+    <meta property="og:image" content="https://ulanzicommunitystore.narlei.com/assets/og-cover.jpg?v=20260714">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:url" content="https://ulanzicommunitystore.narlei.com/updates/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="What's new — Ulanzi Community Store">
+    <meta name="twitter:description" content="New plugins and updates in the Ulanzi Community Store, week by week.">
+    <meta name="twitter:image" content="https://ulanzicommunitystore.narlei.com/assets/og-cover.jpg?v=20260714">
+
+    <link rel="alternate" hreflang="en" href="https://ulanzicommunitystore.narlei.com/updates/">
+    <link rel="alternate" hreflang="pt-BR" href="https://ulanzicommunitystore.narlei.com/updates/">
+    <link rel="alternate" hreflang="zh-CN" href="https://ulanzicommunitystore.narlei.com/updates/">
+    <link rel="alternate" hreflang="x-default" href="https://ulanzicommunitystore.narlei.com/updates/">
+
+    <link rel="stylesheet" href="/assets/style.css?v=20260724a">
+    <script src="/assets/i18n.js?v=20260724a"></script>
+    <script src="/assets/updates.js?v=20260724a" defer></script>
+  </head>
+  <body id="top" class="page-updates">
+    <div class="bg" aria-hidden="true">
+      <div class="bg-grid"></div>
+      <div class="bg-glow bg-glow-1"></div>
+      <div class="bg-glow bg-glow-2"></div>
+    </div>
+
+    <header class="site-header" id="siteHeader">
+      <nav class="nav">
+        <a class="brand" href="/">
+          <img class="brand-icon" src="/assets/logo-512.png" alt="" width="30" height="30">
+          <span>Ulanzi&nbsp;Community&nbsp;Store</span>
+        </a>
+        <div class="nav-links">
+          <a href="/plugins/" data-i18n="nav_plugins">Plugins</a>
+          <a href="/updates/" aria-current="page" data-i18n="nav_updates">What's new</a>
+          <a href="/#publish" data-i18n="nav_publish">Publish</a>
+          <a href="https://github.com/narlei/ulanzicommunitystore" target="_blank" rel="noopener noreferrer" data-i18n="nav_github">GitHub</a>
+        </div>
+        <div class="nav-actions">
+          <div class="lang-switcher" role="group" data-i18n-aria="lang_label" aria-label="Language">
+            <button type="button" class="lang-btn" data-set-lang="en" aria-pressed="true">EN</button>
+            <button type="button" class="lang-btn" data-set-lang="pt" aria-pressed="false">PT</button>
+            <button type="button" class="lang-btn" data-set-lang="zh" aria-pressed="false">中文</button>
+          </div>
+          <a class="button button-sm js-download-trigger" href="https://github.com/narlei/ulanzicommunitystore/releases/latest" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v7.19l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0L3.72 7.53a.75.75 0 0 1 1.06-1.06l2.47 2.47V1.75A.75.75 0 0 1 8 1ZM2 12.25a.75.75 0 0 1 1.5 0v1.25h9v-1.25a.75.75 0 0 1 1.5 0v1.5c0 .69-.56 1.25-1.25 1.25H3.25C2.56 15 2 14.44 2 13.75v-1.5Z"/></svg>
+            <span data-i18n="nav_download">Download</span>
+          </a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="section updates-hero">
+        <p class="section-eyebrow" data-i18n="updates_eyebrow">What's new</p>
+        <h1 class="section-title catalog-title" data-i18n="updates_title">New plugins &amp; updates</h1>
+        <p class="catalog-lead" data-i18n="updates_lead">
+          Everything that landed in the community registry during the selected period. Share the link — it always shows this exact window.
+        </p>
+
+        <div class="updates-toolbar">
+          <div class="updates-period">
+            <button type="button" class="updates-nav-btn" id="updatesPrev" data-i18n-aria="updates_prev" aria-label="Previous period">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>
+            </button>
+            <span class="updates-range" id="updatesRange"></span>
+            <button type="button" class="updates-nav-btn" id="updatesNext" data-i18n-aria="updates_next" aria-label="Next period">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+            </button>
+          </div>
+
+          <div class="updates-toolbar-right">
+            <span class="updates-summary" id="updatesSummary" hidden></span>
+            <button type="button" class="updates-share" id="updatesShare" data-i18n="updates_share">Copy link</button>
+          </div>
+        </div>
+
+        <div class="catalog-status" id="updatesStatus" hidden></div>
+
+        <div id="updatesEmpty" class="updates-empty" hidden>
+          <strong data-i18n="updates_empty_title">Nothing shipped in this period.</strong>
+          <p data-i18n="updates_empty_body">Try the previous week, or browse the full catalog.</p>
+          <a class="button button-sm secondary" href="/plugins/" data-i18n="updates_browse_all">Browse all plugins</a>
+        </div>
+
+        <!-- The grid / list container is emitted by updates.js: one per author, under
+             that author's heading. -->
+        <section id="updatesNewSection" class="updates-section" hidden>
+          <h2 class="updates-section-title" data-i18n="updates_section_new">New in the store</h2>
+          <div id="updatesNewGrid"></div>
+        </section>
+
+        <section id="updatesUpdatedSection" class="updates-section" hidden>
+          <h2 class="updates-section-title" data-i18n="updates_section_updated">Updated</h2>
+          <div id="updatesUpdatedList"></div>
+        </section>
+      </section>
+
+      <section class="note" id="about">
+        <p data-i18n-html="about_html"><strong>Independent project.</strong> The Ulanzi Community Store is an unofficial project made by fans of Ulanzi hardware. It is not affiliated with, endorsed by, or maintained by Ulanzi. For officially reviewed plugins, use the Ulanzi Studio Marketplace — the two stores complement each other.</p>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-links">
+        <a href="https://github.com/narlei/ulanzicommunitystore" target="_blank" rel="noopener noreferrer" data-i18n="nav_github">GitHub</a>
+        <a href="https://github.com/narlei/ulanzicommunitystore/releases/latest" target="_blank" rel="noopener noreferrer" data-i18n="footer_releases">Releases</a>
+        <a href="/#publish" data-i18n="footer_publish">Publish a plugin</a>
+        <a href="https://github.com/narlei/ulanzicommunitystore/issues" target="_blank" rel="noopener noreferrer" data-i18n="footer_issue">Report an issue</a>
+      </div>
+      <p class="copyright">
+        <span data-i18n="footer_copy">Ulanzi Community Store — made with 💚 by the community, for the community. Unofficial project, not affiliated with Ulanzi.</span>
+      </p>
+    </footer>
+
+    <script>
+      (function () {
+        var header = document.getElementById('siteHeader');
+        if (!header) return;
+
+        function syncHeaderHeight() {
+          var h = Math.ceil(header.getBoundingClientRect().height);
+          if (h > 0) document.documentElement.style.setProperty('--site-header-h', h + 'px');
+        }
+
+        var onScroll = function () {
+          header.classList.toggle('scrolled', window.scrollY > 12);
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', syncHeaderHeight, { passive: true });
+        onScroll();
+        syncHeaderHeight();
+      })();
+
+      // Shared with the other pages: updates.js uses it for the "copy link" button.
+      (function () {
+        function fallbackCopy(text) {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          var ok = false;
+          try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+          document.body.removeChild(ta);
+          return ok;
+        }
+
+        window.__marketingCopyText = function (text) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text).then(function () {
+              return true;
+            }).catch(function () {
+              return fallbackCopy(text);
+            });
+          }
+          return Promise.resolve(fallbackCopy(text));
+        };
+      })();
+
+      // The download button here just goes to the releases page — no modal on this page.
+      document.addEventListener('click', function (event) {
+        var trigger = event.target.closest('.js-download-trigger');
+        if (trigger && !trigger.getAttribute('href')) event.preventDefault();
+      });
+    </script>
+  </body>
+</html>
