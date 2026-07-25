@@ -9,10 +9,12 @@
 
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { execFile } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { Resvg } from '@resvg/resvg-js';
-import { renderBanner } from './og-banner.mjs';
+import { renderBanner, renderDigestBanner } from './og-banner.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..', '..');
@@ -163,8 +165,19 @@ function svgToPngDataUrl(svgBuffer) {
 // Raster icons (PNG/JPG/GIF) are embedded as-is; SVGs are pre-rasterized to PNG. Any
 // failure (missing icon, network, unknown type) returns null → the banner draws a
 // branded placeholder tile instead of taking down the build.
+// Memoized: each icon is also reused by every digest banner whose window contains the
+// plugin, so without this a 28-window run would refetch the same PNGs dozens of times.
+const iconDataUrlCache = new Map();
+
 async function fetchIconDataUrl(iconUrl) {
   if (!iconUrl) return null;
+  if (iconDataUrlCache.has(iconUrl)) return iconDataUrlCache.get(iconUrl);
+  const pending = fetchIconDataUrlUncached(iconUrl);
+  iconDataUrlCache.set(iconUrl, pending);
+  return pending;
+}
+
+async function fetchIconDataUrlUncached(iconUrl) {
   try {
     const ext = (iconUrl.split('?')[0].match(/\.([a-z0-9]+)$/i)?.[1] || '').toLowerCase();
     const mime = ICON_MIME[ext];
@@ -209,6 +222,114 @@ async function generateBanner(entry) {
     console.warn(`  ! banner render failed for ${entry.repo}: ${err.message}`);
     return null;
   }
+}
+
+// --------------------------------------------------------- /updates/ share cards
+// A shared /updates/?from=&to= link needs its own 1200×630 card, but the window is a URL
+// parameter — there is no single "current edition" to render. So the build pre-renders the
+// windows the page can actually produce: paging always shifts by the window's own length,
+// so every window reachable from the default is a 7-day one ending on some recent day.
+// Rendering one per day for the last few weeks covers sharing from any of those days plus
+// several pages back. Anything else (a hand-typed range) simply has no entry, and the page
+// falls back to the site's generic cover.
+const DIGEST_WINDOW_DAYS = 7;
+const DIGEST_BANNER_DAYS = Number(process.env.CATALOG_DIGEST_DAYS || 28);
+const DIGEST_MAX_ICONS = 24;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function ymd(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function shiftYmd(value, days) {
+  return ymd(new Date(Date.parse(`${value}T00:00:00Z`) + days * DAY_MS));
+}
+
+function inWindow(iso, from, to) {
+  if (!iso) return false;
+  const ts = Date.parse(iso);
+  return (
+    !isNaN(ts) && ts >= Date.parse(`${from}T00:00:00Z`) && ts <= Date.parse(`${to}T23:59:59.999Z`)
+  );
+}
+
+// Mirrors partition() in assets/updates.js and countWindow() in updates/index.php:
+// `addedAt` inside the window means the plugin entered the store then, otherwise any
+// release inside the window counts as an update.
+function partitionWindow(plugins, from, to) {
+  const added = [];
+  const updated = [];
+
+  for (const plugin of plugins) {
+    const releases = plugin.releases?.length
+      ? plugin.releases
+      : [{ publishedAt: plugin.publishedAt }];
+    const shipped = releases.some((r) => inWindow(r.publishedAt, from, to));
+
+    if (inWindow(plugin.addedAt, from, to)) added.push(plugin);
+    else if (shipped) updated.push(plugin);
+  }
+
+  return { added, updated };
+}
+
+// "17–24 Jul 2026" — same collapsing rules as formatRange() in updates/index.php, so the
+// card and the text of the embed agree.
+function formatRange(from, to) {
+  const a = new Date(`${from}T00:00:00Z`);
+  const b = new Date(`${to}T00:00:00Z`);
+  const month = (d) => d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+  const day = (d) => d.getUTCDate();
+  if (from === to) return `${day(a)} ${month(a)} ${a.getUTCFullYear()}`;
+  if (a.getUTCFullYear() === b.getUTCFullYear()) {
+    if (a.getUTCMonth() === b.getUTCMonth()) return `${day(a)}–${day(b)} ${month(b)} ${b.getUTCFullYear()}`;
+    return `${day(a)} ${month(a)} – ${day(b)} ${month(b)} ${b.getUTCFullYear()}`;
+  }
+  return `${day(a)} ${month(a)} ${a.getUTCFullYear()} – ${day(b)} ${month(b)} ${b.getUTCFullYear()}`;
+}
+
+// Renders one card per non-empty window into og/updates/, returning
+// { "<from>_<to>": "<absolute url>" } for updates/index.php to look the window up in.
+async function generateDigestBanners(plugins) {
+  const banners = {};
+  if (process.env.CATALOG_SKIP_OG === '1' || !PAGES_BASE_URL) return banners;
+
+  const dir = join(OG_DIR, 'updates');
+  await mkdir(dir, { recursive: true });
+  const today = ymd(new Date());
+  let rendered = 0;
+
+  for (let back = 0; back < DIGEST_BANNER_DAYS; back++) {
+    const to = shiftYmd(today, -back);
+    const from = shiftYmd(to, -(DIGEST_WINDOW_DAYS - 1));
+    const { added, updated } = partitionWindow(plugins, from, to);
+    if (!added.length && !updated.length) continue;
+
+    try {
+      // New plugins lead the wall — they're what the edition is about.
+      const icons = await Promise.all(
+        [...added, ...updated].slice(0, DIGEST_MAX_ICONS).map((p) => fetchIconDataUrl(p.icon)),
+      );
+      const png = await renderDigestBanner({
+        range: formatRange(from, to),
+        newCount: added.length,
+        updatedCount: updated.length,
+        icons,
+      });
+      const name = `${from}_${to}.png`;
+      await writeFile(join(dir, name), png);
+      // Same cache-buster reasoning as the plugin banners: Discord's image proxy pins the
+      // URL, so it has to change whenever the image does.
+      const bust = createHash('sha1').update(png).digest('hex').slice(0, 8);
+      banners[`${from}_${to}`] = `${PAGES_BASE_URL}/og/updates/${name}?v=${bust}`;
+      rendered++;
+    } catch (err) {
+      console.warn(`  ! digest banner failed for ${from}..${to}: ${err.message}`);
+    }
+  }
+
+  console.log(`Digest banners: ${rendered} window(s) → ${dir}`);
+  return banners;
 }
 
 // Derives device types from the Controllers of the manifest actions.
@@ -428,6 +549,76 @@ ${body}
 `;
 }
 
+// How much release history each entry carries. The /updates page needs enough past
+// releases to reconstruct an arbitrary date window (a shared link must keep showing what
+// it showed on the day it was posted), but catalog.json is fetched by every app launch —
+// so bodies are truncated and the list is capped.
+const RELEASE_HISTORY_LIMIT = 10;
+const RELEASE_NOTES_MAX = 800;
+
+function truncateNotes(body) {
+  const text = String(body || '').trim();
+  if (text.length <= RELEASE_NOTES_MAX) return text;
+  return text.slice(0, RELEASE_NOTES_MAX).replace(/\s+\S*$/, '') + '…';
+}
+
+// Past releases, newest first — the window a shared /updates link is rebuilt from.
+// Drafts and prereleases never reach the store, so they are dropped here too.
+// A failure is not fatal: the entry keeps its latest-release fields and the page
+// simply can't place that plugin in an older window.
+async function fetchReleases(repo) {
+  try {
+    const list = await ghJson(`/repos/${repo}/releases?per_page=${RELEASE_HISTORY_LIMIT}`);
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((r) => r && !r.draft && !r.prerelease && r.published_at)
+      .map((r) => ({
+        tag: r.tag_name,
+        version: String(r.tag_name || '').replace(/^v/, ''),
+        publishedAt: r.published_at,
+        notes: truncateNotes(r.body),
+      }))
+      // The API orders by creation, not publication. Consumers walk this newest-first to
+      // resolve "the version as of date X", so publication order is what matters.
+      .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+  } catch (err) {
+    console.warn(`  ! ${repo}: release history unavailable (${err.message})`);
+    return [];
+  }
+}
+
+const execFileAsync = promisify(execFile);
+
+// Maps `registry/plugins/<file>.json` → ISO date of the commit that first added it, i.e.
+// when the plugin actually entered the store. This is the only thing that separates a
+// *new* plugin from an *updated* one — a release date alone can't tell them apart.
+//
+// One `git log` for the whole directory: entries come newest-first, so overwriting on
+// each sighting leaves the earliest (the add) in the map. Needs full history — with a
+// shallow checkout the map comes back empty and every plugin reads as an update, so the
+// workflow checks out with fetch-depth: 0.
+async function buildAddedAtMap() {
+  const map = new Map();
+  try {
+    const { stdout } = await execFileAsync(
+      'git',
+      ['log', '--diff-filter=A', '--format=\x01%cI', '--name-only', '--', 'registry/plugins'],
+      { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 },
+    );
+    let date = null;
+    for (const line of stdout.split('\n')) {
+      if (line.startsWith('\x01')) {
+        date = line.slice(1).trim();
+      } else if (date && line.startsWith('registry/plugins/')) {
+        map.set(line.slice('registry/plugins/'.length).trim(), date);
+      }
+    }
+  } catch (err) {
+    console.warn(`! git history unavailable (${err.message}); addedAt will be null`);
+  }
+  return map;
+}
+
 async function buildEntry(repo) {
   // 1) latest release
   const release = await ghJson(`/repos/${repo}/releases/latest`);
@@ -465,6 +656,7 @@ async function buildEntry(repo) {
   const languages = await detectLanguages(repo, pluginId, ref);
   const i18n = await fetchI18n(repo, pluginId, ref, languages);
   const downloads = await countDownloads(repo);
+  const releases = await fetchReleases(repo);
 
   // 6) device types (store.json overrides the one derived from the manifest)
   const deviceTypes =
@@ -482,12 +674,19 @@ async function buildEntry(repo) {
     ? store.screenshots.map((s) => rawUrl(repo, ref, s))
     : [];
 
+  // Tag and manifest can disagree (a repo tagged v1.5.0 whose manifest still says 1.4.2).
+  // The catalog trusts the manifest, so the newest entry in the history is realigned to it
+  // — otherwise /updates would announce a version the plugin page never shows.
+  const version = manifest.Version || release.tag_name.replace(/^v/, '');
+  const latest = releases.find((r) => r.tag === release.tag_name);
+  if (latest) latest.version = version;
+
   return {
     id: pluginId,
     repo,
     name: manifest.Name || pluginId,
     author: manifest.Author || repo.split('/')[0],
-    version: manifest.Version || release.tag_name.replace(/^v/, ''),
+    version,
     description: manifest.Description || '',
     longDescription: store.longDescription || manifest.Description || '',
     category: manifest.Category || null,
@@ -503,6 +702,9 @@ async function buildEntry(repo) {
     releaseTag: release.tag_name,
     changelog: release.body || '',
     publishedAt: release.published_at,
+    releases,
+    // Filled in by main() from the git history of registry/plugins.
+    addedAt: null,
     downloads,
     stars,
     // Fixed name: stable permalink that always points to the latest release.
@@ -524,6 +726,7 @@ async function main() {
   }
 
   const security = await loadSecurity();
+  const addedAt = await buildAddedAtMap();
 
   const plugins = [];
   const errors = [];
@@ -537,6 +740,7 @@ async function main() {
     process.stdout.write(`→ ${repo} ... `);
     try {
       const built = await buildEntry(repo);
+      built.addedAt = addedAt.get(file) || null;
       const sec = security.get(repo) ? { ...security.get(repo) } : { ...UNKNOWN_SECURITY };
       sec.reportUrl = reportUrlFor(repo);
       built.security = sec;
@@ -555,12 +759,22 @@ async function main() {
     generatedAt: new Date().toISOString(),
     count: plugins.length,
     plugins,
+    updates: { banners: await generateDigestBanners(plugins) },
   };
 
   const outDir = dirname(OUT_FILE);
   await mkdir(outDir, { recursive: true });
   await writeFile(OUT_FILE, JSON.stringify(catalog, null, 2) + '\n');
   console.log(`\nCatalog: ${plugins.length} plugin(s) → ${OUT_FILE}`);
+
+  // A shallow checkout resolves nothing here, which silently turns every plugin into an
+  // "update" on the /updates page. Loud warning rather than a quietly wrong digest.
+  const withAddedAt = plugins.filter((p) => p.addedAt).length;
+  if (plugins.length && !withAddedAt) {
+    console.warn('! addedAt is null for every plugin — is this a shallow clone? (need fetch-depth: 0)');
+  } else if (withAddedAt < plugins.length) {
+    console.warn(`! addedAt missing for ${plugins.length - withAddedAt} plugin(s); they will read as updates`);
+  }
 
   const reportFile = join(outDir, 'security.html');
   await writeFile(reportFile, buildSecurityHtml(plugins, catalog.generatedAt));

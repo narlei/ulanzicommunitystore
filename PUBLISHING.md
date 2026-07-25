@@ -57,6 +57,8 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
+> **Write release notes people can read.** The store's [What's new](https://ulanzicommunitystore.narlei.com/updates/) page quotes the top of each release body, so a `## What's new` section with a couple of bullets is what shows up next to your plugin. Install instructions or badges at the top of the body get quoted instead — save those for the README.
+
 ### 4. Submit to the store
 
 Paste your repo URL (`https://github.com/<you>/<repo>`) into either:
