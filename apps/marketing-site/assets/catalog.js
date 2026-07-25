@@ -547,7 +547,7 @@
       escapeHtml(plugin.author || '') +
       '</p>' +
       '</div>' +
-      '<button type="button" class="button button-sm catalog-get js-download-trigger" data-stop>' +
+      '<button type="button" class="button button-sm catalog-get js-download-trigger" data-analytics-placement="catalog_card" data-stop>' +
       escapeHtml(t('catalog_get_app')) +
       '</button>' +
       '</div>' +
@@ -731,6 +731,11 @@
     document.body.style.overflow = 'hidden';
     var closeBtn = document.getElementById('pluginDetailClose');
     if (closeBtn) closeBtn.focus();
+
+    // No-op unless analytics.js is loaded with a real measurement ID.
+    if (typeof window.trackEvent === 'function') {
+      window.trackEvent('view_plugin', { plugin_repo: plugin.repo, plugin_name: name });
+    }
 
     // Reflect the open plugin in the URL so it can be shared / deep-linked.
     // Skipped when opening from an existing history entry (initial load, Back/Forward).
