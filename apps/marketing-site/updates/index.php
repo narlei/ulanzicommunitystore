@@ -12,7 +12,13 @@
 $CATALOG_URL = 'https://narlei.github.io/ulanzicommunitystore/catalog.json';
 $BASE_URL = 'https://ulanzicommunitystore.narlei.com/updates/';
 $CACHE_TTL = 600; // seconds; crawls are bursty, don't hit Pages on every hit
+$MISS_REFRESH_COOLDOWN = 60; // min seconds between forced refreshes on a stale-cache miss
 $DEFAULT_WINDOW_DAYS = 7;
+// Mirrors DIGEST_WINDOW_DAYS / DIGEST_BANNER_DAYS in packages/catalog/bin/build-catalog.mjs:
+// which windows the build pre-renders a share card for. Used only to tell "this catalog is
+// stale" apart from "this window legitimately has no card".
+$BANNER_WINDOW_DAYS = 7;
+$BANNER_HISTORY_DAYS = 28;
 
 $template = file_get_contents(__DIR__ . '/index.html');
 if ($template === false) {
@@ -29,6 +35,22 @@ if (!isValidYmd($from) || !isValidYmd($to) || $from > $to) {
 }
 
 $catalog = loadCatalog($CATALOG_URL, $CACHE_TTL);
+
+// The share is normally posted seconds after the catalog deploy, while the local cache is
+// still inside its TTL and predates it — the crawler would then pin a card built from the
+// old catalog ("0 new plugins", generic cover) for hours. So when a window the build should
+// have rendered a card for has none, buy one forced (cache- and CDN-bypassing) refresh,
+// rate-limited so a crawl of arbitrary ranges can't stampede Pages.
+$banner = bannerFor($catalog, $from, $to);
+if ($banner === '' && expectsBanner($from, $to, $BANNER_WINDOW_DAYS, $BANNER_HISTORY_DAYS)
+    && allowMissRefresh($MISS_REFRESH_COOLDOWN)) {
+    $fresh = loadCatalog($CATALOG_URL, $CACHE_TTL, true);
+    if (is_array($fresh) && !empty($fresh['plugins'])) {
+        $catalog = $fresh;
+        $banner = bannerFor($catalog, $from, $to);
+    }
+}
+
 if (!is_array($catalog) || empty($catalog['plugins'])) {
     serveTemplate($template);
 }
@@ -53,7 +75,7 @@ serveTemplate(injectMeta($template, array(
     'title' => $title,
     'description' => $description,
     'url' => $BASE_URL . '?from=' . rawurlencode($from) . '&to=' . rawurlencode($to),
-    'image' => bannerFor($catalog, $from, $to),
+    'image' => $banner,
 )));
 
 // ---------------------------------------------------------------------------
@@ -146,6 +168,35 @@ function bannerFor($catalog, $from, $to)
     return is_string($url) ? $url : '';
 }
 
+// True when the build should have pre-rendered a card for this window: the exact length it
+// renders, ending within the history it keeps, and not in the future. A hand-typed range
+// fails this and is left alone, so a missing card there never triggers a refresh.
+function expectsBanner($from, $to, $windowDays, $historyDays)
+{
+    $a = strtotime($from . ' 00:00:00 UTC');
+    $b = strtotime($to . ' 00:00:00 UTC');
+    $today = strtotime(gmdate('Y-m-d') . ' 00:00:00 UTC');
+    $span = (int) round(($b - $a) / 86400) + 1;
+    if ($span !== $windowDays || $b > $today) {
+        return false;
+    }
+    return (int) round(($today - $b) / 86400) < $historyDays;
+}
+
+// True at most once per $cooldown seconds, process-wide, so a stale cache can trigger a
+// refresh without letting a crawl (or a scan) stampede GitHub Pages. Separate stamp from
+// the one plugins/index.php uses: neither page should spend the other's budget.
+function allowMissRefresh($cooldown)
+{
+    $stamp = sys_get_temp_dir() . '/ucs-updates-miss-refresh';
+
+    $stat = @stat($stamp);
+    if ($stat && time() - $stat['mtime'] < $cooldown) {
+        return false;
+    }
+    return @touch($stamp) !== false;
+}
+
 function plural($n, $one, $many)
 {
     return $n . ' ' . ($n === 1 ? $one : $many);
@@ -187,12 +238,14 @@ function formatRange($from, $to)
 
 // catalog.json via a small temp-dir cache, shared with plugins/index.php. A fetch failure
 // falls back to a stale cache when one exists; with no cache at all it returns null.
-function loadCatalog($url, $ttl)
+// $force skips the local cache *and* the Pages CDN copy (which carries its own 10-minute
+// max-age) so a freshly deployed catalog is actually visible.
+function loadCatalog($url, $ttl, $force = false)
 {
     $cacheFile = sys_get_temp_dir() . '/ucs-catalog-cache.json';
 
     $stat = @stat($cacheFile);
-    if ($stat && time() - $stat['mtime'] < $ttl) {
+    if (!$force && $stat && time() - $stat['mtime'] < $ttl) {
         $cached = @file_get_contents($cacheFile);
         if ($cached !== false) {
             $json = json_decode($cached, true);
@@ -207,7 +260,8 @@ function loadCatalog($url, $ttl)
         'ignore_errors' => false,
         'header' => "Cache-Control: no-cache\r\nPragma: no-cache\r\n",
     )));
-    $body = @file_get_contents($url, false, $ctx);
+    $fetchUrl = $force ? $url . '?cb=' . time() : $url;
+    $body = @file_get_contents($fetchUrl, false, $ctx);
     if ($body !== false) {
         $json = json_decode($body, true);
         if (is_array($json)) {
