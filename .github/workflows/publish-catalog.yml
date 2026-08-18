@@ -5,9 +5,16 @@ name: publish-catalog
 # every plugin repo so each catalog entry carries a `security` field, and posts findings
 # to a single rolling GitHub issue (opened on findings, closed when everything is clean).
 #
-# Pull requests that touch this pipeline run the same scan + build as a dry-run —
-# proving the pipeline works before merge — but skip the Pages deploy and leave the
-# rolling issue untouched.
+# This whole-registry pipeline deliberately does NOT run on pull requests: it clones and
+# scans ~30 third-party repos and rebuilds every catalog entry, none of which a submission
+# PR changes. What a PR needs — the scan and the build of the entries it actually touched —
+# runs in validate-registry-pr.yml instead.
+#
+# A maintainer who does want the full pipeline exercised against a PR (typically when the
+# PR changes the pipeline itself) can start it by hand: Actions → publish-catalog → Run
+# workflow, with `pr` set to the PR number. That builds and scans everything with the PR's
+# registry data overlaid, uploads the result as an artifact, and skips both the Pages
+# deploy and the rolling security issue.
 
 on:
   push:
@@ -17,15 +24,14 @@ on:
       - 'packages/catalog/**'
       - 'scripts/security-scan.mjs'
       - '.github/workflows/publish-catalog.yml'
-  pull_request:
-    paths:
-      - 'registry/**'
-      - 'packages/catalog/**'
-      - 'scripts/security-scan.mjs'
-      - '.github/workflows/publish-catalog.yml'
   schedule:
     - cron: '0 6 * * *' # every day at 06:00 UTC
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'PR number to dry-run against (blank = normal build of the selected branch)'
+        required: false
+        default: ''
   repository_dispatch:
     types: [rebuild-catalog]
 
@@ -35,15 +41,19 @@ permissions:
   pages: write
   id-token: write
 
-# PR dry-runs get their own group so they never queue behind (or block) a real deploy;
-# a new push to the same PR cancels the previous dry-run.
+# Dry-runs get their own group so they never queue behind (or block) a real deploy;
+# re-running the dry-run for the same PR cancels the previous one.
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('catalog-pr-{0}', github.event.pull_request.number) || 'pages' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ inputs.pr != '' && format('catalog-pr-{0}', inputs.pr) || 'pages' }}
+  cancel-in-progress: ${{ inputs.pr != '' }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # `inputs` is empty for push/schedule/repository_dispatch, so this is only ever '1'
+      # on a hand-started run that named a PR.
+      DRY_RUN: ${{ inputs.pr != '' && '1' || '0' }}
     steps:
       # Full history: the catalog derives each plugin's `addedAt` (when it entered the
       # store) from the commit that added its registry/plugins/*.json. A shallow clone
@@ -51,6 +61,16 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: Bring in the PR registry data
+        if: env.DRY_RUN == '1'
+        env:
+          PR_NUMBER: ${{ inputs.pr }}
+        run: |
+          # Same rule as validate-registry-pr: run the scripts from the ref this workflow was
+          # started on (trusted) and overlay ONLY the PR's registry data, never the PR's code.
+          git fetch --no-tags origin "pull/${PR_NUMBER}/head"
+          git checkout FETCH_HEAD -- registry/plugins/
 
       - uses: actions/setup-node@v7
         with:
@@ -82,9 +102,9 @@ jobs:
         run: cat security-report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Open / update / close security issue
-        # Dry-runs on PRs must not touch the rolling issue (and the PR token from a
-        # fork would be read-only anyway).
-        if: always() && github.event_name != 'pull_request'
+        # A dry-run reports on the PR's registry data, not on what is published — it must
+        # not touch the rolling issue.
+        if: always() && env.DRY_RUN != '1'
         uses: actions/github-script@v9
         with:
           script: |
@@ -134,22 +154,22 @@ jobs:
               });
             }
 
-      - if: github.event_name != 'pull_request'
+      - if: env.DRY_RUN != '1'
         uses: actions/upload-pages-artifact@v5
         with:
           path: dist/catalog
 
-      # On PRs, expose the built catalog + security report as a plain artifact
+      # On a dry-run, expose the built catalog + security report as a plain artifact
       # so reviewers can inspect exactly what would have been published.
-      - if: github.event_name == 'pull_request'
+      - if: env.DRY_RUN == '1'
         uses: actions/upload-artifact@v7
         with:
-          name: catalog-dry-run
+          name: catalog-dry-run-pr-${{ inputs.pr }}
           path: dist/catalog
           retention-days: 7
 
   deploy:
-    if: github.event_name != 'pull_request'
+    if: inputs.pr == ''
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

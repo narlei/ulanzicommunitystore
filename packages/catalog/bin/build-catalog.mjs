@@ -6,6 +6,8 @@
 //
 // Usage:  GH_TOKEN=$(gh auth token) npm run catalog:build
 // In the Action, GITHUB_TOKEN is injected automatically.
+// Set ONLY_FILES to build a subset (see below) — that is how the PR check builds just the
+// entries a Pull Request touched.
 
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -19,6 +21,22 @@ import { renderBanner, renderDigestBanner } from './og-banner.mjs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..', '..');
 const REGISTRY_DIR = join(ROOT, 'registry', 'plugins');
+// Optional allow-list of registry entries to build, same convention as
+// scripts/security-scan.mjs: the PR check passes the files the Pull Request touched so the
+// dry-run builds ONLY those entries instead of hitting the GitHub API for the whole
+// registry. Accepts full paths or bare filenames, space/newline separated.
+// Empty → build everything (the real publish, the daily run, a local build).
+const ONLY_FILES = new Set(
+  (process.env.ONLY_FILES || '')
+    .split(/\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => s.split('/').pop()),
+);
+// A partial build is never publishable — it drops every entry the allow-list left out.
+// Used below to skip the whole-registry work (digest cards, completeness warnings) that
+// only makes sense for a full build.
+const PARTIAL = ONLY_FILES.size > 0;
 const OUT_FILE = process.env.CATALOG_OUT_FILE || join(ROOT, 'dist', 'catalog', 'catalog.json');
 // Social-share banners (og/<slug>.png) are written next to catalog.json and published to
 // Pages, so plugins/index.php can point og:image at them when a plugin link is shared.
@@ -725,6 +743,15 @@ async function main() {
     process.exit(1);
   }
 
+  if (PARTIAL) {
+    const known = new Set(files);
+    for (const wanted of ONLY_FILES) {
+      if (!known.has(wanted)) console.warn(`! ONLY_FILES lists ${wanted}, which is not in the registry`);
+    }
+    files = files.filter((f) => ONLY_FILES.has(f));
+    console.log(`Partial build: ${files.length} of ${known.size} registry entr(ies) — NOT publishable.`);
+  }
+
   const security = await loadSecurity();
   const addedAt = await buildAddedAtMap();
 
@@ -759,7 +786,10 @@ async function main() {
     generatedAt: new Date().toISOString(),
     count: plugins.length,
     plugins,
-    updates: { banners: await generateDigestBanners(plugins) },
+    // The digest cards summarise a time window across the WHOLE registry, so a partial
+    // build has nothing meaningful to render — and rendering ~28 cards would dominate the
+    // dry-run's runtime for output nobody publishes.
+    updates: { banners: PARTIAL ? {} : await generateDigestBanners(plugins) },
   };
 
   const outDir = dirname(OUT_FILE);
@@ -769,8 +799,12 @@ async function main() {
 
   // A shallow checkout resolves nothing here, which silently turns every plugin into an
   // "update" on the /updates page. Loud warning rather than a quietly wrong digest.
+  // Skipped on a partial build: the PR check overlays the entry's file without committing
+  // it, so `addedAt` is legitimately null and the warning would fire on every PR.
   const withAddedAt = plugins.filter((p) => p.addedAt).length;
-  if (plugins.length && !withAddedAt) {
+  if (PARTIAL) {
+    /* no addedAt expectation on a partial build */
+  } else if (plugins.length && !withAddedAt) {
     console.warn('! addedAt is null for every plugin — is this a shallow clone? (need fetch-depth: 0)');
   } else if (withAddedAt < plugins.length) {
     console.warn(`! addedAt missing for ${plugins.length - withAddedAt} plugin(s); they will read as updates`);
