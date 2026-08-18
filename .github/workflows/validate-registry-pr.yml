@@ -6,6 +6,11 @@ name: validate-registry-pr
 #
 # Besides the normal PR trigger, it accepts `/revalidate` in a maintainer comment — needed
 # because a PR opened by the bot (submit-plugin-issue) does not trigger workflows.
+#
+# Everything here is scoped to the entries the PR touched: the standards check, the Trivy
+# scan and the catalog build all run over those files only. The whole-registry pipeline
+# (publish-catalog.yml) stays off pull requests — see its header for the manual dry-run.
+# A PR that touches no registry entry therefore does no plugin work at all.
 
 on:
   pull_request:
@@ -53,6 +58,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
+          cache: npm
 
       - name: Resolve the target PR
         id: pr
@@ -176,6 +182,46 @@ jobs:
             } else {
               await github.rest.issues.createComment({ owner, repo, issue_number, body });
             }
+
+      # ── Catalog: build ONLY the entries this PR touched, so the PR proves its own entry
+      # lands in the catalog (release asset, manifest, store.json, icon, banner) without
+      # rebuilding the other ~30. `--ignore-scripts` skips the Electron download, which the
+      # catalog build has no use for.
+      - name: Install dependencies
+        if: steps.changed.outputs.files != ''
+        run: npm ci --ignore-scripts
+
+      - name: Build the catalog entries from this PR
+        if: steps.changed.outputs.files != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ONLY_FILES: ${{ steps.changed.outputs.files }}
+          # Reuses the records the scan above just wrote, so the built entries carry the
+          # same `security` field they would get in a real publish.
+          SECURITY_DIR: ${{ runner.temp }}/security
+          CATALOG_OUT_FILE: ${{ runner.temp }}/catalog-pr/catalog.json
+          # A partial catalog is never published, so an entry that fails to build is a
+          # problem with the PR, not something to warn about and move on from.
+          CATALOG_STRICT: '1'
+        run: |
+          {
+            echo '### Catalog build (entries in this PR)'
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          node packages/catalog/bin/build-catalog.mjs 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          status=${PIPESTATUS[0]}
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+      - name: Upload the built entries
+        if: always() && steps.changed.outputs.files != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: catalog-pr-${{ steps.pr.outputs.number }}
+          path: ${{ runner.temp }}/catalog-pr
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Fail on leaked secrets or CRITICAL vulnerability
         if: >-
