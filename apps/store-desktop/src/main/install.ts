@@ -238,32 +238,66 @@ export async function restartUlanzi(): Promise<void> {
   } else if (process.platform === 'win32') {
     // Capture the exe path from the running process before killing it,
     // so the Studio comes back up instead of staying dead.
-    const exePath = await windowsStudioExePath();
-    await run('taskkill', ['/IM', `${ULANZI_APP}.exe`, '/F']).catch(() => {});
-    if (exePath) {
-      await sleep(800);
-      try {
-        const child = spawn(exePath, [], { detached: true, stdio: 'ignore' });
-        child.unref();
-      } catch {
-        // Leave the Studio closed rather than fail the install.
-      }
+    const studio = await windowsStudioProcess();
+    if (!studio) return;
+    const pidArgs = studio.pids.flatMap((pid) => ['/PID', String(pid)]);
+    await run('taskkill', [...pidArgs, '/T', '/F']).catch(() => {});
+    await sleep(800);
+    try {
+      const child = spawn(studio.exePath, [], { detached: true, stdio: 'ignore' });
+      child.unref();
+    } catch {
+      // Leave the Studio closed rather than fail the install.
     }
   }
 }
 
-async function windowsStudioExePath(): Promise<string | null> {
+type WindowsProcess = { exePath: string; pids: number[] };
+
+// Lists every running process whose executable path mentions Ulanzi, as `<pid>|<path>` lines.
+// A path can't contain "|" on Windows, so the first one always separates the two fields.
+const PS_LIST_ULANZI_PROCESSES = [
+  "$ErrorActionPreference = 'SilentlyContinue';",
+  "Get-Process | Where-Object { $_.Path -like '*Ulanzi*' }",
+  '| ForEach-Object { "$($_.Id)|$($_.Path)" }',
+].join(' ');
+
+/**
+ * The running Ulanzi Studio on Windows: its exe path plus every pid running it.
+ *
+ * Matching `Get-Process -Name '${ULANZI_APP}'` found nothing whenever the Studio's exe
+ * isn't named exactly "Ulanzi Studio.exe", so this matches "Ulanzi" anywhere in the exe
+ * path instead. That also matches *us* — Electron runs the store's main, renderer and GPU
+ * processes from the same "Ulanzi Community Store.exe" — so anything living in our own
+ * install folder is dropped before picking a target, or the restart would kill the store.
+ */
+async function windowsStudioProcess(): Promise<WindowsProcess | null> {
+  let out: string;
   try {
-    const out = await runCapture('powershell', [
-      '-NoProfile',
-      '-Command',
-      `(Get-Process -Name '${ULANZI_APP}' -ErrorAction SilentlyContinue | Select-Object -First 1).Path`,
-    ]);
-    const exePath = out.trim();
-    return exePath || null;
+    out = await runCapture('powershell', ['-NoProfile', '-Command', PS_LIST_ULANZI_PROCESSES]);
   } catch {
     return null;
   }
+
+  const ownDir = path.dirname(process.execPath).toLowerCase() + path.sep;
+  const pidsByPath = new Map<string, number[]>();
+  for (const line of out.split(/\r?\n/)) {
+    const separator = line.indexOf('|');
+    if (separator < 0) continue;
+    const pid = Number(line.slice(0, separator).trim());
+    const exePath = line.slice(separator + 1).trim();
+    if (!Number.isInteger(pid) || !exePath) continue;
+    if (exePath.toLowerCase().startsWith(ownDir)) continue;
+    pidsByPath.set(exePath, [...(pidsByPath.get(exePath) ?? []), pid]);
+  }
+
+  const paths = [...pidsByPath.keys()];
+  const studioExe = `${ULANZI_APP.toLowerCase()}.exe`;
+  const exePath =
+    paths.find((candidate) => path.basename(candidate).toLowerCase() === studioExe) ??
+    paths.find((candidate) => path.basename(candidate).toLowerCase().includes('studio')) ??
+    paths[0];
+  return exePath ? { exePath, pids: pidsByPath.get(exePath) ?? [] } : null;
 }
 
 function run(cmd: string, args: string[]): Promise<void> {

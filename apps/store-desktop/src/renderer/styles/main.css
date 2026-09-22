@@ -470,6 +470,36 @@ button:disabled {
     -webkit-app-region: no-drag;
   }
 
+  /* Star prompt: rides the toast stack so it can't be scrolled past, and wears gold
+     rather than the app's blue accent — the one ask that isn't about the user's own
+     task should not look like the app's own chrome. */
+  .star-prompt {
+    @apply pointer-events-auto rounded-xl border border-amber-400/40 bg-surface p-4 shadow-sheet;
+    background-image: linear-gradient(
+      135deg,
+      rgb(251 191 36 / 0.14),
+      rgb(251 191 36 / 0.04) 55%,
+      transparent
+    );
+    animation: toast-in 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+    -webkit-app-region: no-drag;
+  }
+
+  .star-prompt-badge {
+    @apply grid h-9 w-9 shrink-0 place-items-center rounded-full text-white;
+    background: linear-gradient(140deg, #fcd34d, #f59e0b);
+    box-shadow: 0 2px 10px rgb(245 158 11 / 0.45);
+  }
+
+  .btn-star {
+    @apply rounded-[7px] px-3.5 py-1.5 text-[13px] font-semibold text-[#3d2a00] transition-opacity;
+    background: linear-gradient(140deg, #fcd34d, #f59e0b);
+  }
+
+  .btn-star:hover:not(:disabled) {
+    @apply opacity-85;
+  }
+
   .toast {
     @apply pointer-events-auto flex items-start gap-2.5 rounded-xl border border-stroke/70 bg-surface px-4 py-3 text-[12.5px] leading-5 text-ink shadow-sheet;
     animation: toast-in 0.22s cubic-bezier(0.32, 0.72, 0, 1);

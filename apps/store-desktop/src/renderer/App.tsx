@@ -22,8 +22,12 @@ const STARTER_INIT_CMD = 'npx ulanzi-plugin-starter@latest init';
 const STARTER_STORE_CMD = 'npx ulanzi-plugin-starter@latest store';
 const RELEASE_TAG_CMD = 'git tag v1.0.0 && git push origin v1.0.0';
 /** Prompt for a GitHub star after the user has installed this many plugins. */
-const GITHUB_STAR_PROMPT_THRESHOLD = 3;
-const GITHUB_STAR_DISMISSED_KEY = 'githubStarDismissed';
+const GITHUB_STAR_PROMPT_THRESHOLD = 2;
+/** Give up after this many "not now" answers, so the prompt never turns into nagging. */
+const GITHUB_STAR_MAX_PROMPTS = 3;
+const GITHUB_STAR_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
+const GITHUB_STAR_KEY = 'githubStarPrompt';
+const GITHUB_STAR_LEGACY_KEY = 'githubStarDismissed';
 const PLATFORM_FILTER_KEY = 'platformFilter';
 const SORT_KEY = 'sortOrder';
 
@@ -140,12 +144,35 @@ function pluginSupportsPlatform(plugin: CatalogPlugin, platform: PlatformFilter)
   return platforms.some((item) => normalizePlatform(item) === platform);
 }
 
-function isGithubStarDismissed(): boolean {
-  return localStorage.getItem(GITHUB_STAR_DISMISSED_KEY) === '1';
+type GithubStarState = {
+  /** How many times the user answered "not now". */
+  dismissed: number;
+  /** Epoch ms before which the prompt stays hidden. */
+  snoozedUntil: number;
+  /** Set once the user takes the offer — never ask again. */
+  starred: boolean;
+};
+
+const GITHUB_STAR_INITIAL: GithubStarState = { dismissed: 0, snoozedUntil: 0, starred: false };
+
+function readGithubStarState(): GithubStarState {
+  const raw = localStorage.getItem(GITHUB_STAR_KEY);
+  if (raw) {
+    try {
+      return { ...GITHUB_STAR_INITIAL, ...(JSON.parse(raw) as Partial<GithubStarState>) };
+    } catch {
+      return GITHUB_STAR_INITIAL;
+    }
+  }
+  // Builds before snoozing stored a permanent dismissal. Spend one of the three prompts
+  // on it instead of honouring it forever, so those users get asked again — with a budget.
+  return localStorage.getItem(GITHUB_STAR_LEGACY_KEY) === '1'
+    ? { ...GITHUB_STAR_INITIAL, dismissed: 1 }
+    : GITHUB_STAR_INITIAL;
 }
 
-function dismissGithubStarPrompt(): void {
-  localStorage.setItem(GITHUB_STAR_DISMISSED_KEY, '1');
+function writeGithubStarState(state: GithubStarState): void {
+  localStorage.setItem(GITHUB_STAR_KEY, JSON.stringify(state));
 }
 
 const NAV_VIEWS: View[] = ['store', 'installed', 'updates', 'submit', 'settings'];
@@ -258,7 +285,7 @@ export function App() {
   const [appUpdateDismissed, setAppUpdateDismissed] = useState<string | null>(null);
   const [appUpdateBusy, setAppUpdateBusy] = useState(false);
   const [cacheBusy, setCacheBusy] = useState(false);
-  const [githubStarDismissed, setGithubStarDismissed] = useState(() => isGithubStarDismissed());
+  const [githubStar, setGithubStar] = useState(readGithubStarState);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [confirmUninstall, setConfirmUninstall] = useState<CatalogPlugin | null>(null);
   const [updatingAll, setUpdatingAll] = useState(false);
@@ -701,15 +728,26 @@ export function App() {
     appUpdateDismissed !== appUpdate?.latestVersion;
 
   const showGithubStarBanner =
-    !githubStarDismissed && installedCount >= GITHUB_STAR_PROMPT_THRESHOLD;
+    !githubStar.starred &&
+    githubStar.dismissed < GITHUB_STAR_MAX_PROMPTS &&
+    Date.now() >= githubStar.snoozedUntil &&
+    installedCount >= GITHUB_STAR_PROMPT_THRESHOLD;
 
-  function dismissGithubStar() {
-    dismissGithubStarPrompt();
-    setGithubStarDismissed(true);
+  function commitGithubStar(next: GithubStarState) {
+    writeGithubStarState(next);
+    setGithubStar(next);
+  }
+
+  function snoozeGithubStar() {
+    commitGithubStar({
+      ...githubStar,
+      dismissed: githubStar.dismissed + 1,
+      snoozedUntil: Date.now() + GITHUB_STAR_SNOOZE_MS,
+    });
   }
 
   async function openGithubStar() {
-    dismissGithubStar();
+    commitGithubStar({ ...githubStar, starred: true });
     await window.api.openExternal(REPO_URL);
   }
 
@@ -798,13 +836,6 @@ export function App() {
                   busy={appUpdateBusy}
                   onUpdate={() => void applyAppUpdate()}
                   onLater={() => setAppUpdateDismissed(appUpdate.latestVersion)}
-                />
-              )}
-              {showGithubStarBanner && (
-                <GithubStarBanner
-                  lang={lang}
-                  onStar={() => void openGithubStar()}
-                  onLater={dismissGithubStar}
                 />
               )}
               <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
@@ -1015,7 +1046,7 @@ export function App() {
         />
       )}
 
-      {toasts.length > 0 && (
+      {(toasts.length > 0 || showGithubStarBanner) && (
         <div className="toast-stack">
           {toasts.map((toast) => (
             <div key={toast.id} className={`toast toast-${toast.kind}`} role="status" aria-live="polite">
@@ -1033,6 +1064,13 @@ export function App() {
               </button>
             </div>
           ))}
+          {showGithubStarBanner && (
+            <GithubStarBanner
+              lang={lang}
+              onStar={() => void openGithubStar()}
+              onLater={snoozeGithubStar}
+            />
+          )}
         </div>
       )}
     </main>
@@ -1765,16 +1803,27 @@ function GithubStarBanner({
   onLater: () => void;
 }) {
   return (
-    <div className="card mb-5 flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-      <div className="min-w-0">
-        <div className="font-semibold">{t(lang, 'githubStarPromptTitle')}</div>
-        <p className="mt-0.5 text-[12px] text-ink2">{t(lang, 'githubStarPromptHelp')}</p>
+    <div className="star-prompt" role="dialog" aria-label={t(lang, 'githubStarPromptTitle')}>
+      <div className="flex items-start gap-3">
+        <span className="star-prompt-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor" className="h-[22px] w-[22px]">
+            <path d="M12 2.4l2.95 5.98 6.6.96-4.775 4.655 1.127 6.573L12 17.46l-5.902 3.103 1.127-6.573L2.45 9.34l6.6-.96L12 2.4z" />
+          </svg>
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[14px] font-bold leading-snug tracking-tight">
+            {t(lang, 'githubStarPromptTitle')}
+          </div>
+          <p className="mt-1 text-[12.5px] leading-[1.45] text-ink2">
+            {t(lang, 'githubStarPromptHelp')}
+          </p>
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="mt-3.5 flex items-center justify-end gap-2">
         <button className="btn-ghost" onClick={onLater}>
           {t(lang, 'githubStarPromptLater')}
         </button>
-        <button className="btn-primary" onClick={onStar}>
+        <button className="btn-star" onClick={onStar}>
           {t(lang, 'githubStarPromptStar')}
         </button>
       </div>
